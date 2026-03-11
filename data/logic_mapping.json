@@ -1,0 +1,472 @@
+{
+  "taxonomy": [
+    {
+      "id": "A",
+      "label": "興建／新建／改建／修復工程",
+      "icon": "🏗️",
+      "description": "包含建築物新建、增建、改建及古蹟修復",
+      "sub_categories": [
+        {
+          "id": "A1",
+          "label": "建築物興建與修繕",
+          "examples": "如：長照大樓、青年住宅、校舍、活動中心",
+          "items": [
+            {
+              "label": "取得綠建築或建築能效(BERS)標章",
+              "mitigation_codes": ["住商-1"],
+              "adaptation_codes": [],
+              "policy": "第三期住商部門旗艦計畫：近零碳建築",
+              "alert": "高隱含碳風險，建議檢核減碳材料與能效設計"
+            },
+            {
+              "label": "導入低蘊含碳建材或循環建材",
+              "mitigation_codes": ["住商-2", "環境-5"],
+              "adaptation_codes": [],
+              "policy": "第三期製造/環境部門：資源循環零廢棄",
+              "alert": ""
+            },
+            {
+              "label": "建築節能設備（高效空調、LED照明系統）",
+              "mitigation_codes": ["住商-3", "住商-4"],
+              "adaptation_codes": [],
+              "policy": "第三期住商部門：設備效率提升",
+              "alert": ""
+            },
+            {
+              "label": "古蹟或歷史建築修復（文資保存）",
+              "mitigation_codes": ["住商-6"],
+              "adaptation_codes": ["調適-文化"],
+              "policy": "文化資產韌性保存",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "label": "道路與橋梁新建改建",
+          "examples": "如：道路拓寬、橋梁新建、田徑場工程",
+          "items": [
+            {
+              "label": "低碳路面材料或再生瀝青",
+              "mitigation_codes": ["運輸-5"],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：低碳道路材料",
+              "alert": ""
+            },
+            {
+              "label": "人行道或自行車道友善環境",
+              "mitigation_codes": ["運輸-1"],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：完備步行/自行車環境",
+              "alert": ""
+            },
+            {
+              "label": "橋梁防洪韌性強化設計",
+              "mitigation_codes": [],
+              "adaptation_codes": ["調適-水"],
+              "policy": "氣候韌性調適基礎設施",
+              "alert": ""
+            },
+            {
+              "label": "道路熱島效應改善（透水鋪面、遮蔭）",
+              "mitigation_codes": ["農業-5"],
+              "adaptation_codes": ["調適-降溫"],
+              "policy": "都市熱島調適",
+              "alert": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "排水／水利／抽水站／污水工程",
+      "icon": "💧",
+      "description": "包含防洪排水、滯洪設施、污水處理等水利工程",
+      "sub_categories": [
+        {
+          "id": "B1",
+          "label": "防洪排水與滯洪設施",
+          "examples": "如：排水幹線改善、滯洪池、抽水站",
+          "items": [
+            {
+              "label": "滯洪池、抽水站建置與防洪改善",
+              "mitigation_codes": [],
+              "adaptation_codes": ["調適-水"],
+              "policy": "氣候變遷韌性調適關鍵設施",
+              "alert": "氣候韌性調適關鍵計畫"
+            },
+            {
+              "label": "排水系統清淤與維護管理",
+              "mitigation_codes": [],
+              "adaptation_codes": ["調適-水"],
+              "policy": "極端氣候調適設施維護",
+              "alert": ""
+            },
+            {
+              "label": "自然水岸與堤岸生態化工程",
+              "mitigation_codes": ["農業-7"],
+              "adaptation_codes": ["調適-生態"],
+              "policy": "生態堤岸與碳匯",
+              "alert": ""
+            },
+            {
+              "label": "都市地下透水排水系統",
+              "mitigation_codes": [],
+              "adaptation_codes": ["調適-水", "調適-降溫"],
+              "policy": "海綿城市概念調適",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "B2",
+          "label": "污水與廢水處理",
+          "examples": "如：污水下水道、用戶接管、廢水處理廠",
+          "items": [
+            {
+              "label": "污水下水道建置與用戶接管",
+              "mitigation_codes": ["環境-1"],
+              "adaptation_codes": [],
+              "policy": "第三期環境部門核心目標：提升污水處理率",
+              "alert": ""
+            },
+            {
+              "label": "污水廠節能設備或沼氣回收",
+              "mitigation_codes": ["環境-1", "能源-3"],
+              "adaptation_codes": [],
+              "policy": "第三期能源部門：廢棄物能源化",
+              "alert": ""
+            },
+            {
+              "label": "廢水污泥再利用或資源化",
+              "mitigation_codes": ["環境-5"],
+              "adaptation_codes": [],
+              "policy": "第三期環境部門：資源循環零廢棄",
+              "alert": ""
+            },
+            {
+              "label": "農業灌溉用水效率改善",
+              "mitigation_codes": ["農業-3"],
+              "adaptation_codes": ["調適-水"],
+              "policy": "農業節水與調適",
+              "alert": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "交通改善／綠色運輸／智慧運輸",
+      "icon": "🚌",
+      "description": "包含道路交通設施、大眾運輸、電動化等",
+      "sub_categories": [
+        {
+          "id": "C1",
+          "label": "人本交通與步行環境",
+          "examples": "如：人行空間改善、自行車道、無障礙設施",
+          "items": [
+            {
+              "label": "建置友善行人空間或自行車道",
+              "mitigation_codes": ["運輸-1"],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門目標：完備步行/自行車環境",
+              "alert": ""
+            },
+            {
+              "label": "公共自行車站點擴建",
+              "mitigation_codes": ["運輸-1"],
+              "adaptation_codes": [],
+              "policy": "共享運輸推廣",
+              "alert": ""
+            },
+            {
+              "label": "道路照明LED燈具汰換",
+              "mitigation_codes": ["住商-3", "1-7"],
+              "adaptation_codes": [],
+              "policy": "能源轉型：路燈節能",
+              "alert": ""
+            },
+            {
+              "label": "停車場電動車充電樁設置",
+              "mitigation_codes": ["運輸-2"],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：電動車基礎設施",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "C2",
+          "label": "大眾運輸與智慧運輸系統",
+          "examples": "如：公車站牌、智慧交通、停車管理",
+          "items": [
+            {
+              "label": "導入大眾運輸智慧化系統（智慧站牌）",
+              "mitigation_codes": ["運輸-3"],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：提升運輸系統能源效率",
+              "alert": ""
+            },
+            {
+              "label": "電動公車或電動公務車採購",
+              "mitigation_codes": ["運輸-2"],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：運具電動化",
+              "alert": ""
+            },
+            {
+              "label": "交通號誌智慧化節能",
+              "mitigation_codes": ["運輸-3"],
+              "adaptation_codes": [],
+              "policy": "智慧交通節能",
+              "alert": ""
+            },
+            {
+              "label": "共享運輸服務平台建置",
+              "mitigation_codes": ["運輸-1"],
+              "adaptation_codes": [],
+              "policy": "共享運輸推廣",
+              "alert": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "label": "公園／綠美化／生態環境",
+      "icon": "🌿",
+      "description": "包含公園綠化、植樹造林、濕地棲地保育",
+      "sub_categories": [
+        {
+          "id": "D1",
+          "label": "自然碳匯與生態營造",
+          "examples": "如：公園植樹、行道樹、濕地、紅樹林",
+          "items": [
+            {
+              "label": "植樹造林或都市綠化",
+              "mitigation_codes": ["農業-5"],
+              "adaptation_codes": ["調適-降溫"],
+              "policy": "第三期農業部門旗艦計畫：森林碳匯",
+              "alert": "具備自然碳匯貢獻"
+            },
+            {
+              "label": "濕地、紅樹林或棲地復育",
+              "mitigation_codes": ["農業-7"],
+              "adaptation_codes": ["調適-生態"],
+              "policy": "第三期農業部門旗艦計畫：海洋與濕地碳匯",
+              "alert": "海洋/濕地藍碳計畫"
+            },
+            {
+              "label": "公園草坪智慧節水灌溉",
+              "mitigation_codes": ["農業-3"],
+              "adaptation_codes": ["調適-水"],
+              "policy": "農業節水",
+              "alert": ""
+            },
+            {
+              "label": "太陽能路燈或公園節能設施",
+              "mitigation_codes": ["能源-1"],
+              "adaptation_codes": [],
+              "policy": "第三期能源部門：再生能源",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "D2",
+          "label": "景觀與人本環境改善",
+          "examples": "如：景觀整治、廣場美化、環境教育設施",
+          "items": [
+            {
+              "label": "環境教育設施建置",
+              "mitigation_codes": ["淨零教育-1"],
+              "adaptation_codes": [],
+              "policy": "第三期淨零教育部門：環境教育推廣",
+              "alert": ""
+            },
+            {
+              "label": "廣場透水鋪面改善",
+              "mitigation_codes": [],
+              "adaptation_codes": ["調適-水", "調適-降溫"],
+              "policy": "都市調適",
+              "alert": ""
+            },
+            {
+              "label": "都市農園或食農教育設施",
+              "mitigation_codes": ["農業-4"],
+              "adaptation_codes": [],
+              "policy": "第三期農業部門：有機友善農業",
+              "alert": ""
+            },
+            {
+              "label": "海岸或河岸環境景觀整治",
+              "mitigation_codes": ["農業-7"],
+              "adaptation_codes": ["調適-生態"],
+              "policy": "海岸韌性與碳匯",
+              "alert": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "E",
+      "label": "裝修／設備汰換／場館改善",
+      "icon": "🔧",
+      "description": "包含室內裝修、設備更新、既有建物節能改善",
+      "sub_categories": [
+        {
+          "id": "E1",
+          "label": "節能設備汰換與能源管理",
+          "examples": "如：LED燈具、高效空調、太陽能板",
+          "items": [
+            {
+              "label": "LED燈具全面汰換",
+              "mitigation_codes": ["1-7", "住商-3"],
+              "adaptation_codes": [],
+              "policy": "第三期能源轉型：照明節能",
+              "alert": ""
+            },
+            {
+              "label": "高能效空調系統更新",
+              "mitigation_codes": ["住商-4"],
+              "adaptation_codes": [],
+              "policy": "第三期住商部門：設備效率提升",
+              "alert": ""
+            },
+            {
+              "label": "屋頂太陽能光電設置",
+              "mitigation_codes": ["能源-1"],
+              "adaptation_codes": [],
+              "policy": "第三期能源部門：擴大再生能源",
+              "alert": ""
+            },
+            {
+              "label": "智慧能源管理系統（BEMS）",
+              "mitigation_codes": ["住商-5"],
+              "adaptation_codes": [],
+              "policy": "建築智慧能源管理",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "E2",
+          "label": "場館與室內裝修改善",
+          "examples": "如：活動中心翻新、辦公室整修、廁所改善",
+          "items": [
+            {
+              "label": "室內裝修使用低逸散環保建材",
+              "mitigation_codes": ["住商-2"],
+              "adaptation_codes": [],
+              "policy": "住商部門：環保建材",
+              "alert": ""
+            },
+            {
+              "label": "無障礙設施改善（兼顧高齡調適）",
+              "mitigation_codes": [],
+              "adaptation_codes": ["調適-社會"],
+              "policy": "氣候調適社會韌性",
+              "alert": ""
+            },
+            {
+              "label": "節水設備安裝（省水馬桶、感應龍頭）",
+              "mitigation_codes": ["農業-3"],
+              "adaptation_codes": ["調適-水"],
+              "policy": "節水調適",
+              "alert": ""
+            },
+            {
+              "label": "通風採光改善（被動式節能設計）",
+              "mitigation_codes": ["住商-3"],
+              "adaptation_codes": ["調適-降溫"],
+              "policy": "被動式建築節能",
+              "alert": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F",
+      "label": "評估／規劃／顧問／系統建置",
+      "icon": "📋",
+      "description": "包含可行性評估、規劃設計、委託研究、資訊系統",
+      "sub_categories": [
+        {
+          "id": "F1",
+          "label": "淨零與氣候相關規劃研究",
+          "examples": "如：氣候變遷調適計畫、淨零路徑研究、碳盤查",
+          "items": [
+            {
+              "label": "縣市層級淨零/氣候調適計畫研擬",
+              "mitigation_codes": ["淨零教育-1"],
+              "adaptation_codes": ["調適-政策"],
+              "policy": "地方淨零治理",
+              "alert": ""
+            },
+            {
+              "label": "組織碳盤查或碳足跡評估",
+              "mitigation_codes": ["淨零教育-2"],
+              "adaptation_codes": [],
+              "policy": "碳管理能量建置",
+              "alert": ""
+            },
+            {
+              "label": "綠能或再生能源可行性評估",
+              "mitigation_codes": ["能源-1"],
+              "adaptation_codes": [],
+              "policy": "再生能源推動",
+              "alert": ""
+            },
+            {
+              "label": "氣候風險評估或脆弱度調查",
+              "mitigation_codes": [],
+              "adaptation_codes": ["調適-政策"],
+              "policy": "氣候韌性治理",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "label": "智慧城市與環境監測系統",
+          "examples": "如：空氣品質監測、智慧水表、環境感測",
+          "items": [
+            {
+              "label": "空氣品質或溫室氣體監測系統",
+              "mitigation_codes": ["環境-4"],
+              "adaptation_codes": [],
+              "policy": "環境監測能量",
+              "alert": ""
+            },
+            {
+              "label": "智慧水資源管理系統",
+              "mitigation_codes": ["農業-3"],
+              "adaptation_codes": ["調適-水"],
+              "policy": "水資源智慧管理",
+              "alert": ""
+            },
+            {
+              "label": "災害預警或韌性資訊平台",
+              "mitigation_codes": [],
+              "adaptation_codes": ["調適-政策"],
+              "policy": "氣候韌性資訊系統",
+              "alert": ""
+            },
+            {
+              "label": "節能減碳推廣教育宣導計畫",
+              "mitigation_codes": ["淨零教育-1"],
+              "adaptation_codes": [],
+              "policy": "第三期淨零教育部門",
+              "alert": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

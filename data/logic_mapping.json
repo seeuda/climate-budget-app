@@ -83,6 +83,60 @@
                 "strategy_ref": "第三期住商方案-策略1.1",
                 "guideline": "建築工程減碳指引"
               }
+            },
+            {
+              "label": "使用低碳水泥/低碳混凝土",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "低碳材料應用",
+              "alert": ""
+            },
+            {
+              "label": "應用再生材料（如焚化底渣CLSM、再生瀝青）",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "資源循環",
+              "alert": ""
+            },
+            {
+              "label": "現地土方平衡處理（減少運輸排碳）",
+              "mitigation_codes": [
+                "運輸-3"
+              ],
+              "adaptation_codes": [],
+              "policy": "低碳施工管理",
+              "alert": ""
+            },
+            {
+              "label": "高能效機電設備（含電力回生電梯）",
+              "mitigation_codes": [
+                "住商-4"
+              ],
+              "adaptation_codes": [],
+              "policy": "設備能效提升",
+              "alert": ""
+            },
+            {
+              "label": "基地保水與透水鋪面工程",
+              "mitigation_codes": [],
+              "adaptation_codes": [
+                "調適-水"
+              ],
+              "policy": "海綿城市",
+              "alert": ""
+            },
+            {
+              "label": "設置太陽光電系統或儲能設施",
+              "mitigation_codes": [
+                "能源-1"
+              ],
+              "adaptation_codes": [],
+              "policy": "能源轉型",
+              "alert": ""
             }
           ]
         },
@@ -127,6 +181,15 @@
                 "調適-降溫"
               ],
               "policy": "都市熱島調適",
+              "alert": ""
+            },
+            {
+              "label": "現地土方平衡與再利用（減少運輸與棄土）",
+              "mitigation_codes": [
+                "運輸-3"
+              ],
+              "adaptation_codes": [],
+              "policy": "低碳施工管理",
               "alert": ""
             }
           ]
@@ -200,6 +263,33 @@
                 "guideline": "水利/下水道工程減碳指引"
               },
               "green_spending_type": "綠色環境"
+            },
+            {
+              "label": "使用低碳水泥/低碳混凝土",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "材料減碳",
+              "alert": ""
+            },
+            {
+              "label": "應用再生粒料或循環材料",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "資源循環",
+              "alert": ""
+            },
+            {
+              "label": "現地土方平衡處理（減少運輸排碳）",
+              "mitigation_codes": [
+                "運輸-3"
+              ],
+              "adaptation_codes": [],
+              "policy": "低碳施工管理",
+              "alert": ""
             }
           ]
         },
@@ -798,12 +888,12 @@
   ],
   "engineering_guideline_types": [
     "建築",
+    "道路",
     "水利",
-    "水保",
-    "國道",
-    "省道",
+    "景觀",
     "軌道",
-    "下水道"
+    "下水道",
+    "港口"
   ],
   "central_sector_strategies": {
     "住商部門": [

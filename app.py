@@ -791,6 +791,8 @@ elif st.session_state.step == 1:
             st.rerun()
     with col_next:
         can_next = bool(st.session_state.selected_category)
+        if st.session_state.selected_category == "A":
+            can_next = can_next and bool(st.session_state.engineering_guideline_type) and st.session_state.engineering_guideline_type != "（請選擇）"
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
             st.session_state.step = 2
             st.rerun()
@@ -940,11 +942,13 @@ elif st.session_state.step == 3:
         col_amt, col_calc = st.columns([3, 2])
 
         with col_amt:
+            saved_amount = int(ib.get("amount", 0) or 0)
+            clamped_amount = min(max(saved_amount, 0), total_budget)
             amount = st.number_input(
                 "工項參考金額（元）",
                 min_value=0,
                 max_value=total_budget,
-                value=int(ib.get("amount", 0) or 0),
+                value=clamped_amount,
                 step=100000,
                 key=f"amt_{idx}"
             )

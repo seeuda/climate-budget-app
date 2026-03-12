@@ -724,9 +724,9 @@
     },
     {
       "id": "F",
-      "label": "評估／規劃／顧問／系統建置",
+      "label": "評估／規劃／顧問／系統建置／委託營運管理",
       "icon": "📋",
-      "description": "包含可行性評估、規劃設計、委託研究、資訊系統",
+      "description": "包含可行性評估、規劃設計、委託研究、資訊系統與委外營運管理",
       "sub_categories": [
         {
           "id": "F1",
@@ -880,6 +880,59 @@
                 "guideline": "工程減碳作業參考指引"
               },
               "green_spending_type": "綠色工法"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "label": "委託營運管理與維運服務",
+          "examples": "如：場館委外營運、系統維運、公共設施管理服務",
+          "items": [
+            {
+              "label": "委託營運管理（含節能與減碳要求）",
+              "mitigation_codes": [
+                "住商-2"
+              ],
+              "adaptation_codes": [
+                "調適-政策"
+              ],
+              "policy": "委外契約納入節能減碳與韌性管理",
+              "alert": "建議於契約規範能源使用與碳管理指標"
+            },
+            {
+              "label": "維運服務（含設備效率與低碳採購）",
+              "mitigation_codes": [
+                "能源-2"
+              ],
+              "adaptation_codes": [],
+              "policy": "維運階段持續改善能效與採購管理",
+              "alert": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G",
+      "label": "其他計畫類別（彈性填報）",
+      "icon": "🧩",
+      "description": "無法歸入既有類別時可選，後續再由工項與預算判讀",
+      "sub_categories": [
+        {
+          "id": "G1",
+          "label": "其他或跨域計畫",
+          "examples": "如：跨局處整合方案、試辦計畫、特殊委辦案件",
+          "items": [
+            {
+              "label": "其他氣候相關作為（請於後續說明）",
+              "mitigation_codes": [
+                "淨零教育-1"
+              ],
+              "adaptation_codes": [
+                "調適-政策"
+              ],
+              "policy": "保留彈性填報，後續依內容判讀",
+              "alert": ""
             }
           ]
         }

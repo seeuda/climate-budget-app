@@ -8,6 +8,8 @@ import json
 import pandas as pd
 from datetime import datetime
 import io
+from urllib import request, error
+import hashlib
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -369,6 +371,12 @@ def detect_keywords(text):
             seen.add(kw["keyword"])
     return matches
 
+def detect_text_keywords(text, keywords):
+    """Return matched keywords contained in text."""
+    if not text:
+        return []
+    return [k for k in keywords if k and k in text]
+
 def get_taxonomy_by_id(cat_id):
     for cat in LOGIC["taxonomy"]:
         if cat["id"] == cat_id:
@@ -379,6 +387,12 @@ def get_sub_by_id(cat, sub_id):
     for sub in cat.get("sub_categories", []):
         if sub["id"] == sub_id:
             return sub
+    return None
+
+def get_item_by_label(sub, label):
+    for item in sub.get("items", []):
+        if item.get("label") == label:
+            return item
     return None
 
 def generate_export_json(state):
@@ -402,8 +416,49 @@ def generate_export_json(state):
             i.get("amount", 0) for i in state.get("item_budgets", [])
         ),
         "impact_level": get_alert_level(state.get("budget", 0))["level"],
+        "assessment_metadata": {
+            "engineering_guideline_type": state.get("engineering_guideline_type", ""),
+            "green_spending_category": state.get("green_spending_category", []),
+            "just_transition_flag": state.get("just_transition_flag", False),
+            "just_transition_note": state.get("just_transition_note", ""),
+        },
     }
     return result
+
+
+def get_google_sheet_webhook_url():
+    """Get Google Sheet webhook URL from Streamlit secrets or config."""
+    secret_url = st.secrets.get("google_sheet_webhook_url")
+    if secret_url:
+        return secret_url
+    return CONFIG.get("integrations", {}).get("google_sheet_webhook_url", "")
+
+
+def sync_to_google_sheet(payload):
+    """Send assessment payload to Google Sheet webhook."""
+    webhook_url = get_google_sheet_webhook_url()
+    if not webhook_url:
+        return False, "尚未設定 Google 試算表同步網址（google_sheet_webhook_url）。"
+
+    req = request.Request(
+        webhook_url,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+
+    try:
+        with request.urlopen(req, timeout=10) as resp:
+            status_code = resp.getcode()
+            body = resp.read().decode("utf-8", errors="ignore")
+            if 200 <= status_code < 300:
+                return True, body or "同步成功"
+            return False, f"同步失敗（HTTP {status_code}）：{body}"
+    except error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        return False, f"同步失敗（HTTP {e.code}）：{body}"
+    except error.URLError as e:
+        return False, f"同步失敗（連線錯誤）：{e.reason}"
 
 # ── Session state init ────────────────────────────────────────────────────────
 
@@ -419,6 +474,13 @@ def init_state():
         "selected_sub": None,
         "selected_items": [],
         "item_budgets": [],
+        "engineering_guideline_type": "",
+        "green_spending_category": [],
+        "just_transition_flag": False,
+        "just_transition_note": "",
+        "sync_done": False,
+        "sync_message": "",
+        "sync_signature": "",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -542,6 +604,23 @@ if st.session_state.step == 0:
         elif case_name:
             st.info("📋 未偵測到特定氣候關鍵字，請繼續手動選擇工項類別。")
 
+        optimized = CONFIG.get("optimized_parameters", {})
+        high_risk_hits = detect_text_keywords(case_name, optimized.get("high_risk_keywords", []))
+        adaptation_hits = detect_text_keywords(case_name, optimized.get("adaptation_keywords", []))
+
+        if high_risk_hits:
+            st.markdown(
+                f'<div class="alert-red">⚠️ 偵測到高隱含碳關鍵字：{"、".join(high_risk_hits)}。'
+                '建議於後續步驟完整檢核低碳建材、能效與工程碳排。</div>',
+                unsafe_allow_html=True
+            )
+        if adaptation_hits:
+            st.markdown(
+                f'<div class="alert-green">💧 偵測到氣候調適關鍵字：{"、".join(adaptation_hits)}。'
+                '系統將優先引導至水利/防洪/韌性相關工項。</div>',
+                unsafe_allow_html=True
+            )
+
         # Budget display
         try:
             budget_val = int(budget_input.replace(",", "").replace(" ", "")) if budget_input else 0
@@ -573,6 +652,11 @@ if st.session_state.step == 0:
     below_threshold = budget_val > 0 and budget_val < PARAMS["min_threshold"]
     if below_threshold:
         st.markdown(f'<div class="alert-yellow">⚠️ {UI["exclusion_warning"]}</div>', unsafe_allow_html=True)
+        optimized = CONFIG.get("optimized_parameters", {})
+        low_budget_hits = detect_text_keywords(case_name, optimized.get("adaptation_keywords", []))
+        if low_budget_hits:
+            hint_text = UI.get("manual_override_hint_text", optimized.get("manual_override_hints", ""))
+            st.markdown(f'<div class="alert-green">📝 {hint_text}</div>', unsafe_allow_html=True)
         manual_override = st.checkbox(UI["manual_override_label"], value=st.session_state.manual_override)
     else:
         manual_override = False
@@ -645,6 +729,8 @@ elif st.session_state.step == 1:
                 st.session_state.selected_category = cat["id"]
                 st.session_state.selected_sub = None
                 st.session_state.selected_items = []
+                if cat["id"] != "A":
+                    st.session_state.engineering_guideline_type = ""
                 st.rerun()
 
     # Sub-category selection
@@ -673,6 +759,18 @@ elif st.session_state.step == 1:
                     st.session_state.selected_items = []
                     st.rerun()
 
+    if st.session_state.selected_category == "A":
+        guideline_options = ["（請選擇）"] + LOGIC.get("engineering_guideline_types", [])
+        current_idx = 0
+        if st.session_state.engineering_guideline_type in guideline_options:
+            current_idx = guideline_options.index(st.session_state.engineering_guideline_type)
+        st.session_state.engineering_guideline_type = st.selectbox(
+            "🏗️ 七大工程減碳指引分類（營繕工程必填）",
+            options=guideline_options,
+            index=current_idx,
+            help="對接第三期管制目標：建築、水利、水保、國道、省道、軌道、下水道"
+        )
+
     col_back, col_next = st.columns([1, 3])
     with col_back:
         if st.button("← 返回", use_container_width=True):
@@ -680,6 +778,8 @@ elif st.session_state.step == 1:
             st.rerun()
     with col_next:
         can_next = st.session_state.selected_category and st.session_state.selected_sub
+        if st.session_state.selected_category == "A":
+            can_next = can_next and st.session_state.engineering_guideline_type and st.session_state.engineering_guideline_type != "（請選擇）"
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
             st.session_state.step = 2
             st.rerun()
@@ -951,6 +1051,27 @@ elif st.session_state.step == 4:
         else:
             st.markdown(f'<div class="alert-green"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
 
+    st.markdown("---")
+    st.markdown('<div class="section-title">🧩 政策對接補充欄位</div>', unsafe_allow_html=True)
+
+    st.session_state.green_spending_category = st.multiselect(
+        "綠色預算支出分類（可複選）",
+        options=CONFIG.get("green_spending_category", []),
+        default=st.session_state.green_spending_category,
+        help="對接中央綠色經費四大面向"
+    )
+
+    st.session_state.just_transition_flag = st.checkbox(
+        "本計畫包含公正轉型措施（勞工轉型培訓/弱勢節能補助）",
+        value=st.session_state.just_transition_flag,
+    )
+    if st.session_state.just_transition_flag:
+        st.session_state.just_transition_note = st.text_area(
+            "公正轉型補充說明",
+            value=st.session_state.just_transition_note,
+            placeholder="請描述受影響族群、配套措施、受益對象..."
+        )
+
     # Export section
     st.markdown("---")
     st.markdown('<div class="section-title">📤 匯出評估報告</div>', unsafe_allow_html=True)
@@ -963,55 +1084,81 @@ elif st.session_state.step == 4:
         "selected_category": state.selected_category,
         "selected_sub": state.selected_sub,
         "item_budgets": state.item_budgets,
+        "engineering_guideline_type": state.engineering_guideline_type,
+        "green_spending_category": state.green_spending_category,
+        "just_transition_flag": state.just_transition_flag,
+        "just_transition_note": state.just_transition_note,
     })
+
+    export_signature = hashlib.md5(
+        json.dumps(export_data, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    if st.session_state.sync_signature != export_signature:
+        st.session_state.sync_done = False
+        st.session_state.sync_message = ""
+        st.session_state.sync_signature = export_signature
+
+    st.markdown("**步驟 1：先同步到預設 Google 試算表**")
+    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary"):
+        ok, msg = sync_to_google_sheet(export_data)
+        st.session_state.sync_done = ok
+        st.session_state.sync_message = msg
+
+    if st.session_state.sync_message:
+        if st.session_state.sync_done:
+            st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
+        else:
+            st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
+
+    st.markdown("**步驟 2：同步成功後可下載報告**")
+
+    json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
+
+    rows = []
+    for ib in state.item_budgets:
+        rows.append({
+            "評估日期": datetime.now().strftime("%Y-%m-%d"),
+            "標案名稱": state.case_name,
+            "主辦局處": state.dept,
+            "決標金額": state.budget,
+            "風險等級": alert["label"],
+            "氣候工項": ib["label"],
+            "工項金額": ib["amount"],
+            "工項比例(%)": round(ib["amount"] / state.budget * 100, 1) if state.budget else 0,
+            "氣候預算合計": climate_total,
+            "氣候預算比例(%)": round(climate_ratio, 1),
+        })
+
+    csv_df = pd.DataFrame(rows)
+    csv_bytes = csv_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
 
     col_j, col_c = st.columns(2)
 
     with col_j:
         st.markdown("**📄 JSON 格式（供系統串接）**")
-        json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
         st.download_button(
             label="⬇️ 下載 JSON 報告",
             data=json_str.encode("utf-8"),
             file_name=f"climate_budget_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
             mime="application/json",
             use_container_width=True,
-            type="primary"
+            disabled=not st.session_state.sync_done,
         )
         with st.expander("預覽 JSON 內容"):
             st.code(json_str, language="json")
 
     with col_c:
         st.markdown("**📊 CSV 格式（供 Excel 分析）**")
-
-        # Build CSV
-        rows = []
-        for ib in state.item_budgets:
-            rows.append({
-                "評估日期": datetime.now().strftime("%Y-%m-%d"),
-                "標案名稱": state.case_name,
-                "主辦局處": state.dept,
-                "決標金額": state.budget,
-                "風險等級": alert["label"],
-                "氣候工項": ib["label"],
-                "工項金額": ib["amount"],
-                "工項比例(%)": round(ib["amount"] / state.budget * 100, 1) if state.budget else 0,
-                "氣候預算合計": climate_total,
-                "氣候預算比例(%)": round(climate_ratio, 1),
-            })
-
-        csv_df = pd.DataFrame(rows)
-        csv_bytes = csv_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
         st.download_button(
             label="⬇️ 下載 CSV 報告",
             data=csv_bytes,
             file_name=f"climate_budget_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
             mime="text/csv",
             use_container_width=True,
+            disabled=not st.session_state.sync_done,
         )
         with st.expander("預覽 CSV 內容"):
             st.dataframe(csv_df, use_container_width=True)
-
     st.markdown("---")
     col_b, col_r = st.columns([1, 3])
     with col_b:

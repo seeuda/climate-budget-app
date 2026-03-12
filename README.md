@@ -44,6 +44,31 @@ streamlit run app.py
 
 ---
 
+
+### Google 試算表同步設定（必要）
+
+步驟五已改為：**先同步至預設 Google 試算表，成功後才可下載 JSON/CSV**。
+
+請擇一設定 webhook URL：
+
+1. **建議：Streamlit secrets**（避免把敏感網址寫進 repo）
+   在 `.streamlit/secrets.toml` 加入：
+
+   ```toml
+   google_sheet_webhook_url = "https://script.google.com/macros/s/你的部署ID/exec"
+   ```
+
+2. **備援：`data/config.json`**
+   填入 `integrations.google_sheet_webhook_url`。
+
+### 2026/03 清單分析後的規則補強
+
+- 門檻維持 300 萬元，並在低於門檻時新增「排水清疏/災修」的人工覆核提示。
+- 補強關鍵字字典：`清疏`、`護岸`、`防洪`、`抽水`、`拓寬`、`新建`、`宿舍`、`住宅`、`環境教育`、`資收`。
+- 新增跨局處共用工項「場館室內裝修（通用節能檢核）」與 `F3` 子類「科學監測與政策研究」。
+- 新增中央第三期對接欄位：七大工程減碳指引分類、綠色預算支出分類、公正轉型標記（輸出於 `assessment_metadata`）。
+- `logic_mapping.json` 新增 `engineering_guideline_types` 與 `central_sector_strategies`，並在工項加入 `central_alignment` / `green_spending_type`。
+
 ## 📁 檔案結構
 
 ```

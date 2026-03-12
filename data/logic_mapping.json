@@ -584,6 +584,56 @@
               "alert": ""
             }
           ]
+        },
+        {
+          "id": "D3",
+          "label": "海岸與農業景觀生態",
+          "examples": "如：海岸防風林、農田景觀、生態廊道、溼地公園",
+          "items": [
+            {
+              "label": "海岸防風林或護岸植生工程",
+              "mitigation_codes": [
+                "農業-5",
+                "農業-7"
+              ],
+              "adaptation_codes": [
+                "調適-生態"
+              ],
+              "policy": "第三期農業部門：海岸碳匯與防護",
+              "alert": ""
+            },
+            {
+              "label": "農田生態廊道或生物多樣性復育",
+              "mitigation_codes": [
+                "農業-7"
+              ],
+              "adaptation_codes": [
+                "調適-生態"
+              ],
+              "policy": "第三期農業部門：生態保育",
+              "alert": ""
+            },
+            {
+              "label": "休閒農業或食農教育設施建置",
+              "mitigation_codes": [
+                "農業-4"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期農業部門：有機友善農業",
+              "alert": ""
+            },
+            {
+              "label": "大型綠地或公共碳匯空間規劃",
+              "mitigation_codes": [
+                "農業-5"
+              ],
+              "adaptation_codes": [
+                "調適-降溫"
+              ],
+              "policy": "都市碳匯規劃",
+              "alert": ""
+            }
+          ]
         }
       ]
     },
@@ -880,6 +930,202 @@
                 "guideline": "工程減碳作業參考指引"
               },
               "green_spending_type": "綠色工法"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G",
+      "label": "委託營運管理／勞務採購／服務計畫",
+      "icon": "📑",
+      "description": "包含委託營運管理、場館委外、環境教育計畫、永續服務採購",
+      "sub_categories": [
+        {
+          "id": "G1",
+          "label": "場館與設施委託營運",
+          "examples": "如：社區大學、活動中心、公園、體育館委外營運",
+          "items": [
+            {
+              "label": "場館節電/節水自主管理目標設定",
+              "mitigation_codes": [
+                "住商-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期住商部門：建築能源管理",
+              "alert": ""
+            },
+            {
+              "label": "採購綠電或再生能源憑證(RECs)",
+              "mitigation_codes": [
+                "能源-1"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期能源部門：擴大再生能源",
+              "alert": ""
+            },
+            {
+              "label": "場館廢棄物分類資源化管理",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期環境部門：資源循環零廢棄",
+              "alert": ""
+            },
+            {
+              "label": "服務過程低碳交通安排（減少碳排）",
+              "mitigation_codes": [
+                "運輸-1"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：低碳運具推廣",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "G2",
+          "label": "環境教育/淨零推廣服務計畫",
+          "examples": "如：氣候教育計畫、淨零宣導、綠生活推廣、碳足跡活動",
+          "items": [
+            {
+              "label": "氣候變遷調適教育推廣活動",
+              "mitigation_codes": [
+                "淨零教育-1"
+              ],
+              "adaptation_codes": [
+                "調適-政策"
+              ],
+              "policy": "第三期淨零教育部門：環境教育推廣",
+              "alert": ""
+            },
+            {
+              "label": "淨零綠生活行為推廣計畫",
+              "mitigation_codes": [
+                "淨零教育-1"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期淨零教育部門：綠色消費推廣",
+              "alert": ""
+            },
+            {
+              "label": "企業或社區碳盤查輔導服務",
+              "mitigation_codes": [
+                "淨零教育-2"
+              ],
+              "adaptation_codes": [],
+              "policy": "碳管理能量建置",
+              "alert": ""
+            },
+            {
+              "label": "自然生態保育解說服務",
+              "mitigation_codes": [
+                "農業-7"
+              ],
+              "adaptation_codes": [
+                "調適-生態"
+              ],
+              "policy": "第三期農業部門：生態保育",
+              "alert": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "H",
+      "label": "財物採購／設備購置",
+      "icon": "🛒",
+      "description": "包含節能設備採購、電動車輛、再生能源設備、環保耗材",
+      "sub_categories": [
+        {
+          "id": "H1",
+          "label": "節能/低碳設備採購",
+          "examples": "如：電動公務車、高效空調、LED燈具批量採購、太陽能設備",
+          "items": [
+            {
+              "label": "電動車輛或低排放運具採購",
+              "mitigation_codes": [
+                "運輸-2"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：運具電動化",
+              "alert": ""
+            },
+            {
+              "label": "高能效空調或冷凍設備採購（能效1-2級）",
+              "mitigation_codes": [
+                "住商-4"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期住商部門：設備效率提升",
+              "alert": ""
+            },
+            {
+              "label": "LED照明或智慧照明系統批量採購",
+              "mitigation_codes": [
+                "住商-3",
+                "1-7"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期能源轉型：照明節能",
+              "alert": ""
+            },
+            {
+              "label": "太陽能或儲能設備採購",
+              "mitigation_codes": [
+                "能源-1"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期能源部門：擴大再生能源",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "H2",
+          "label": "環保材料/綠色採購",
+          "examples": "如：環保標章文具、再生紙、低碳耗材、生態友善產品",
+          "items": [
+            {
+              "label": "環保標章或綠色採購認證產品",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "政府綠色採購推動",
+              "alert": ""
+            },
+            {
+              "label": "低碳建材或再生料採購（供工程使用）",
+              "mitigation_codes": [
+                "住商-2",
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期製造部門：低碳建材",
+              "alert": ""
+            },
+            {
+              "label": "節水器材或雨水回收設備採購",
+              "mitigation_codes": [
+                "農業-3"
+              ],
+              "adaptation_codes": [
+                "調適-水"
+              ],
+              "policy": "節水調適",
+              "alert": ""
+            },
+            {
+              "label": "空氣品質或環境監測儀器採購",
+              "mitigation_codes": [
+                "環境-4"
+              ],
+              "adaptation_codes": [],
+              "policy": "環境監測能量建置",
+              "alert": ""
             }
           ]
         }

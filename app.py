@@ -8,8 +8,17 @@ import json
 import pandas as pd
 from datetime import datetime
 import io
-from urllib import request, error
 import hashlib
+
+try:
+    import gspread
+    from google.oauth2.service_account import Credentials
+    GSPREAD_OK = True
+except ImportError:
+    GSPREAD_OK = False
+
+SPREADSHEET_ID = "10Z_wgmfqv4h4rk4oKDsP-V4jSS9XmO6PGAy_jrpTU7Q"
+SHEET_NAME = "工作表1"
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -440,39 +449,45 @@ def generate_export_json(state):
     return result
 
 
-def get_google_sheet_webhook_url():
-    """Get Google Sheet webhook URL from Streamlit secrets or config."""
-    secret_url = st.secrets.get("google_sheet_webhook_url")
-    if secret_url:
-        return secret_url
-    return CONFIG.get("integrations", {}).get("google_sheet_webhook_url", "")
-
-
-def sync_to_google_sheet(payload):
-    """Send assessment payload to Google Sheet webhook."""
-    webhook_url = get_google_sheet_webhook_url()
-    if not webhook_url:
-        return False, "尚未設定 Google 試算表同步網址（google_sheet_webhook_url）。"
-
-    req = request.Request(
-        webhook_url,
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json; charset=utf-8"},
-        method="POST",
-    )
-
+def save_to_sheets(export_data):
+    """Write assessment result to Google Sheets via gspread. Returns (ok, message)."""
+    if not GSPREAD_OK:
+        return False, "gspread 套件未安裝，請確認 requirements.txt 包含 gspread 與 google-auth。"
     try:
-        with request.urlopen(req, timeout=10) as resp:
-            status_code = resp.getcode()
-            body = resp.read().decode("utf-8", errors="ignore")
-            if 200 <= status_code < 300:
-                return True, body or "同步成功"
-            return False, f"同步失敗（HTTP {status_code}）：{body}"
-    except error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="ignore")
-        return False, f"同步失敗（HTTP {e.code}）：{body}"
-    except error.URLError as e:
-        return False, f"同步失敗（連線錯誤）：{e.reason}"
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=scopes
+        )
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
+
+        meta       = export_data["project_metadata"]
+        assessment = export_data["climate_assessment"]
+        items      = assessment.get("selected_items", [])
+
+        all_codes = list(dict.fromkeys(
+            code
+            for i in items
+            for code in (i.get("mitigation_codes", []) + i.get("adaptation_codes", []))
+        ))
+
+        row = [
+            meta["assessment_date"],
+            meta["name"],
+            meta["dept"],
+            meta["total_budget"],
+            assessment["alert_level"],
+            export_data["climate_budget_total"],
+            round(export_data["climate_budget_total"] / meta["total_budget"] * 100, 1)
+                if meta["total_budget"] else 0,
+            "、".join([i["label"] for i in items]),
+            "、".join(all_codes),
+            "手動放行" if meta.get("is_manual_override") else "",
+        ]
+        sheet.append_row(row, value_input_option="USER_ENTERED")
+        return True, "已成功儲存至 Google 試算表"
+    except Exception as e:
+        return False, str(e)
 
 # ── Session state init ────────────────────────────────────────────────────────
 
@@ -589,12 +604,25 @@ if st.session_state.step == 0:
             help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
         )
 
-        dept = st.selectbox(
-            "🏛️ 主辦局處",
-            options=["（請選擇）"] + CONFIG["departments"],
-            index=0 if not st.session_state.dept else CONFIG["departments"].index(st.session_state.dept) + 1
-            if st.session_state.dept in CONFIG["departments"] else 0
-        )
+        dept_options = ["（請選擇）"] + CONFIG["departments"] + ["其他（請填寫）"]
+        if not st.session_state.dept:
+            dept_default_idx = 0
+        elif st.session_state.dept in CONFIG["departments"]:
+            dept_default_idx = CONFIG["departments"].index(st.session_state.dept) + 1
+        else:
+            dept_default_idx = len(dept_options) - 1
+        dept_select = st.selectbox("🏛️ 主辦局處", options=dept_options, index=dept_default_idx)
+        if dept_select == "其他（請填寫）":
+            dept_other = st.text_input(
+                "請填寫主辦局處名稱",
+                value=st.session_state.dept if st.session_state.dept not in CONFIG["departments"] and st.session_state.dept else "",
+                placeholder="例：彰化縣政府秘書處"
+            )
+            dept = dept_other.strip() if dept_other.strip() else ""
+        elif dept_select == "（請選擇）":
+            dept = ""
+        else:
+            dept = dept_select
 
         budget_input = st.text_input(
             "💰 決標金額（元）",
@@ -772,18 +800,6 @@ elif st.session_state.step == 1:
                     st.session_state.selected_items = []
                     st.rerun()
 
-    if st.session_state.selected_category == "A":
-        guideline_options = ["（請選擇）"] + LOGIC.get("engineering_guideline_types", [])
-        current_idx = 0
-        if st.session_state.engineering_guideline_type in guideline_options:
-            current_idx = guideline_options.index(st.session_state.engineering_guideline_type)
-        st.session_state.engineering_guideline_type = st.selectbox(
-            "🏗️ 七大工程減碳指引分類（營繕工程必填）",
-            options=guideline_options,
-            index=current_idx,
-            help="對接第三期管制目標：建築、水利、水保、國道、省道、軌道、下水道"
-        )
-
     col_back, col_next = st.columns([1, 3])
     with col_back:
         if st.button("← 返回", use_container_width=True):
@@ -791,8 +807,6 @@ elif st.session_state.step == 1:
             st.rerun()
     with col_next:
         can_next = bool(st.session_state.selected_category)
-        if st.session_state.selected_category == "A":
-            can_next = can_next and bool(st.session_state.engineering_guideline_type) and st.session_state.engineering_guideline_type != "（請選擇）"
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
             st.session_state.step = 2
             st.rerun()
@@ -855,22 +869,25 @@ elif st.session_state.step == 2:
 
     st.session_state.selected_items = selected_items
 
-    if not selected_items:
-        st.info("💡 請至少勾選一項氣候相關工項，才能進入預算拆解步驟。")
-
-    # Code explanation
-    with st.expander("📘 方案代碼說明"):
-        st.markdown("""
-| 代碼前綴 | 說明 |
-|---------|------|
-| 住商-X | 住商部門行動方案 |
-| 運輸-X | 運輸部門行動方案 |
-| 農業-X | 農業部門行動方案 |
-| 環境-X | 環境部門行動方案 |
-| 能源-X | 能源部門行動方案 |
-| 調適-X | 氣候調適行動方案 |
-| 淨零教育-X | 淨零教育推廣方案 |
-        """)
+    # Material/construction checklist for engineering categories
+    if st.session_state.selected_category in ["A", "B", "C"]:
+        st.markdown("---")
+        st.markdown("**🔍 工程材料與施工低碳自評（選填）**")
+        st.caption("以下問題有助於下一步驟評估工程材料的低碳程度，請依實際情況勾選：")
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            has_concrete = st.checkbox("本案有使用混凝土或水泥", key="mat_concrete")
+            has_steel = st.checkbox("本案有使用鋼材或金屬結構", key="mat_steel")
+            has_asphalt = st.checkbox("本案有使用瀝青鋪面", key="mat_asphalt")
+        with col_m2:
+            has_recycled = st.checkbox("已規劃採用再生料或低碳建材", key="mat_recycled")
+            has_local = st.checkbox("材料來源以在地採購為主（減少運輸碳排）", key="mat_local")
+            has_waste_plan = st.checkbox("施工廢棄物已規劃資源化處理", key="mat_waste")
+        if has_concrete or has_steel or has_asphalt:
+            st.markdown(
+                '<div class="alert-yellow">💡 本案含高碳建材，下一步驟請特別評估是否有採用低碳替代方案（如再生水泥、回收鋼鐵、再生瀝青）的計畫或可能性。</div>',
+                unsafe_allow_html=True
+            )
 
     col_back, col_next = st.columns([1, 3])
     with col_back:
@@ -1100,23 +1117,21 @@ elif st.session_state.step == 4:
         st.session_state.sync_message = ""
         st.session_state.sync_signature = export_signature
 
-    st.markdown("**步驟 1：先同步到預設 Google 試算表**")
-    webhook_ready = bool(get_google_sheet_webhook_url())
-    if not webhook_ready:
-        st.warning("⚠️ 尚未設定 Google 試算表同步網址（google_sheet_webhook_url），目前僅可下載本地報告。")
-        st.session_state.sync_done = True
-    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready):
-        ok, msg = sync_to_google_sheet(export_data)
-        st.session_state.sync_done = ok
-        st.session_state.sync_message = msg
+    st.markdown("**☁️ 儲存至 Google 試算表（彰化縣氣候預算填報）**")
+    if st.session_state.sync_done:
+        st.success("✅ 填報紀錄已成功儲存至 Google 試算表！")
+    else:
+        if st.button("📋 確認完成並儲存至 Google 試算表", type="primary", use_container_width=True):
+            with st.spinner("儲存中，請稍候…"):
+                ok, msg = save_to_sheets(export_data)
+            st.session_state.sync_done = ok
+            st.session_state.sync_message = msg
+            if ok:
+                st.rerun()
+            else:
+                st.error(f"❌ 儲存失敗：{msg}，請手動下載下方報告備用。")
 
-    if st.session_state.sync_message:
-        if st.session_state.sync_done:
-            st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
-        else:
-            st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
-
-    st.markdown("**步驟 2：同步成功後可下載報告**")
+    st.markdown("**📥 本地下載備份**")
 
     json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
 
@@ -1148,7 +1163,6 @@ elif st.session_state.step == 4:
             file_name=f"climate_budget_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
             mime="application/json",
             use_container_width=True,
-            disabled=not st.session_state.sync_done,
         )
         with st.expander("預覽 JSON 內容"):
             st.code(json_str, language="json")
@@ -1161,7 +1175,6 @@ elif st.session_state.step == 4:
             file_name=f"climate_budget_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
             mime="text/csv",
             use_container_width=True,
-            disabled=not st.session_state.sync_done,
         )
         with st.expander("預覽 CSV 內容"):
             st.dataframe(csv_df, use_container_width=True)

@@ -40,7 +40,16 @@
     "規劃": "F",
     "顧問": "F",
     "系統建置": "F",
-    "監測": "F"
+    "監測": "F",
+    "電梯": "A",
+    "冷氣": "A",
+    "空調": "A",
+    "冷凍": "A",
+    "疫苗": "A",
+    "生物製劑": "A",
+    "營運": "E",
+    "管理": "F",
+    "盤查": "F"
   },
   "keyword_triggers": [
     {
@@ -434,6 +443,27 @@
       "code": "農業-3",
       "category_id": "F",
       "sub_id": "F3"
+    },
+    {
+      "keyword": "電梯",
+      "suggested_item": "高能效機電設備（含電力回生電梯）",
+      "code": "住商-4",
+      "category_id": "A",
+      "sub_id": "A1"
+    },
+    {
+      "keyword": "冷凍",
+      "suggested_item": "高能效機電設備（含電力回生電梯）",
+      "code": "住商-4",
+      "category_id": "A",
+      "sub_id": "A1"
+    },
+    {
+      "keyword": "委託營運",
+      "suggested_item": "場館室內裝修（通用節能檢核）",
+      "code": "住商-4",
+      "category_id": "E",
+      "sub_id": "E2"
     }
   ]
 }

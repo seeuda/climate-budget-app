@@ -45,24 +45,24 @@
   "keyword_triggers": [
     {
       "keyword": "LED",
-      "suggested_item": "LED燈具汰換",
+      "suggested_item": "LED燈具全面汰換",
       "code": "1-7",
       "category_id": "E",
       "sub_id": "E1"
     },
     {
       "keyword": "路燈",
-      "suggested_item": "LED燈具汰換",
+      "suggested_item": "道路照明LED燈具汰換",
       "code": "住商-3",
-      "category_id": "E",
-      "sub_id": "E1"
+      "category_id": "C",
+      "sub_id": "C1"
     },
     {
       "keyword": "電動車",
-      "suggested_item": "運輸工具電動化",
+      "suggested_item": "電動公車或電動公務車採購",
       "code": "運輸-2",
       "category_id": "C",
-      "sub_id": "C1"
+      "sub_id": "C2"
     },
     {
       "keyword": "充電",
@@ -73,73 +73,73 @@
     },
     {
       "keyword": "滯洪池",
-      "suggested_item": "防洪調適設施",
+      "suggested_item": "滯洪池、抽水站建置與防洪改善",
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1"
     },
     {
       "keyword": "抽水站",
-      "suggested_item": "防洪調適/水利設施韌性",
+      "suggested_item": "滯洪池、抽水站建置與防洪改善",
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1"
     },
     {
       "keyword": "排水",
-      "suggested_item": "排水系統改善",
+      "suggested_item": "排水系統清淤與維護管理",
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1"
     },
     {
       "keyword": "污水",
-      "suggested_item": "污水下水道建置",
+      "suggested_item": "污水下水道建置與用戶接管",
       "code": "環境-1",
       "category_id": "B",
       "sub_id": "B2"
     },
     {
       "keyword": "下水道",
-      "suggested_item": "污水下水道建置",
+      "suggested_item": "污水下水道建置與用戶接管",
       "code": "環境-1",
       "category_id": "B",
       "sub_id": "B2"
     },
     {
       "keyword": "綠建築",
-      "suggested_item": "取得綠建築或建築能效標章",
+      "suggested_item": "取得綠建築或建築能效(BERS)標章",
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "長照",
-      "suggested_item": "近零碳建築/綠建築標章",
+      "suggested_item": "近零碳建築技術(nZEB)",
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "長照衛福大樓",
-      "suggested_item": "近零碳建築/綠建築標章",
+      "suggested_item": "近零碳建築技術(nZEB)",
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "青年住宅",
-      "suggested_item": "建築能效標示/綠建築",
+      "suggested_item": "近零碳建築技術(nZEB)",
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "托嬰",
-      "suggested_item": "室內裝修節能/高能效家電",
+      "suggested_item": "場館室內裝修（通用節能檢核）",
       "code": "住商-4",
       "category_id": "E",
-      "sub_id": "E1"
+      "sub_id": "E2"
     },
     {
       "keyword": "太陽能",
@@ -157,28 +157,28 @@
     },
     {
       "keyword": "植樹",
-      "suggested_item": "植樹造林/都市綠化",
+      "suggested_item": "植樹造林或都市綠化",
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D1"
     },
     {
       "keyword": "造林",
-      "suggested_item": "植樹造林/都市綠化",
+      "suggested_item": "植樹造林或都市綠化",
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D1"
     },
     {
       "keyword": "公園",
-      "suggested_item": "都市綠化/自然碳匯",
+      "suggested_item": "植樹造林或都市綠化",
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D1"
     },
     {
       "keyword": "紅樹林",
-      "suggested_item": "濕地保育/海洋碳匯",
+      "suggested_item": "濕地、紅樹林或棲地復育",
       "code": "農業-7",
       "category_id": "D",
       "sub_id": "D1"
@@ -192,35 +192,35 @@
     },
     {
       "keyword": "人行空間",
-      "suggested_item": "完備步行環境",
+      "suggested_item": "建置友善行人空間或自行車道",
       "code": "運輸-1",
       "category_id": "C",
       "sub_id": "C1"
     },
     {
       "keyword": "自行車",
-      "suggested_item": "公共自行車/自行車道",
+      "suggested_item": "建置友善行人空間或自行車道",
       "code": "運輸-1",
       "category_id": "C",
       "sub_id": "C1"
     },
     {
       "keyword": "公共自行車",
-      "suggested_item": "推廣綠色運輸",
+      "suggested_item": "公共自行車站點擴建",
       "code": "運輸-1",
       "category_id": "C",
       "sub_id": "C1"
     },
     {
       "keyword": "智慧站牌",
-      "suggested_item": "智慧運輸系統",
+      "suggested_item": "導入大眾運輸智慧化系統（智慧站牌）",
       "code": "運輸-3",
       "category_id": "C",
       "sub_id": "C2"
     },
     {
       "keyword": "淨零",
-      "suggested_item": "縣市層級淨零計畫研擬",
+      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
       "code": "淨零教育-1",
       "category_id": "F",
       "sub_id": "F1"
@@ -255,7 +255,7 @@
     },
     {
       "keyword": "節能",
-      "suggested_item": "智慧能源管理系統(BEMS)",
+      "suggested_item": "智慧能源管理系統（BEMS）",
       "code": "住商-5",
       "category_id": "E",
       "sub_id": "E1"
@@ -269,52 +269,52 @@
     },
     {
       "keyword": "底渣",
-      "suggested_item": "廢棄物能資源化/再生料使用",
+      "suggested_item": "廢水污泥再利用或資源化",
       "code": "環境-5",
       "category_id": "B",
       "sub_id": "B2"
     },
     {
       "keyword": "資源回收",
-      "suggested_item": "廢棄物資源化",
+      "suggested_item": "節能減碳推廣教育宣導計畫",
       "code": "環境-5",
       "category_id": "F",
       "sub_id": "F2"
     },
     {
       "keyword": "古蹟",
-      "suggested_item": "古蹟或歷史建築修復",
+      "suggested_item": "古蹟或歷史建築修復（文資保存）",
       "code": "住商-6",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "修復",
-      "suggested_item": "古蹟或歷史建築修復",
+      "suggested_item": "古蹟或歷史建築修復（文資保存）",
       "code": "住商-6",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "災修",
-      "suggested_item": "防洪調適/韌性基礎設施",
+      "suggested_item": "滯洪池、抽水站建置與防洪改善",
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1"
     },
     {
       "keyword": "防洪",
-      "suggested_item": "防洪調適設施",
+      "suggested_item": "滯洪池、抽水站建置與防洪改善",
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1"
     },
     {
       "keyword": "道路改善",
-      "suggested_item": "低碳路面材料或透水鋪面",
+      "suggested_item": "道路熱島效應改善（透水鋪面、遮蔭）",
       "code": "運輸-5",
-      "category_id": "C",
-      "sub_id": "C1"
+      "category_id": "A",
+      "sub_id": "A2"
     },
     {
       "keyword": "環境教育",
@@ -325,56 +325,56 @@
     },
     {
       "keyword": "清疏",
-      "suggested_item": "防洪調適/韌性基礎設施",
+      "suggested_item": "排水系統清淤與維護管理",
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1"
     },
     {
       "keyword": "護岸",
-      "suggested_item": "防洪調適/水利設施韌性",
+      "suggested_item": "自然水岸與堤岸生態化工程",
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1"
     },
     {
       "keyword": "抽水",
-      "suggested_item": "防洪調適/水利設施韌性",
+      "suggested_item": "滯洪池、抽水站建置與防洪改善",
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1"
     },
     {
       "keyword": "拓寬",
-      "suggested_item": "低碳鋪面與工程碳排檢核",
+      "suggested_item": "低碳路面材料或再生瀝青",
       "code": "運輸-3",
-      "category_id": "C",
-      "sub_id": "C2"
+      "category_id": "A",
+      "sub_id": "A2"
     },
     {
       "keyword": "新建",
-      "suggested_item": "近零碳建築/綠建築標章",
+      "suggested_item": "近零碳建築技術(nZEB)",
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "宿舍",
-      "suggested_item": "建築能效標示/綠建築",
+      "suggested_item": "近零碳建築技術(nZEB)",
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "住宅",
-      "suggested_item": "建築能效標示/綠建築",
+      "suggested_item": "近零碳建築技術(nZEB)",
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1"
     },
     {
       "keyword": "資收",
-      "suggested_item": "廢棄物資源化",
+      "suggested_item": "節能減碳推廣教育宣導計畫",
       "code": "環境-5",
       "category_id": "F",
       "sub_id": "F2"
@@ -402,21 +402,21 @@
     },
     {
       "keyword": "沼氣",
-      "suggested_item": "廢棄物能資源化/再生料使用",
+      "suggested_item": "污水廠節能設備或沼氣回收",
       "code": "環境-5",
       "category_id": "B",
       "sub_id": "B2"
     },
     {
       "keyword": "SRF",
-      "suggested_item": "廢棄物資源化",
+      "suggested_item": "節能減碳推廣教育宣導計畫",
       "code": "環境-5",
       "category_id": "F",
       "sub_id": "F2"
     },
     {
       "keyword": "竹林",
-      "suggested_item": "植樹造林/都市綠化",
+      "suggested_item": "植樹造林或都市綠化",
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D1"
@@ -430,7 +430,7 @@
     },
     {
       "keyword": "間歇灌溉",
-      "suggested_item": "智慧水資源管理系統",
+      "suggested_item": "水文/空氣品質科學監測與資料分析",
       "code": "農業-3",
       "category_id": "F",
       "sub_id": "F3"

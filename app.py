@@ -1076,7 +1076,7 @@ elif st.session_state.step == 4:
     st.markdown("---")
     st.markdown('<div class="section-title">📤 匯出評估報告</div>', unsafe_allow_html=True)
 
-    export_data = generate_export_json({
+    export_payload = {
         "case_name": state.case_name,
         "dept": state.dept,
         "budget": state.budget,
@@ -1088,10 +1088,12 @@ elif st.session_state.step == 4:
         "green_spending_category": state.green_spending_category,
         "just_transition_flag": state.just_transition_flag,
         "just_transition_note": state.just_transition_note,
-    })
+    }
+    export_data = generate_export_json(export_payload)
 
+    # Use stable user-input payload for sync gating (exclude volatile uid/timestamp)
     export_signature = hashlib.md5(
-        json.dumps(export_data, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        json.dumps(export_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
     ).hexdigest()
     if st.session_state.sync_signature != export_signature:
         st.session_state.sync_done = False

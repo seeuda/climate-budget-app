@@ -332,6 +332,21 @@ hr { border-color: #d4e8d4; }
 button[kind="primary"] {
     background: #2d6a4f !important;
     border: none !important;
+    color: #ffffff !important;
+}
+
+button[kind="secondary"] {
+    background: #e9f3ec !important;
+    color: #1a4731 !important;
+    border: 1px solid #9ec5ab !important;
+}
+
+[data-testid="stTextInput"] input,
+[data-testid="stSelectbox"] > div > div,
+[data-testid="stNumberInput"] input,
+[data-testid="stTextArea"] textarea {
+    background-color: #f3f9f4 !important;
+    border: 1px solid #b7d3be !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -419,8 +434,7 @@ def generate_export_json(state):
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "green_spending_category": state.get("green_spending_category", []),
-            "just_transition_flag": state.get("just_transition_flag", False),
-            "just_transition_note": state.get("just_transition_note", ""),
+            "qualitative_factors": state.get("qualitative_factors", []),
         },
     }
     return result
@@ -476,8 +490,7 @@ def init_state():
         "item_budgets": [],
         "engineering_guideline_type": "",
         "green_spending_category": [],
-        "just_transition_flag": False,
-        "just_transition_note": "",
+        "qualitative_factors": [],
         "sync_done": False,
         "sync_message": "",
         "sync_signature": "",
@@ -502,7 +515,7 @@ with st.sidebar:
 2. 系統自動偵測關鍵字
 3. 選擇工程類別
 4. 勾選氣候相關工項
-5. 拆解與確認預算比例
+5. 填寫各工項預算
 6. 匯出評估報告
     """)
     st.markdown("---")
@@ -674,7 +687,7 @@ if st.session_state.step == 0:
         and (budget_val >= PARAMS["min_threshold"] or manual_override)
     )
 
-    if st.button("下一步：選擇工程類別 →", disabled=not can_proceed, type="primary", use_container_width=True):
+    if st.button("下一步：選擇計畫及工項類別 →", disabled=not can_proceed, type="primary", use_container_width=True):
         st.session_state.case_name = case_name
         st.session_state.dept = dept
         st.session_state.budget = budget_val
@@ -697,7 +710,7 @@ if st.session_state.step == 0:
 # ═══════════════════════════════════════════════════════════════════
 
 elif st.session_state.step == 1:
-    st.markdown('<div class="section-title">步驟二：選擇標案類別</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟二：選擇計畫類別(如同時符合兩種以上，請擇一)</div>', unsafe_allow_html=True)
 
     # Show keyword suggestions
     if st.session_state.kw_matches:
@@ -777,9 +790,7 @@ elif st.session_state.step == 1:
             st.session_state.step = 0
             st.rerun()
     with col_next:
-        can_next = st.session_state.selected_category and st.session_state.selected_sub
-        if st.session_state.selected_category == "A":
-            can_next = can_next and st.session_state.engineering_guideline_type and st.session_state.engineering_guideline_type != "（請選擇）"
+        can_next = bool(st.session_state.selected_category)
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
             st.session_state.step = 2
             st.rerun()
@@ -792,44 +803,53 @@ elif st.session_state.step == 2:
     st.markdown('<div class="section-title">步驟三：勾選氣候相關工項</div>', unsafe_allow_html=True)
 
     cat = get_taxonomy_by_id(st.session_state.selected_category)
-    sub = get_sub_by_id(cat, st.session_state.selected_sub)
+    sub = get_sub_by_id(cat, st.session_state.selected_sub) if st.session_state.selected_sub else None
 
-    st.markdown(f"**{cat['icon']} {cat['label']}  ›  {sub['label']}**")
-    st.caption(f"📌 {sub['examples']}")
+    if sub:
+        st.markdown(f"**{cat['icon']} {cat['label']}  ›  {sub['label']}**")
+        st.caption(f"📌 {sub['examples']}")
+        item_sources = [sub]
+    else:
+        st.markdown(f"**{cat['icon']} {cat['label']}（全部細項工項）**")
+        st.caption("📌 已展開該計畫類別下所有細項，請複選適用工項。")
+        item_sources = cat.get("sub_categories", [])
 
     # Suggested items from keywords
-    suggested_items_labels = set()
-    for kw in st.session_state.kw_matches:
-        if kw.get("sub_id") == st.session_state.selected_sub:
-            suggested_items_labels.add(kw["suggested_item"])
+    suggested_items_labels = {kw["suggested_item"] for kw in st.session_state.kw_matches}
 
     st.markdown("**請勾選本案中包含的氣候相關工項（可複選）：**")
 
     selected_items = list(st.session_state.selected_items)
-
-    for item in sub["items"]:
-        is_suggested = item["label"] in suggested_items_labels or any(
-            kw["suggested_item"] == item["label"] for kw in st.session_state.kw_matches
-        )
-        is_checked = item["label"] in selected_items
-
-        col_chk, col_info = st.columns([1, 8])
-        with col_chk:
-            checked = st.checkbox("", value=is_checked, key=f"item_{item['label']}")
-        with col_info:
-            star = "⭐ " if is_suggested else ""
-            codes_html = " ".join([f'<span class="code-badge">{c}</span>' for c in item.get("mitigation_codes", []) + item.get("adaptation_codes", [])])
-            alert_html = f'<span style="color:#e74c3c;font-size:0.78rem;"> ⚠️ {item["alert"]}</span>' if item.get("alert") else ""
-            st.markdown(
-                f'{star}**{item["label"]}** {codes_html}{alert_html}<br>'
-                f'<span style="font-size:0.78rem;color:#666;">📋 {item["policy"]}</span>',
-                unsafe_allow_html=True
+    rendered = set()
+    for src in item_sources:
+        if not sub:
+            st.markdown(f"**• {src['label']}**")
+        for item in src["items"]:
+            if item["label"] in rendered:
+                continue
+            rendered.add(item["label"])
+            is_suggested = item["label"] in suggested_items_labels or any(
+                kw["suggested_item"] == item["label"] for kw in st.session_state.kw_matches
             )
+            is_checked = item["label"] in selected_items
 
-        if checked and item["label"] not in selected_items:
-            selected_items.append(item["label"])
-        elif not checked and item["label"] in selected_items:
-            selected_items.remove(item["label"])
+            col_chk, col_info = st.columns([1, 8])
+            with col_chk:
+                checked = st.checkbox("", value=is_checked, key=f"item_{item['label']}")
+            with col_info:
+                star = "⭐ " if is_suggested else ""
+                codes_html = " ".join([f'<span class="code-badge">{c}</span>' for c in item.get("mitigation_codes", []) + item.get("adaptation_codes", [])])
+                alert_html = f'<span style="color:#e74c3c;font-size:0.78rem;"> ⚠️ {item["alert"]}</span>' if item.get("alert") else ""
+                st.markdown(
+                    f'{star}**{item["label"]}** {codes_html}{alert_html}<br>'
+                    f'<span style="font-size:0.78rem;color:#666;">📋 {item["policy"]}</span>',
+                    unsafe_allow_html=True
+                )
+
+            if checked and item["label"] not in selected_items:
+                selected_items.append(item["label"])
+            elif not checked and item["label"] in selected_items:
+                selected_items.remove(item["label"])
 
     st.session_state.selected_items = selected_items
 
@@ -856,7 +876,7 @@ elif st.session_state.step == 2:
             st.session_state.step = 1
             st.rerun()
     with col_next:
-        if st.button("下一步：拆解預算比例 →", disabled=not selected_items, type="primary", use_container_width=True):
+        if st.button("下一步：填寫工項預算 →", disabled=not selected_items, type="primary", use_container_width=True):
             # Init item_budgets
             existing = {ib["label"]: ib for ib in st.session_state.item_budgets}
             st.session_state.item_budgets = [
@@ -871,7 +891,7 @@ elif st.session_state.step == 2:
 # ═══════════════════════════════════════════════════════════════════
 
 elif st.session_state.step == 3:
-    st.markdown('<div class="section-title">步驟四：拆解各工項氣候預算</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟四：填寫各工項氣候預算</div>', unsafe_allow_html=True)
 
     total_budget = st.session_state.budget
     item_budgets = st.session_state.item_budgets
@@ -910,53 +930,33 @@ elif st.session_state.step == 3:
         st.error("🚫 各工項金額加總已超出標案總預算，請調整後再繼續。")
 
     st.markdown("---")
-    st.markdown("**請為每個氣候工項設定預算比例或金額：**")
+    st.markdown("**請為每個氣候工項填寫參考金額（元）：**")
 
     updated_items = []
     for idx, ib in enumerate(item_budgets):
         label = ib["label"]
         st.markdown(f"**{idx+1}. {label}**")
 
-        col_ratio, col_amt, col_calc = st.columns([2, 2, 2])
-
-        with col_ratio:
-            ratio_options = ["請選擇比例", "10%", "30%", "50%", "70%", "100%", "自訂金額"]
-            selected_ratio = st.selectbox("預算比例", ratio_options, key=f"ratio_{idx}")
+        col_amt, col_calc = st.columns([3, 2])
 
         with col_amt:
-            if selected_ratio == "自訂金額":
-                manual_amt = st.number_input(
-                    "自訂金額（元）",
-                    min_value=0,
-                    max_value=total_budget,
-                    value=ib.get("amount", 0) or 0,
-                    step=100000,
-                    key=f"amt_{idx}"
-                )
-                amount = manual_amt
-                ratio_val = round(manual_amt / total_budget * 100, 1) if total_budget else 0
-            elif selected_ratio != "請選擇比例":
-                ratio_val = int(selected_ratio.replace("%", ""))
-                amount = int(total_budget * ratio_val / 100)
-                st.metric("換算金額", fmt_twd(amount))
-            else:
-                ratio_val = None
-                amount = 0
-                st.caption("請選擇比例或輸入金額")
+            amount = st.number_input(
+                "工項參考金額（元）",
+                min_value=0,
+                max_value=total_budget,
+                value=int(ib.get("amount", 0) or 0),
+                step=100000,
+                key=f"amt_{idx}"
+            )
 
         with col_calc:
-            if amount > 0:
-                pct_of_total = amount / total_budget * 100
-                st.metric(
-                    "佔總預算",
-                    f"{pct_of_total:.1f}%",
-                    delta=fmt_twd(amount)
-                )
+            pct_of_total = amount / total_budget * 100 if total_budget else 0
+            st.metric("佔總預算", f"{pct_of_total:.1f}%", delta=fmt_twd(amount))
 
         updated_items.append({
             "label": label,
-            "ratio": ratio_val,
-            "amount": amount
+            "ratio": round(pct_of_total, 1),
+            "amount": int(amount)
         })
 
         st.markdown("<hr style='margin:0.5rem 0; border-color:#e8f0e8'>", unsafe_allow_html=True)
@@ -1009,7 +1009,7 @@ elif st.session_state.step == 4:
 
 **🏛️ 主辦局處：** {state.dept}
 
-**💰 決標金額：** {fmt_twd(state.budget)}
+**💰 計畫總經費：** {fmt_twd(state.budget)}
 
 **{alert['badge']} 風險等級：** {alert['label']} — {alert['desc']}
         """)
@@ -1031,14 +1031,14 @@ elif st.session_state.step == 4:
     with col_chart:
         st.markdown(f"""
         <div class="budget-display" style="margin-bottom:0.5rem">
-            <div class="label">氣候預算合計</div>
+            <div class="label">氣候變遷相關經費</div>
             <div class="amount">{fmt_twd(climate_total)}</div>
-            <div style="font-size:0.9rem;opacity:0.85;margin-top:0.3rem">佔總預算 {climate_ratio:.1f}%</div>
+            <div style="font-size:0.9rem;opacity:0.85;margin-top:0.3rem">氣候預算占比 {climate_ratio:.1f}%</div>
         </div>
         """, unsafe_allow_html=True)
 
         # Simple progress bar
-        st.progress(min(climate_ratio / 100, 1.0), text=f"氣候預算比例 {climate_ratio:.1f}%")
+        st.progress(min(climate_ratio / 100, 1.0), text=f"氣候預算占比 {climate_ratio:.1f}%")
 
         # Alert box
         level = alert["level"]
@@ -1061,16 +1061,13 @@ elif st.session_state.step == 4:
         help="對接中央綠色經費四大面向"
     )
 
-    st.session_state.just_transition_flag = st.checkbox(
-        "本計畫包含公正轉型措施（勞工轉型培訓/弱勢節能補助）",
-        value=st.session_state.just_transition_flag,
+    qualitative_options = UI.get("qualitative_factors", [])
+    st.session_state.qualitative_factors = st.multiselect(
+        "氣候政策加分因子（可複選）",
+        options=qualitative_options,
+        default=st.session_state.qualitative_factors,
+        help="補充難以工程量化但可強化氣候效益的執行方案因子"
     )
-    if st.session_state.just_transition_flag:
-        st.session_state.just_transition_note = st.text_area(
-            "公正轉型補充說明",
-            value=st.session_state.just_transition_note,
-            placeholder="請描述受影響族群、配套措施、受益對象..."
-        )
 
     # Export section
     st.markdown("---")
@@ -1086,8 +1083,7 @@ elif st.session_state.step == 4:
         "item_budgets": state.item_budgets,
         "engineering_guideline_type": state.engineering_guideline_type,
         "green_spending_category": state.green_spending_category,
-        "just_transition_flag": state.just_transition_flag,
-        "just_transition_note": state.just_transition_note,
+        "qualitative_factors": state.qualitative_factors,
     }
     export_data = generate_export_json(export_payload)
 
@@ -1101,7 +1097,11 @@ elif st.session_state.step == 4:
         st.session_state.sync_signature = export_signature
 
     st.markdown("**步驟 1：先同步到預設 Google 試算表**")
-    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary"):
+    webhook_ready = bool(get_google_sheet_webhook_url())
+    if not webhook_ready:
+        st.warning("⚠️ 尚未設定 Google 試算表同步網址（google_sheet_webhook_url），目前僅可下載本地報告。")
+        st.session_state.sync_done = True
+    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready):
         ok, msg = sync_to_google_sheet(export_data)
         st.session_state.sync_done = ok
         st.session_state.sync_message = msg

@@ -442,10 +442,29 @@ def generate_export_json(state):
 
 def get_google_sheet_webhook_url():
     """Get Google Sheet webhook URL from Streamlit secrets or config."""
-    secret_url = st.secrets.get("google_sheet_webhook_url")
-    if secret_url:
-        return secret_url
-    return CONFIG.get("integrations", {}).get("google_sheet_webhook_url", "")
+    candidate_keys = [
+        "google_sheet_webhook_url",
+        "google_sheet_webhook",
+        "google_sheet_sync_url",
+        "google_sheet_url",
+    ]
+
+    for key in candidate_keys:
+        secret_url = st.secrets.get(key)
+        if secret_url is not None:
+            normalized_secret_url = str(secret_url).strip()
+            if normalized_secret_url:
+                return normalized_secret_url
+
+    integrations = CONFIG.get("integrations", {})
+    for key in candidate_keys:
+        config_url = integrations.get(key)
+        if config_url is not None:
+            normalized_config_url = str(config_url).strip()
+            if normalized_config_url:
+                return normalized_config_url
+
+    return ""
 
 
 def get_google_sheet_target():
@@ -603,12 +622,12 @@ if st.session_state.step == 0:
             help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
         )
 
-        dept_options = ["（請選擇）"] + CONFIG["departments"] + ["其他（自行填寫）"]
+        dept_options = ["（請選擇）"] + CONFIG["departments"] + ["其他"]
         dept_index = 0
         if st.session_state.dept in CONFIG["departments"]:
             dept_index = dept_options.index(st.session_state.dept)
         elif st.session_state.dept and st.session_state.dept not in ("（請選擇）", ""):
-            dept_index = dept_options.index("其他（自行填寫）")
+            dept_index = dept_options.index("其他")
 
         dept = st.selectbox(
             "🏛️ 主辦局處",
@@ -617,7 +636,7 @@ if st.session_state.step == 0:
         )
 
         dept_other = ""
-        if dept == "其他（自行填寫）":
+        if dept == "其他":
             dept_other = st.text_input(
                 "請填寫主辦局處名稱",
                 value=st.session_state.dept_other,
@@ -708,7 +727,7 @@ if st.session_state.step == 0:
             st.markdown(f"• {guideline}")
 
     # Proceed button
-    selected_dept = dept_other if dept == "其他（自行填寫）" else dept
+    selected_dept = dept_other if dept == "其他" else dept
 
     can_proceed = (
         case_name.strip()

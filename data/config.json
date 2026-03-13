@@ -83,7 +83,9 @@
     "衛生局"
   ],
   "integrations": {
-    "google_sheet_webhook_url": ""
+    "google_sheet_webhook_url": "",
+    "google_sheet_id": "10Z_wgmfqv4h4rk4oKDsP-V4jSS9XmO6PGAy_jrpTU7Q",
+    "google_sheet_worksheet": "工作表1"
   },
   "optimized_parameters": {
     "high_risk_keywords": [

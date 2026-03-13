@@ -448,15 +448,28 @@ def get_google_sheet_webhook_url():
     return CONFIG.get("integrations", {}).get("google_sheet_webhook_url", "")
 
 
+def get_google_sheet_target():
+    """Get default Google Sheet target settings."""
+    return {
+        "spreadsheet_id": st.secrets.get("google_sheet_id")
+        or CONFIG.get("integrations", {}).get("google_sheet_id", ""),
+        "worksheet_name": st.secrets.get("google_sheet_worksheet")
+        or CONFIG.get("integrations", {}).get("google_sheet_worksheet", "工作表1"),
+    }
+
+
 def sync_to_google_sheet(payload):
     """Send assessment payload to Google Sheet webhook."""
     webhook_url = get_google_sheet_webhook_url()
     if not webhook_url:
         return False, "尚未設定 Google 試算表同步網址（google_sheet_webhook_url）。"
 
+    sync_payload = dict(payload)
+    sync_payload["google_sheet_target"] = get_google_sheet_target()
+
     req = request.Request(
         webhook_url,
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        data=json.dumps(sync_payload, ensure_ascii=False).encode("utf-8"),
         headers={"Content-Type": "application/json; charset=utf-8"},
         method="POST",
     )
@@ -481,6 +494,7 @@ def init_state():
         "step": 0,
         "case_name": "",
         "dept": "",
+        "dept_other": "",
         "budget": 0,
         "manual_override": False,
         "kw_matches": [],
@@ -589,12 +603,26 @@ if st.session_state.step == 0:
             help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
         )
 
+        dept_options = ["（請選擇）"] + CONFIG["departments"] + ["其他（自行填寫）"]
+        dept_index = 0
+        if st.session_state.dept in CONFIG["departments"]:
+            dept_index = dept_options.index(st.session_state.dept)
+        elif st.session_state.dept and st.session_state.dept not in ("（請選擇）", ""):
+            dept_index = dept_options.index("其他（自行填寫）")
+
         dept = st.selectbox(
             "🏛️ 主辦局處",
-            options=["（請選擇）"] + CONFIG["departments"],
-            index=0 if not st.session_state.dept else CONFIG["departments"].index(st.session_state.dept) + 1
-            if st.session_state.dept in CONFIG["departments"] else 0
+            options=dept_options,
+            index=dept_index
         )
+
+        dept_other = ""
+        if dept == "其他（自行填寫）":
+            dept_other = st.text_input(
+                "請填寫主辦局處名稱",
+                value=st.session_state.dept_other,
+                placeholder="例：文化局"
+            ).strip()
 
         budget_input = st.text_input(
             "💰 決標金額（元）",
@@ -680,16 +708,19 @@ if st.session_state.step == 0:
             st.markdown(f"• {guideline}")
 
     # Proceed button
+    selected_dept = dept_other if dept == "其他（自行填寫）" else dept
+
     can_proceed = (
         case_name.strip()
-        and dept != "（請選擇）"
+        and selected_dept not in ("（請選擇）", "")
         and budget_val > 0
         and (budget_val >= PARAMS["min_threshold"] or manual_override)
     )
 
     if st.button("下一步：選擇計畫及工項類別 →", disabled=not can_proceed, type="primary", use_container_width=True):
         st.session_state.case_name = case_name
-        st.session_state.dept = dept
+        st.session_state.dept = selected_dept
+        st.session_state.dept_other = dept_other
         st.session_state.budget = budget_val
         st.session_state.manual_override = manual_override
         st.session_state.kw_matches = kw_matches
@@ -699,7 +730,8 @@ if st.session_state.step == 0:
     if not can_proceed and (case_name or budget_val):
         missing = []
         if not case_name.strip(): missing.append("標案名稱")
-        if dept == "（請選擇）": missing.append("主辦局處")
+        if selected_dept in ("（請選擇）", ""):
+            missing.append("主辦局處")
         if not budget_val: missing.append("決標金額")
         if below_threshold and not manual_override: missing.append("確認繼續評估")
         if missing:
@@ -710,7 +742,7 @@ if st.session_state.step == 0:
 # ═══════════════════════════════════════════════════════════════════
 
 elif st.session_state.step == 1:
-    st.markdown('<div class="section-title">步驟二：選擇計畫類別(如同時符合兩種以上，請擇一)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟二：選擇計畫類別（建議先選最接近者，後續可再補充）</div>', unsafe_allow_html=True)
 
     # Show keyword suggestions
     if st.session_state.kw_matches:
@@ -772,18 +804,6 @@ elif st.session_state.step == 1:
                     st.session_state.selected_items = []
                     st.rerun()
 
-    if st.session_state.selected_category == "A":
-        guideline_options = ["（請選擇）"] + LOGIC.get("engineering_guideline_types", [])
-        current_idx = 0
-        if st.session_state.engineering_guideline_type in guideline_options:
-            current_idx = guideline_options.index(st.session_state.engineering_guideline_type)
-        st.session_state.engineering_guideline_type = st.selectbox(
-            "🏗️ 七大工程減碳指引分類（營繕工程必填）",
-            options=guideline_options,
-            index=current_idx,
-            help="對接第三期管制目標：建築、水利、水保、國道、省道、軌道、下水道"
-        )
-
     col_back, col_next = st.columns([1, 3])
     with col_back:
         if st.button("← 返回", use_container_width=True):
@@ -791,8 +811,6 @@ elif st.session_state.step == 1:
             st.rerun()
     with col_next:
         can_next = bool(st.session_state.selected_category)
-        if st.session_state.selected_category == "A":
-            can_next = can_next and bool(st.session_state.engineering_guideline_type) and st.session_state.engineering_guideline_type != "（請選擇）"
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
             st.session_state.step = 2
             st.rerun()
@@ -856,21 +874,7 @@ elif st.session_state.step == 2:
     st.session_state.selected_items = selected_items
 
     if not selected_items:
-        st.info("💡 請至少勾選一項氣候相關工項，才能進入預算拆解步驟。")
-
-    # Code explanation
-    with st.expander("📘 方案代碼說明"):
-        st.markdown("""
-| 代碼前綴 | 說明 |
-|---------|------|
-| 住商-X | 住商部門行動方案 |
-| 運輸-X | 運輸部門行動方案 |
-| 農業-X | 農業部門行動方案 |
-| 環境-X | 環境部門行動方案 |
-| 能源-X | 能源部門行動方案 |
-| 調適-X | 氣候調適行動方案 |
-| 淨零教育-X | 淨零教育推廣方案 |
-        """)
+        st.caption("本步驟可先略過，下一步可直接進行預算檢視與補充。")
 
     col_back, col_next = st.columns([1, 3])
     with col_back:
@@ -878,7 +882,7 @@ elif st.session_state.step == 2:
             st.session_state.step = 1
             st.rerun()
     with col_next:
-        if st.button("下一步：填寫工項預算 →", disabled=not selected_items, type="primary", use_container_width=True):
+        if st.button("下一步：填寫工項預算 →", type="primary", use_container_width=True):
             # Init item_budgets
             existing = {ib["label"]: ib for ib in st.session_state.item_budgets}
             st.session_state.item_budgets = [
@@ -933,6 +937,8 @@ elif st.session_state.step == 3:
 
     st.markdown("---")
     st.markdown("**請為每個氣候工項填寫參考金額（元）：**")
+    if not item_budgets:
+        st.info("目前尚未勾選工項，可直接前往下一步完成填報。")
 
     updated_items = []
     for idx, ib in enumerate(item_budgets):
@@ -1100,7 +1106,12 @@ elif st.session_state.step == 4:
         st.session_state.sync_message = ""
         st.session_state.sync_signature = export_signature
 
+    sheet_target = get_google_sheet_target()
     st.markdown("**步驟 1：先同步到預設 Google 試算表**")
+    if sheet_target.get("spreadsheet_id"):
+        st.caption(
+            f"預設同步目標：`{sheet_target['spreadsheet_id']}` / 分頁 `{sheet_target['worksheet_name']}`"
+        )
     webhook_ready = bool(get_google_sheet_webhook_url())
     if not webhook_ready:
         st.warning("⚠️ 尚未設定 Google 試算表同步網址（google_sheet_webhook_url），目前僅可下載本地報告。")

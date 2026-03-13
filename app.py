@@ -451,14 +451,18 @@ def get_google_sheet_webhook_url():
 
     for key in candidate_keys:
         secret_url = st.secrets.get(key)
-        if secret_url:
-            return str(secret_url).strip()
+        if secret_url is not None:
+            normalized_secret_url = str(secret_url).strip()
+            if normalized_secret_url:
+                return normalized_secret_url
 
     integrations = CONFIG.get("integrations", {})
     for key in candidate_keys:
         config_url = integrations.get(key)
-        if config_url:
-            return str(config_url).strip()
+        if config_url is not None:
+            normalized_config_url = str(config_url).strip()
+            if normalized_config_url:
+                return normalized_config_url
 
     return ""
 

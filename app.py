@@ -32,6 +32,24 @@ KWDICT = load_json("data/keyword_dictionary.json")
 PARAMS = CONFIG["system_parameters"]
 UI     = CONFIG["ui_text"]
 
+DEFAULT_DEPARTMENTS = [
+    "行政處",
+    "經濟暨綠能發展處",
+    "農業處",
+    "水利資源處",
+    "教育處",
+    "環境保護局",
+    "交通處",
+    "城市暨觀光發展處",
+    "社會處",
+    "民政處",
+    "建設處",
+    "消防局",
+    "工務處",
+    "勞工處",
+    "衛生局",
+]
+
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -464,6 +482,10 @@ def get_google_sheet_webhook_url():
             if normalized_config_url:
                 return normalized_config_url
 
+    spreadsheet_id = get_google_sheet_target().get("spreadsheet_id", "").strip()
+    if spreadsheet_id:
+        return f"https://script.google.com/macros/s/{spreadsheet_id}/exec"
+
     return ""
 
 
@@ -475,6 +497,15 @@ def get_google_sheet_target():
         "worksheet_name": st.secrets.get("google_sheet_worksheet")
         or CONFIG.get("integrations", {}).get("google_sheet_worksheet", "工作表1"),
     }
+
+
+def get_department_options():
+    """Get department list with fixed defaults for step 1 input."""
+    configured_departments = CONFIG.get("departments", [])
+    if configured_departments == DEFAULT_DEPARTMENTS:
+        return configured_departments
+
+    return DEFAULT_DEPARTMENTS
 
 
 def sync_to_google_sheet(payload):
@@ -622,9 +653,10 @@ if st.session_state.step == 0:
             help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
         )
 
-        dept_options = ["（請選擇）"] + CONFIG["departments"] + ["其他"]
+        departments = get_department_options()
+        dept_options = ["（請選擇）"] + departments + ["其他"]
         dept_index = 0
-        if st.session_state.dept in CONFIG["departments"]:
+        if st.session_state.dept in departments:
             dept_index = dept_options.index(st.session_state.dept)
         elif st.session_state.dept and st.session_state.dept not in ("（請選擇）", ""):
             dept_index = dept_options.index("其他")

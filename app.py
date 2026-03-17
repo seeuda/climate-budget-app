@@ -802,6 +802,11 @@ if st.session_state.step == 0:
     if st.session_state.use_manual_case_input != use_manual_case_input:
         st.session_state.use_manual_case_input = use_manual_case_input
 
+    case_df = pd.DataFrame()
+    case_error = ""
+    if not use_manual_case_input:
+        case_df, case_error = load_registered_cases()
+
     col1, col2 = st.columns([3, 2])
 
     with col1:

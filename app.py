@@ -415,37 +415,6 @@ def detect_text_keywords(text, keywords):
     return [k for k in keywords if k and k in text]
 
 
-def get_weighting_parameters():
-    """Read weighting parameters from config with safe defaults."""
-    weighting = CONFIG.get("weighting_parameters", {})
-    impact_cfg = weighting.get("impact_factor", {})
-    social_cfg = weighting.get("social_resilience_factor", {})
-    return {
-        "impact_default": impact_cfg.get("default", 1.0),
-        "impact_boost": impact_cfg.get("boost", 1.15),
-        "social_default": social_cfg.get("default", 1.0),
-        "social_per_group": social_cfg.get("per_vulnerable_group", 0.05),
-        "social_max": social_cfg.get("max", 1.2),
-    }
-
-
-def get_impact_factor(low_carbon_procurement):
-    """Calculate impact factor I for low-carbon procurement commitments."""
-    params = get_weighting_parameters()
-    return params["impact_boost"] if low_carbon_procurement else params["impact_default"]
-
-
-def get_social_resilience_factor(beneficiary_groups):
-    """Calculate social resilience factor S based on vulnerable groups coverage."""
-    params = get_weighting_parameters()
-    base = params["social_default"]
-    bonus = len(beneficiary_groups) * params["social_per_group"]
-    return round(min(base + bonus, params["social_max"]), 2)
-
-
-def calc_weighted_climate_budget(raw_budget, impact_factor, social_factor):
-    """Dynamic weighted climate budget formula: R × I × S."""
-    return int(round((raw_budget or 0) * impact_factor * social_factor))
 
 def get_taxonomy_by_id(cat_id):
     for cat in LOGIC["taxonomy"]:
@@ -485,16 +454,11 @@ def generate_export_json(state):
         "climate_budget_total": sum(
             i.get("amount", 0) for i in state.get("item_budgets", [])
         ),
-        "weighted_climate_budget_total": state.get("weighted_climate_budget_total", 0),
-        "impact_factor": state.get("impact_factor", 1.0),
-        "social_resilience_factor": state.get("social_resilience_factor", 1.0),
         "impact_level": get_alert_level(state.get("budget", 0))["level"],
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "green_spending_category": state.get("green_spending_category", []),
             "qualitative_factors": state.get("qualitative_factors", []),
-            "low_carbon_procurement": state.get("low_carbon_procurement", False),
-            "social_resilience_groups": state.get("social_resilience_groups", []),
         },
     }
     return result
@@ -608,7 +572,6 @@ def sync_to_google_sheet_direct(payload):
         metadata.get("dept", ""),
         metadata.get("total_budget", 0),
         payload.get("climate_budget_total", 0),
-        payload.get("weighted_climate_budget_total", 0),
         assessment.get("category", ""),
         assessment.get("sub_category", ""),
         assessment.get("alert_level", ""),
@@ -764,8 +727,6 @@ def init_state():
         "sync_done": False,
         "sync_message": "",
         "sync_signature": "",
-        "low_carbon_procurement": False,
-        "social_resilience_groups": [],
         "negative_filter_override": False,
     }
     for k, v in defaults.items():
@@ -1381,11 +1342,7 @@ elif st.session_state.step == 4:
     sub = get_sub_by_id(cat, state.selected_sub) if cat else None
 
     climate_total = sum(ib.get("amount", 0) for ib in state.item_budgets)
-    impact_factor = get_impact_factor(state.low_carbon_procurement)
-    social_factor = get_social_resilience_factor(state.social_resilience_groups)
-    weighted_climate_total = calc_weighted_climate_budget(climate_total, impact_factor, social_factor)
     climate_ratio = climate_total / state.budget * 100 if state.budget else 0
-    weighted_ratio = weighted_climate_total / state.budget * 100 if state.budget else 0
 
     # Summary display
     col_info, col_chart = st.columns([3, 2])
@@ -1469,11 +1426,6 @@ elif st.session_state.step == 4:
         "engineering_guideline_type": state.engineering_guideline_type,
         "green_spending_category": state.green_spending_category,
         "qualitative_factors": state.qualitative_factors,
-        "low_carbon_procurement": state.low_carbon_procurement,
-        "social_resilience_groups": state.social_resilience_groups,
-        "impact_factor": impact_factor,
-        "social_resilience_factor": social_factor,
-        "weighted_climate_budget_total": weighted_climate_total,
     }
     export_data = generate_export_json(export_payload)
 
@@ -1524,10 +1476,6 @@ elif st.session_state.step == 4:
             "工項比例(%)": round(ib["amount"] / state.budget * 100, 1) if state.budget else 0,
             "氣候預算合計": climate_total,
             "氣候預算比例(%)": round(climate_ratio, 1),
-            "影響因子I": impact_factor,
-            "社會韌性係數S": social_factor,
-            "加權後氣候預算": weighted_climate_total,
-            "加權後氣候預算比例(%)": round(weighted_ratio, 1),
         })
 
     csv_df = pd.DataFrame(rows)

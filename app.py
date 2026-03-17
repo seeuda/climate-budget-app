@@ -734,10 +734,10 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**預算警示門檻**")
     st.markdown("""
-- 🟢 300萬–1000萬：自然碳匯/一般維護
-- 🟡 1000萬–2000萬：設施改善重點
-- 🔴 2000萬–1億：高碳影響力計畫
-- 🟣 1億以上：重大建設強制檢核
+- 🟢 300萬–1000萬：氣候預算潛力：基層守護
+- 🟡 1000萬–2000萬：氣候預算潛力：效能升級
+- 🔴 2000萬–1億：氣候預算潛力：部門轉型
+- 🟣 1億以上：氣候預算潛力：城市重塑
     """)
     st.markdown("---")
     if st.button("🔄 重新開始", use_container_width=True):
@@ -790,13 +790,13 @@ st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', un
 # ═══════════════════════════════════════════════════════════════════
 
 if st.session_state.step == 0:
-    st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊(已預載)</div>', unsafe_allow_html=True)
 
     case_df, case_error = load_registered_cases()
     use_manual_case_input = st.checkbox(
         "自行輸入計畫資訊",
         value=st.session_state.use_manual_case_input,
-        help="勾選後可改為手動填寫標案名稱、主辦局處與決標金額。"
+        help="如非屬預載計畫，勾選後可改為手動填寫標案名稱、主辦局處與決標金額。"
     )
 
     if st.session_state.use_manual_case_input != use_manual_case_input:
@@ -1562,7 +1562,7 @@ elif st.session_state.step == 4:
 st.markdown("---")
 st.markdown(
     '<p style="text-align:center;color:#888;font-size:0.78rem;">'
-    '彰化縣氣候預算導引式判讀系統 v1.0 · 資料源：國家第三期溫室氣體階段管制目標與各部門行動方案'
+    '彰化縣氣候預算導引式判讀系統 v1.0 · 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引'
     '</p>',
     unsafe_allow_html=True
 )

@@ -565,16 +565,28 @@ def sync_to_google_sheet_direct(payload):
 
     metadata = payload.get("project_metadata", {})
     assessment = payload.get("climate_assessment", {})
+
+    total_budget = metadata.get("total_budget", 0) or 0
+    climate_budget_total = payload.get("climate_budget_total", 0) or 0
+    climate_ratio_pct = ""
+    if total_budget:
+        climate_ratio_pct = f"{(climate_budget_total / total_budget) * 100:.2f}%"
+
+    uid = metadata.get("uid", "")
+    note = f"系統編號：{uid}" if uid else ""
+
+    # Align direct-sync output with existing official worksheet headers (A~J).
     row = [
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        metadata.get("uid", ""),
+        datetime.now().strftime("%Y-%m-%d"),
         metadata.get("name", ""),
         metadata.get("dept", ""),
-        metadata.get("total_budget", 0),
-        payload.get("climate_budget_total", 0),
+        total_budget,
+        assessment.get("alert_level", ""),
+        climate_budget_total,
+        climate_ratio_pct,
         assessment.get("category", ""),
         assessment.get("sub_category", ""),
-        assessment.get("alert_level", ""),
+        note,
     ]
 
     try:

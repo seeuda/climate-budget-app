@@ -1381,11 +1381,11 @@ elif st.session_state.step == 4:
     sub = get_sub_by_id(cat, state.selected_sub) if cat else None
 
     climate_total = sum(ib.get("amount", 0) for ib in state.item_budgets)
-    impact_factor = 1.0
-    social_factor = 1.0
-    weighted_climate_total = climate_total
+    impact_factor = get_impact_factor(state.low_carbon_procurement)
+    social_factor = get_social_resilience_factor(state.social_resilience_groups)
+    weighted_climate_total = calc_weighted_climate_budget(climate_total, impact_factor, social_factor)
     climate_ratio = climate_total / state.budget * 100 if state.budget else 0
-    weighted_ratio = climate_ratio
+    weighted_ratio = weighted_climate_total / state.budget * 100 if state.budget else 0
 
     # Summary display
     col_info, col_chart = st.columns([3, 2])

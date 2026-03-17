@@ -1380,31 +1380,12 @@ elif st.session_state.step == 4:
     cat = get_taxonomy_by_id(state.selected_category)
     sub = get_sub_by_id(cat, state.selected_sub) if cat else None
 
-    st.markdown("---")
-    st.markdown('<div class="section-title">⚖️ 動態多重加權（R × I × S）</div>', unsafe_allow_html=True)
-
-    low_carbon_procurement = st.checkbox(
-        "落實低碳採購（如租賃限電動/油電車、工程使用低碳建材）",
-        value=st.session_state.low_carbon_procurement,
-        help="勾選後影響因子 I 會提高。"
-    )
-    social_group_options = ["高齡者", "身心障礙者", "新住民"]
-    social_resilience_groups = st.multiselect(
-        "受益對象涵蓋之氣候脆弱族群（可複選）",
-        options=social_group_options,
-        default=st.session_state.social_resilience_groups,
-        help="每涵蓋1類脆弱族群，社會韌性係數 S 增加0.05（最高1.20）。"
-    )
-
-    st.session_state.low_carbon_procurement = low_carbon_procurement
-    st.session_state.social_resilience_groups = social_resilience_groups
-
     climate_total = sum(ib.get("amount", 0) for ib in state.item_budgets)
-    impact_factor = get_impact_factor(low_carbon_procurement)
-    social_factor = get_social_resilience_factor(social_resilience_groups)
-    weighted_climate_total = calc_weighted_climate_budget(climate_total, impact_factor, social_factor)
+    impact_factor = 1.0
+    social_factor = 1.0
+    weighted_climate_total = climate_total
     climate_ratio = climate_total / state.budget * 100 if state.budget else 0
-    weighted_ratio = weighted_climate_total / state.budget * 100 if state.budget else 0
+    weighted_ratio = climate_ratio
 
     # Summary display
     col_info, col_chart = st.columns([3, 2])
@@ -1444,17 +1425,6 @@ elif st.session_state.step == 4:
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div class="budget-display" style="margin-bottom:0.5rem;background:linear-gradient(135deg,#2d6a4f,#52b788)">
-            <div class="label">加權後氣候預算（R × I × S）</div>
-            <div class="amount">{fmt_twd(weighted_climate_total)}</div>
-            <div style="font-size:0.85rem;opacity:0.85;margin-top:0.3rem">I={impact_factor:.2f} · S={social_factor:.2f} · 占比 {weighted_ratio:.1f}%</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Simple progress bar
-        st.progress(min(weighted_ratio / 100, 1.0), text=f"加權後氣候預算占比 {weighted_ratio:.1f}%")
-
         # Alert box
         level = alert["level"]
         if level == "extreme":
@@ -1465,22 +1435,6 @@ elif st.session_state.step == 4:
             st.markdown(f'<div class="alert-yellow"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="alert-green"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown('<div class="section-title">⚖️ 動態多重加權（R × I × S）</div>', unsafe_allow_html=True)
-
-    st.session_state.low_carbon_procurement = st.checkbox(
-        "落實低碳採購（如租賃限電動/油電車、工程使用低碳建材）",
-        value=st.session_state.low_carbon_procurement,
-        help="勾選後影響因子 I 會提高。"
-    )
-    social_group_options = ["高齡者", "身心障礙者", "新住民"]
-    st.session_state.social_resilience_groups = st.multiselect(
-        "受益對象涵蓋之氣候脆弱族群（可複選）",
-        options=social_group_options,
-        default=st.session_state.social_resilience_groups,
-        help="每涵蓋1類脆弱族群，社會韌性係數 S 增加0.05（最高1.20）。"
-    )
 
     st.markdown("---")
     st.markdown('<div class="section-title">🧩 政策對接補充欄位</div>', unsafe_allow_html=True)

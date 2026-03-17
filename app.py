@@ -16,6 +16,18 @@ from google.oauth2.service_account import Credentials
 PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
 PRESET_SHEET_GID = "0"
 
+DEFAULT_SYNC_HEADERS = [
+    "填報日期",
+    "案件編號",
+    "標案名稱",
+    "主辦局處",
+    "決標金額",
+    "氣候預算",
+    "判讀主類別",
+    "判讀子類別",
+    "風險等級",
+]
+
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="彰化縣氣候預算判讀系統",
@@ -565,17 +577,42 @@ def sync_to_google_sheet_direct(payload):
 
     metadata = payload.get("project_metadata", {})
     assessment = payload.get("climate_assessment", {})
-    row = [
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        metadata.get("uid", ""),
-        metadata.get("name", ""),
-        metadata.get("dept", ""),
-        metadata.get("total_budget", 0),
-        payload.get("climate_budget_total", 0),
-        assessment.get("category", ""),
-        assessment.get("sub_category", ""),
-        assessment.get("alert_level", ""),
-    ]
+    row_dict = {
+        "填報日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "案件編號": metadata.get("uid", ""),
+        "標案名稱": metadata.get("name", ""),
+        "主辦局處": metadata.get("dept", ""),
+        "決標金額": metadata.get("total_budget", 0),
+        "氣候預算": payload.get("climate_budget_total", 0),
+        "判讀主類別": assessment.get("category", ""),
+        "判讀子類別": assessment.get("sub_category", ""),
+        "風險等級": assessment.get("alert_level", ""),
+    }
+
+    expected_headers = list(DEFAULT_SYNC_HEADERS)
+    expected_set = set(expected_headers)
+
+    try:
+        first_row_values = [str(h).strip() for h in worksheet.row_values(1) if str(h).strip()]
+    except Exception:
+        first_row_values = []
+
+    has_header_overlap = len(set(first_row_values) & expected_set) >= 2
+    if has_header_overlap:
+        headers = first_row_values
+    else:
+        headers = expected_headers
+        try:
+            if first_row_values:
+                worksheet.insert_row(headers, index=1, value_input_option="USER_ENTERED")
+            else:
+                worksheet.update("A1", [headers])
+        except Exception as e:
+            return False, f"初始化試算表表頭失敗：{e}"
+
+    row = [row_dict.get(col, "") for col in headers]
+    if len(row) != len(headers):
+        return False, "資料欄位長度與試算表表頭不一致"
 
     try:
         worksheet.append_row(row, value_input_option="USER_ENTERED")

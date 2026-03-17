@@ -10,6 +10,8 @@ from datetime import datetime
 import io
 from urllib import request, error
 import hashlib
+import gspread
+from google.oauth2.service_account import Credentials
 
 PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
 PRESET_SHEET_GID = "0"
@@ -34,24 +36,6 @@ KWDICT = load_json("data/keyword_dictionary.json")
 
 PARAMS = CONFIG["system_parameters"]
 UI     = CONFIG["ui_text"]
-
-DEFAULT_DEPARTMENTS = [
-    "行政處",
-    "經濟暨綠能發展處",
-    "農業處",
-    "水利資源處",
-    "教育處",
-    "環境保護局",
-    "交通處",
-    "城市暨觀光發展處",
-    "社會處",
-    "民政處",
-    "建設處",
-    "消防局",
-    "工務處",
-    "勞工處",
-    "衛生局",
-]
 
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -554,12 +538,88 @@ def get_google_sheet_target():
 
 
 def get_department_options():
-    """Get department list with fixed defaults for step 1 input."""
+    """Get department list from config."""
     configured_departments = CONFIG.get("departments", [])
-    if configured_departments == DEFAULT_DEPARTMENTS:
-        return configured_departments
+    return configured_departments if isinstance(configured_departments, list) else []
 
-    return DEFAULT_DEPARTMENTS
+
+def is_sheet_sync_ready():
+    """Return whether either webhook sync or direct Sheets API sync is available."""
+    if get_google_sheet_webhook_url():
+        return True
+
+    has_service_account = bool(st.secrets.get("gcp_service_account"))
+    has_sheet_id = bool(get_google_sheet_target().get("spreadsheet_id"))
+    return has_service_account and has_sheet_id
+
+
+def get_google_sheet_client():
+    """Create Google Sheets client from Streamlit secrets service account."""
+    service_account_info = st.secrets.get("gcp_service_account")
+    if not service_account_info:
+        return None, "尚未設定 gcp_service_account（service account 金鑰）"
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+
+    try:
+        service_account_dict = dict(service_account_info)
+    except Exception as e:
+        return None, f"gcp_service_account 格式錯誤：{e}"
+
+    try:
+        creds = Credentials.from_service_account_info(
+            service_account_dict,
+            scopes=scopes,
+        )
+        return gspread.authorize(creds), ""
+    except Exception as e:
+        return None, f"service account 驗證失敗：{e}"
+
+
+def sync_to_google_sheet_direct(payload):
+    """Append assessment payload directly to Google Sheets by service account."""
+    client, err = get_google_sheet_client()
+    if err:
+        return False, err
+
+    target = get_google_sheet_target()
+    spreadsheet_id = target.get("spreadsheet_id")
+    worksheet_name = target.get("worksheet_name") or "工作表1"
+    if not spreadsheet_id:
+        return False, "尚未設定 google_sheet_id"
+
+    try:
+        spreadsheet = client.open_by_key(spreadsheet_id)
+        worksheet = spreadsheet.worksheet(worksheet_name)
+    except gspread.WorksheetNotFound:
+        worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=30)
+    except Exception as e:
+        return False, f"無法連線試算表：{e}"
+
+    metadata = payload.get("project_metadata", {})
+    assessment = payload.get("climate_assessment", {})
+    row = [
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        metadata.get("uid", ""),
+        metadata.get("name", ""),
+        metadata.get("dept", ""),
+        metadata.get("total_budget", 0),
+        payload.get("climate_budget_total", 0),
+        payload.get("weighted_climate_budget_total", 0),
+        assessment.get("category", ""),
+        assessment.get("sub_category", ""),
+        assessment.get("alert_level", ""),
+    ]
+
+    try:
+        worksheet.append_row(row, value_input_option="USER_ENTERED")
+    except Exception as e:
+        return False, f"寫入試算表失敗：{e}"
+
+    return True, f"已直接寫入試算表 {spreadsheet_id} / {worksheet_name}"
 
 
 @st.cache_data(ttl=600)
@@ -655,7 +715,7 @@ def sync_to_google_sheet(payload):
     """Send assessment payload to Google Sheet webhook."""
     webhook_url = get_google_sheet_webhook_url()
     if not webhook_url:
-        return False, "尚未設定 Google 試算表同步網址（google_sheet_webhook_url）。"
+        return sync_to_google_sheet_direct(payload)
 
     sync_payload = dict(payload)
     sync_payload["google_sheet_target"] = get_google_sheet_target()
@@ -734,10 +794,10 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**預算警示門檻**")
     st.markdown("""
-- 🟢 300萬–1000萬：自然碳匯/一般維護
-- 🟡 1000萬–2000萬：設施改善重點
-- 🔴 2000萬–1億：高碳影響力計畫
-- 🟣 1億以上：重大建設強制檢核
+- 🟢 300萬–1000萬：氣候預算潛力：基層守護
+- 🟡 1000萬–2000萬：氣候預算潛力：效能升級
+- 🔴 2000萬–1億：氣候預算潛力：部門轉型
+- 🟣 1億以上：氣候預算潛力：城市重塑
     """)
     st.markdown("---")
     if st.button("🔄 重新開始", use_container_width=True):
@@ -790,13 +850,13 @@ st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', un
 # ═══════════════════════════════════════════════════════════════════
 
 if st.session_state.step == 0:
-    st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊(已預載)</div>', unsafe_allow_html=True)
 
     case_df, case_error = load_registered_cases()
     use_manual_case_input = st.checkbox(
         "自行輸入計畫資訊",
         value=st.session_state.use_manual_case_input,
-        help="勾選後可改為手動填寫標案名稱、主辦局處與決標金額。"
+        help="如非屬預載計畫，勾選後可改為手動填寫標案名稱、主辦局處與決標金額。"
     )
 
     if st.session_state.use_manual_case_input != use_manual_case_input:
@@ -968,11 +1028,11 @@ if st.session_state.step == 0:
         if budget_val >= PARAMS["extreme_alert_threshold"]:
             st.markdown(f'<div class="alert-purple">⛔ {UI["extreme_alert_warning"]}</div>', unsafe_allow_html=True)
         elif budget_val >= PARAMS["high_alert_threshold"]:
-            st.markdown('<div class="alert-red">🔴 高碳影響力計畫：本案金額達2,000萬元以上，UI強調「隱含碳」檢核。</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="alert-red">{UI["high_alert_warning"]}</div>', unsafe_allow_html=True)
         elif budget_val >= PARAMS["medium_alert_threshold"]:
-            st.markdown('<div class="alert-yellow">🟡 設施改善重點：本案金額達1,000萬元以上，請特別注意節能設施評估。</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="alert-yellow">{UI["medium_alert_warning"]}</div>', unsafe_allow_html=True)
         elif budget_val >= PARAMS["min_threshold"]:
-            st.markdown('<div class="alert-green">🟢 本案符合評估門檻，請繼續完成氣候預算判讀。</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="alert-green">{UI["threshold_pass_warning"]}</div>', unsafe_allow_html=True)
 
     # Below threshold
     below_threshold = budget_val > 0 and budget_val < PARAMS["min_threshold"]
@@ -1478,9 +1538,9 @@ elif st.session_state.step == 4:
         st.caption(
             f"預設同步目標：`{sheet_target['spreadsheet_id']}` / 分頁 `{sheet_target['worksheet_name']}`"
         )
-    webhook_ready = bool(get_google_sheet_webhook_url())
+    webhook_ready = is_sheet_sync_ready()
     if not webhook_ready:
-        st.warning("⚠️ 尚未設定 Google 試算表同步網址（google_sheet_webhook_url），目前僅可下載本地報告。")
+        st.warning("⚠️ 尚未完成 Google 試算表同步設定（需 webhook 或 gcp_service_account + google_sheet_id），目前僅可下載本地報告。")
         st.session_state.sync_done = True
     if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready):
         ok, msg = sync_to_google_sheet(export_data)
@@ -1562,7 +1622,7 @@ elif st.session_state.step == 4:
 st.markdown("---")
 st.markdown(
     '<p style="text-align:center;color:#888;font-size:0.78rem;">'
-    '彰化縣氣候預算導引式判讀系統 v1.0 · 資料源：國家第三期溫室氣體階段管制目標與各部門行動方案'
+    '彰化縣氣候預算導引式判讀系統 v1.0 · 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引'
     '</p>',
     unsafe_allow_html=True
 )

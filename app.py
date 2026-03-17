@@ -11,6 +11,9 @@ import io
 from urllib import request, error
 import hashlib
 
+PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
+PRESET_SHEET_GID = "0"
+
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="彰化縣氣候預算判讀系統",
@@ -559,6 +562,95 @@ def get_department_options():
     return DEFAULT_DEPARTMENTS
 
 
+@st.cache_data(ttl=600)
+def load_registered_cases():
+    """Load pre-registered case list from public Google Sheet."""
+    csv_url = (
+        f"https://docs.google.com/spreadsheets/d/{PRESET_SHEET_ID}/"
+        f"export?format=csv&gid={PRESET_SHEET_GID}"
+    )
+
+    req = request.Request(
+        csv_url,
+        headers={
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "text/csv,text/plain,*/*",
+        },
+    )
+    try:
+        with request.urlopen(req, timeout=10) as resp:
+            body = resp.read().decode("utf-8-sig", errors="ignore")
+    except Exception as e:
+        return pd.DataFrame(), f"無法讀取雲端試算表：{e}"
+
+    try:
+        df = pd.read_csv(io.StringIO(body)).fillna("")
+    except Exception as e:
+        return pd.DataFrame(), f"雲端試算表格式讀取失敗：{e}"
+
+    if df.empty:
+        return pd.DataFrame(), "雲端試算表沒有可用資料。"
+
+    def pick_col(candidates):
+        for col in df.columns:
+            col_name = str(col).strip()
+            if any(key in col_name for key in candidates):
+                return col
+        return None
+
+    agency_col = pick_col(["機關"])
+    unit_col = pick_col(["單位"])
+    case_col = pick_col(["標案", "計畫名稱", "標的名稱"])
+    budget_col = pick_col(["決標金額", "預算金額", "金額"])
+
+    if not agency_col or not unit_col or not case_col:
+        return pd.DataFrame(), "試算表缺少必要欄位（機關名稱、單位名稱、標案名稱）。"
+
+    renamed = df.rename(
+        columns={
+            agency_col: "機關名稱",
+            unit_col: "單位名稱",
+            case_col: "標案名稱",
+        }
+    )
+    if budget_col:
+        renamed = renamed.rename(columns={budget_col: "決標金額"})
+    else:
+        renamed["決標金額"] = ""
+
+    cleaned = renamed[["機關名稱", "單位名稱", "標案名稱", "決標金額"]].copy()
+    for col in ["機關名稱", "單位名稱", "標案名稱"]:
+        cleaned[col] = cleaned[col].astype(str).str.strip()
+    cleaned = cleaned[(cleaned["機關名稱"] != "") & (cleaned["單位名稱"] != "") & (cleaned["標案名稱"] != "")]
+    cleaned = cleaned.drop_duplicates(subset=["機關名稱", "單位名稱", "標案名稱"], keep="first")
+
+    if cleaned.empty:
+        return pd.DataFrame(), "試算表中沒有可用案件資料。"
+
+    return cleaned.reset_index(drop=True), ""
+
+
+def parse_budget_from_sheet(raw_value):
+    """Safely parse budget value from sheet cell."""
+    if raw_value is None or (isinstance(raw_value, float) and pd.isna(raw_value)):
+        return 0
+
+    if isinstance(raw_value, (int, float)):
+        try:
+            return max(int(float(raw_value)), 0)
+        except (TypeError, ValueError):
+            return 0
+
+    raw_text = str(raw_value).strip().replace(",", "")
+    if not raw_text:
+        return 0
+
+    try:
+        return max(int(float(raw_text)), 0)
+    except ValueError:
+        return 0
+
+
 def sync_to_google_sheet(payload):
     """Send assessment payload to Google Sheet webhook."""
     webhook_url = get_google_sheet_webhook_url()
@@ -595,8 +687,11 @@ def init_state():
         "step": 0,
         "case_name": "",
         "dept": "",
+        "agency_name": "",
+        "unit_name": "",
         "dept_other": "",
         "budget": 0,
+        "use_manual_case_input": False,
         "manual_override": False,
         "kw_matches": [],
         "selected_category": None,
@@ -629,7 +724,7 @@ with st.sidebar:
 此工具協助彰化縣各局處承辦人，透過直覺式流程判定計畫與氣候預算的關聯性。
 
 **評估流程：**
-1. 輸入計畫基本資訊
+1. 帶入計畫基本資訊
 2. 系統自動偵測關鍵字
 3. 選擇工程類別
 4. 勾選氣候相關工項
@@ -695,46 +790,130 @@ st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', un
 # ═══════════════════════════════════════════════════════════════════
 
 if st.session_state.step == 0:
-    st.markdown('<div class="section-title">步驟一：輸入計畫基本資訊</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊</div>', unsafe_allow_html=True)
+
+    case_df, case_error = load_registered_cases()
+    use_manual_case_input = st.checkbox(
+        "自行輸入計畫資訊",
+        value=st.session_state.use_manual_case_input,
+        help="勾選後可改為手動填寫標案名稱、主辦局處與決標金額。"
+    )
+
+    if st.session_state.use_manual_case_input != use_manual_case_input:
+        st.session_state.use_manual_case_input = use_manual_case_input
+
+    case_df = pd.DataFrame()
+    case_error = ""
+    if not use_manual_case_input:
+        case_df, case_error = load_registered_cases()
 
     col1, col2 = st.columns([3, 2])
 
     with col1:
-        case_name = st.text_input(
-            "📌 標案名稱",
-            value=st.session_state.case_name,
-            placeholder="例：彰化縣○○公園綠美化工程",
-            help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
-        )
+        auto_selected = None
+        agency = "（請選擇）"
+        unit = "（請選擇）"
+        case_name = st.session_state.case_name
+        dept_other = st.session_state.dept_other
 
-        departments = get_department_options()
-        dept_options = ["（請選擇）"] + departments + ["其他"]
-        dept_index = 0
-        if st.session_state.dept in departments:
-            dept_index = dept_options.index(st.session_state.dept)
-        elif st.session_state.dept and st.session_state.dept not in ("（請選擇）", ""):
-            dept_index = dept_options.index("其他")
+        if not use_manual_case_input:
+            if case_error:
+                st.warning(f"⚠️ {case_error}，請改用下方手動輸入。")
+                use_manual_case_input = True
+                st.session_state.use_manual_case_input = True
+            else:
+                agency_options = ["（請選擇）"] + sorted(case_df["機關名稱"].unique().tolist())
+                default_agency = st.session_state.agency_name if st.session_state.agency_name in agency_options else "（請選擇）"
+                agency = st.selectbox(
+                    "🏛️ 機關名稱",
+                    options=agency_options,
+                    index=agency_options.index(default_agency),
+                )
 
-        dept = st.selectbox(
-            "🏛️ 主辦局處",
-            options=dept_options,
-            index=dept_index
-        )
+                unit_pool = case_df[case_df["機關名稱"] == agency] if agency != "（請選擇）" else pd.DataFrame()
+                unit_options = ["（請選擇）"] + sorted(unit_pool["單位名稱"].unique().tolist()) if not unit_pool.empty else ["（請選擇）"]
+                default_unit = st.session_state.unit_name if st.session_state.unit_name in unit_options else "（請選擇）"
+                unit = st.selectbox(
+                    "🏢 單位名稱",
+                    options=unit_options,
+                    index=unit_options.index(default_unit),
+                    disabled=agency == "（請選擇）",
+                )
 
-        dept_other = ""
-        if dept == "其他":
-            dept_other = st.text_input(
-                "請填寫主辦局處名稱",
-                value=st.session_state.dept_other,
-                placeholder="例：文化局"
-            ).strip()
+                case_pool = unit_pool[unit_pool["單位名稱"] == unit] if unit != "（請選擇）" else pd.DataFrame()
+                case_options = ["（請選擇）"] + sorted(case_pool["標案名稱"].unique().tolist()) if not case_pool.empty else ["（請選擇）"]
+                selected_case = case_name if case_name in case_options else "（請選擇）"
+                selected_case = st.selectbox(
+                    "📌 標案名稱",
+                    options=case_options,
+                    index=case_options.index(selected_case),
+                    disabled=unit == "（請選擇）",
+                )
 
-        budget_input = st.text_input(
-            "💰 決標金額（元）",
-            value=str(int(st.session_state.budget)) if st.session_state.budget else "",
-            placeholder="例：15000000",
-            help="請輸入決標金額（純數字，不含逗號）"
-        )
+                if selected_case != "（請選擇）":
+                    selected_rows = case_pool[case_pool["標案名稱"] == selected_case]
+                    if not selected_rows.empty:
+                        auto_selected = selected_rows.iloc[0]
+                        case_name = str(auto_selected["標案名稱"]).strip()
+                        st.session_state.case_name = case_name
+                        st.session_state.agency_name = str(auto_selected["機關名稱"]).strip()
+                        st.session_state.unit_name = str(auto_selected["單位名稱"]).strip()
+                        st.session_state.dept = st.session_state.unit_name
+                else:
+                    case_name = ""
+                    st.session_state.case_name = ""
+                    st.session_state.budget = 0
+                    st.session_state.dept = ""
+
+        if use_manual_case_input:
+            case_name = st.text_input(
+                "📌 標案名稱",
+                value=st.session_state.case_name,
+                placeholder="例：彰化縣○○公園綠美化工程",
+                help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
+            )
+
+            departments = get_department_options()
+            dept_options = ["（請選擇）"] + departments + ["其他"]
+            dept_index = 0
+            if st.session_state.dept in departments:
+                dept_index = dept_options.index(st.session_state.dept)
+            elif st.session_state.dept and st.session_state.dept not in ("（請選擇）", ""):
+                dept_index = dept_options.index("其他")
+
+            dept = st.selectbox(
+                "🏛️ 主辦局處",
+                options=dept_options,
+                index=dept_index
+            )
+
+            dept_other = ""
+            if dept == "其他":
+                dept_other = st.text_input(
+                    "請填寫主辦局處名稱",
+                    value=st.session_state.dept_other,
+                    placeholder="例：文化局"
+                ).strip()
+
+            budget_input = st.text_input(
+                "💰 決標金額（元）",
+                value=str(int(st.session_state.budget)) if st.session_state.budget else "",
+                placeholder="例：15000000",
+                help="請輸入決標金額（純數字，不含逗號）"
+            )
+        else:
+            selected_dept = unit if unit != "（請選擇）" else "（請選擇）"
+            if auto_selected is not None:
+                st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
+            st.text_input("📌 標案名稱", value=case_name, disabled=True)
+            st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
+            budget_input = st.text_input(
+                "💰 決標金額（元）",
+                value=str(int(st.session_state.budget)) if st.session_state.budget else "",
+                disabled=True,
+                help="此欄位由雲端試算表自動帶入"
+            )
+            dept = selected_dept
 
     with col2:
         # Keyword detection live preview

@@ -16,6 +16,19 @@ from google.oauth2.service_account import Credentials
 PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
 PRESET_SHEET_GID = "0"
 
+DEFAULT_SYNC_HEADERS = [
+    "同步時間",
+    "案件代碼",
+    "標案名稱",
+    "主辦局處",
+    "決標金額",
+    "氣候預算",
+    "氣候比例(%)",
+    "標案類別",
+    "細項分類",
+    "風險等級",
+]
+
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="彰化縣氣候預算判讀系統",
@@ -565,17 +578,31 @@ def sync_to_google_sheet_direct(payload):
 
     metadata = payload.get("project_metadata", {})
     assessment = payload.get("climate_assessment", {})
-    row = [
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        metadata.get("uid", ""),
-        metadata.get("name", ""),
-        metadata.get("dept", ""),
-        metadata.get("total_budget", 0),
-        payload.get("climate_budget_total", 0),
-        assessment.get("category", ""),
-        assessment.get("sub_category", ""),
-        assessment.get("alert_level", ""),
-    ]
+    total_budget = metadata.get("total_budget", 0) or 0
+    climate_budget = payload.get("climate_budget_total", 0) or 0
+    climate_ratio = round((climate_budget / total_budget) * 100, 1) if total_budget else 0
+
+    row_dict = {
+        "同步時間": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "案件代碼": metadata.get("uid", ""),
+        "標案名稱": metadata.get("name", ""),
+        "主辦局處": metadata.get("dept", ""),
+        "決標金額": total_budget,
+        "氣候預算": climate_budget,
+        "氣候比例(%)": climate_ratio,
+        "標案類別": assessment.get("category", ""),
+        "細項分類": assessment.get("sub_category", ""),
+        "風險等級": assessment.get("alert_level", ""),
+    }
+
+    headers = worksheet.row_values(1)
+    if not headers:
+        headers = DEFAULT_SYNC_HEADERS.copy()
+        worksheet.append_row(headers, value_input_option="USER_ENTERED")
+
+    row = [row_dict.get(col, "") for col in headers]
+    if len(row) != len(headers):
+        return False, "資料欄位數量與試算表標題不一致"
 
     try:
         worksheet.append_row(row, value_input_option="USER_ENTERED")

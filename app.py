@@ -482,10 +482,6 @@ def get_google_sheet_webhook_url():
             if normalized_config_url:
                 return normalized_config_url
 
-    spreadsheet_id = get_google_sheet_target().get("spreadsheet_id", "").strip()
-    if spreadsheet_id:
-        return f"https://script.google.com/macros/s/{spreadsheet_id}/exec"
-
     return ""
 
 

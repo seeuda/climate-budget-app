@@ -792,6 +792,7 @@ st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', un
 if st.session_state.step == 0:
     st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊</div>', unsafe_allow_html=True)
 
+    case_df, case_error = load_registered_cases()
     use_manual_case_input = st.checkbox(
         "自行輸入計畫資訊",
         value=st.session_state.use_manual_case_input,

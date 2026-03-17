@@ -563,8 +563,20 @@ def get_google_sheet_client():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
-    creds = Credentials.from_service_account_info(dict(service_account_info), scopes=scopes)
-    return gspread.authorize(creds), ""
+
+    try:
+        service_account_dict = dict(service_account_info)
+    except Exception as e:
+        return None, f"gcp_service_account 格式錯誤：{e}"
+
+    try:
+        creds = Credentials.from_service_account_info(
+            service_account_dict,
+            scopes=scopes,
+        )
+        return gspread.authorize(creds), ""
+    except Exception as e:
+        return None, f"service account 驗證失敗：{e}"
 
 
 def sync_to_google_sheet_direct(payload):

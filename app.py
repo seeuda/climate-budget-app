@@ -405,9 +405,11 @@ def detect_keywords(text):
 
     for rule in KWDICT.get("keyword_logic", []):
         triggers = rule.get("triggers", [])
-        hit = next((t for t in triggers if t in text), None)
+        if not triggers:
+            continue
         synthetic_keyword = "/".join(triggers)
-        if hit and synthetic_keyword not in seen:
+        # Multi-trigger logic rules should match only when all triggers appear.
+        if all(t in text for t in triggers) and synthetic_keyword not in seen:
             matches.append({
                 "keyword": synthetic_keyword,
                 "suggested_item": rule.get("suggested_item", ""),
@@ -426,16 +428,32 @@ def detect_text_keywords(text, keywords):
     return [k for k in keywords if k and k in text]
 
 
+def get_weighting_parameters():
+    """Read weighting parameters from config with safe defaults."""
+    weighting = CONFIG.get("weighting_parameters", {})
+    impact_cfg = weighting.get("impact_factor", {})
+    social_cfg = weighting.get("social_resilience_factor", {})
+    return {
+        "impact_default": impact_cfg.get("default", 1.0),
+        "impact_boost": impact_cfg.get("boost", 1.15),
+        "social_default": social_cfg.get("default", 1.0),
+        "social_per_group": social_cfg.get("per_vulnerable_group", 0.05),
+        "social_max": social_cfg.get("max", 1.2),
+    }
+
+
 def get_impact_factor(low_carbon_procurement):
     """Calculate impact factor I for low-carbon procurement commitments."""
-    return 1.15 if low_carbon_procurement else 1.0
+    params = get_weighting_parameters()
+    return params["impact_boost"] if low_carbon_procurement else params["impact_default"]
 
 
 def get_social_resilience_factor(beneficiary_groups):
     """Calculate social resilience factor S based on vulnerable groups coverage."""
-    base = 1.0
-    bonus = min(len(beneficiary_groups) * 0.05, 0.2)
-    return round(base + bonus, 2)
+    params = get_weighting_parameters()
+    base = params["social_default"]
+    bonus = len(beneficiary_groups) * params["social_per_group"]
+    return round(min(base + bonus, params["social_max"]), 2)
 
 
 def calc_weighted_climate_budget(raw_budget, impact_factor, social_factor):
@@ -798,14 +816,17 @@ if st.session_state.step == 0:
     # Proceed button
     selected_dept = dept_other if dept == "其他" else dept
 
+    forced_review_threshold = CONFIG.get("weighting_parameters", {}).get(
+        "high_budget_forced_review_threshold", 50000000
+    )
     high_budget_forced_review = (
-        budget_val >= 50000000 and case_name and not kw_matches
+        budget_val >= forced_review_threshold and case_name and not kw_matches
     )
     exclusion_hits = detect_text_keywords(case_name, KWDICT.get("exclusion_keywords", []))
 
     if high_budget_forced_review:
         st.markdown(
-            '<div class="alert-purple">🧭 本案金額超過5,000萬元且未命中關鍵字，依防漂綠規則仍需強制進入下一步檢核。</div>',
+            f'<div class="alert-purple">🧭 本案金額超過{forced_review_threshold:,}元且未命中關鍵字，依防漂綠規則仍需強制進入下一步檢核。</div>',
             unsafe_allow_html=True
         )
 
@@ -1120,9 +1141,28 @@ elif st.session_state.step == 4:
     cat = get_taxonomy_by_id(state.selected_category)
     sub = get_sub_by_id(cat, state.selected_sub) if cat else None
 
+    st.markdown("---")
+    st.markdown('<div class="section-title">⚖️ 動態多重加權（R × I × S）</div>', unsafe_allow_html=True)
+
+    low_carbon_procurement = st.checkbox(
+        "落實低碳採購（如租賃限電動/油電車、工程使用低碳建材）",
+        value=st.session_state.low_carbon_procurement,
+        help="勾選後影響因子 I 會提高。"
+    )
+    social_group_options = ["高齡者", "身心障礙者", "新住民"]
+    social_resilience_groups = st.multiselect(
+        "受益對象涵蓋之氣候脆弱族群（可複選）",
+        options=social_group_options,
+        default=st.session_state.social_resilience_groups,
+        help="每涵蓋1類脆弱族群，社會韌性係數 S 增加0.05（最高1.20）。"
+    )
+
+    st.session_state.low_carbon_procurement = low_carbon_procurement
+    st.session_state.social_resilience_groups = social_resilience_groups
+
     climate_total = sum(ib.get("amount", 0) for ib in state.item_budgets)
-    impact_factor = get_impact_factor(state.low_carbon_procurement)
-    social_factor = get_social_resilience_factor(state.social_resilience_groups)
+    impact_factor = get_impact_factor(low_carbon_procurement)
+    social_factor = get_social_resilience_factor(social_resilience_groups)
     weighted_climate_total = calc_weighted_climate_budget(climate_total, impact_factor, social_factor)
     climate_ratio = climate_total / state.budget * 100 if state.budget else 0
     weighted_ratio = weighted_climate_total / state.budget * 100 if state.budget else 0

@@ -415,37 +415,6 @@ def detect_text_keywords(text, keywords):
     return [k for k in keywords if k and k in text]
 
 
-def get_weighting_parameters():
-    """Read weighting parameters from config with safe defaults."""
-    weighting = CONFIG.get("weighting_parameters", {})
-    impact_cfg = weighting.get("impact_factor", {})
-    social_cfg = weighting.get("social_resilience_factor", {})
-    return {
-        "impact_default": impact_cfg.get("default", 1.0),
-        "impact_boost": impact_cfg.get("boost", 1.15),
-        "social_default": social_cfg.get("default", 1.0),
-        "social_per_group": social_cfg.get("per_vulnerable_group", 0.05),
-        "social_max": social_cfg.get("max", 1.2),
-    }
-
-
-def get_impact_factor(low_carbon_procurement):
-    """Calculate impact factor I for low-carbon procurement commitments."""
-    params = get_weighting_parameters()
-    return params["impact_boost"] if low_carbon_procurement else params["impact_default"]
-
-
-def get_social_resilience_factor(beneficiary_groups):
-    """Calculate social resilience factor S based on vulnerable groups coverage."""
-    params = get_weighting_parameters()
-    base = params["social_default"]
-    bonus = len(beneficiary_groups) * params["social_per_group"]
-    return round(min(base + bonus, params["social_max"]), 2)
-
-
-def calc_weighted_climate_budget(raw_budget, impact_factor, social_factor):
-    """Dynamic weighted climate budget formula: R × I × S."""
-    return int(round((raw_budget or 0) * impact_factor * social_factor))
 
 def get_taxonomy_by_id(cat_id):
     for cat in LOGIC["taxonomy"]:
@@ -485,16 +454,11 @@ def generate_export_json(state):
         "climate_budget_total": sum(
             i.get("amount", 0) for i in state.get("item_budgets", [])
         ),
-        "weighted_climate_budget_total": state.get("weighted_climate_budget_total", 0),
-        "impact_factor": state.get("impact_factor", 1.0),
-        "social_resilience_factor": state.get("social_resilience_factor", 1.0),
         "impact_level": get_alert_level(state.get("budget", 0))["level"],
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "green_spending_category": state.get("green_spending_category", []),
             "qualitative_factors": state.get("qualitative_factors", []),
-            "low_carbon_procurement": state.get("low_carbon_procurement", False),
-            "social_resilience_groups": state.get("social_resilience_groups", []),
         },
     }
     return result
@@ -608,7 +572,6 @@ def sync_to_google_sheet_direct(payload):
         metadata.get("dept", ""),
         metadata.get("total_budget", 0),
         payload.get("climate_budget_total", 0),
-        payload.get("weighted_climate_budget_total", 0),
         assessment.get("category", ""),
         assessment.get("sub_category", ""),
         assessment.get("alert_level", ""),
@@ -764,8 +727,6 @@ def init_state():
         "sync_done": False,
         "sync_message": "",
         "sync_signature": "",
-        "low_carbon_procurement": False,
-        "social_resilience_groups": [],
         "negative_filter_override": False,
     }
     for k, v in defaults.items():
@@ -1380,31 +1341,8 @@ elif st.session_state.step == 4:
     cat = get_taxonomy_by_id(state.selected_category)
     sub = get_sub_by_id(cat, state.selected_sub) if cat else None
 
-    st.markdown("---")
-    st.markdown('<div class="section-title">⚖️ 動態多重加權（R × I × S）</div>', unsafe_allow_html=True)
-
-    low_carbon_procurement = st.checkbox(
-        "落實低碳採購（如租賃限電動/油電車、工程使用低碳建材）",
-        value=st.session_state.low_carbon_procurement,
-        help="勾選後影響因子 I 會提高。"
-    )
-    social_group_options = ["高齡者", "身心障礙者", "新住民"]
-    social_resilience_groups = st.multiselect(
-        "受益對象涵蓋之氣候脆弱族群（可複選）",
-        options=social_group_options,
-        default=st.session_state.social_resilience_groups,
-        help="每涵蓋1類脆弱族群，社會韌性係數 S 增加0.05（最高1.20）。"
-    )
-
-    st.session_state.low_carbon_procurement = low_carbon_procurement
-    st.session_state.social_resilience_groups = social_resilience_groups
-
     climate_total = sum(ib.get("amount", 0) for ib in state.item_budgets)
-    impact_factor = get_impact_factor(low_carbon_procurement)
-    social_factor = get_social_resilience_factor(social_resilience_groups)
-    weighted_climate_total = calc_weighted_climate_budget(climate_total, impact_factor, social_factor)
     climate_ratio = climate_total / state.budget * 100 if state.budget else 0
-    weighted_ratio = weighted_climate_total / state.budget * 100 if state.budget else 0
 
     # Summary display
     col_info, col_chart = st.columns([3, 2])
@@ -1444,17 +1382,6 @@ elif st.session_state.step == 4:
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div class="budget-display" style="margin-bottom:0.5rem;background:linear-gradient(135deg,#2d6a4f,#52b788)">
-            <div class="label">加權後氣候預算（R × I × S）</div>
-            <div class="amount">{fmt_twd(weighted_climate_total)}</div>
-            <div style="font-size:0.85rem;opacity:0.85;margin-top:0.3rem">I={impact_factor:.2f} · S={social_factor:.2f} · 占比 {weighted_ratio:.1f}%</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Simple progress bar
-        st.progress(min(weighted_ratio / 100, 1.0), text=f"加權後氣候預算占比 {weighted_ratio:.1f}%")
-
         # Alert box
         level = alert["level"]
         if level == "extreme":
@@ -1465,22 +1392,6 @@ elif st.session_state.step == 4:
             st.markdown(f'<div class="alert-yellow"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="alert-green"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown('<div class="section-title">⚖️ 動態多重加權（R × I × S）</div>', unsafe_allow_html=True)
-
-    st.session_state.low_carbon_procurement = st.checkbox(
-        "落實低碳採購（如租賃限電動/油電車、工程使用低碳建材）",
-        value=st.session_state.low_carbon_procurement,
-        help="勾選後影響因子 I 會提高。"
-    )
-    social_group_options = ["高齡者", "身心障礙者", "新住民"]
-    st.session_state.social_resilience_groups = st.multiselect(
-        "受益對象涵蓋之氣候脆弱族群（可複選）",
-        options=social_group_options,
-        default=st.session_state.social_resilience_groups,
-        help="每涵蓋1類脆弱族群，社會韌性係數 S 增加0.05（最高1.20）。"
-    )
 
     st.markdown("---")
     st.markdown('<div class="section-title">🧩 政策對接補充欄位</div>', unsafe_allow_html=True)
@@ -1515,11 +1426,6 @@ elif st.session_state.step == 4:
         "engineering_guideline_type": state.engineering_guideline_type,
         "green_spending_category": state.green_spending_category,
         "qualitative_factors": state.qualitative_factors,
-        "low_carbon_procurement": state.low_carbon_procurement,
-        "social_resilience_groups": state.social_resilience_groups,
-        "impact_factor": impact_factor,
-        "social_resilience_factor": social_factor,
-        "weighted_climate_budget_total": weighted_climate_total,
     }
     export_data = generate_export_json(export_payload)
 
@@ -1570,10 +1476,6 @@ elif st.session_state.step == 4:
             "工項比例(%)": round(ib["amount"] / state.budget * 100, 1) if state.budget else 0,
             "氣候預算合計": climate_total,
             "氣候預算比例(%)": round(climate_ratio, 1),
-            "影響因子I": impact_factor,
-            "社會韌性係數S": social_factor,
-            "加權後氣候預算": weighted_climate_total,
-            "加權後氣候預算比例(%)": round(weighted_ratio, 1),
         })
 
     csv_df = pd.DataFrame(rows)

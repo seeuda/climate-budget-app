@@ -589,17 +589,26 @@ def sync_to_google_sheet_direct(payload):
         "風險等級": assessment.get("alert_level", ""),
     }
 
-    try:
-        headers = [h.strip() for h in worksheet.row_values(1) if str(h).strip()]
-    except Exception:
-        headers = []
+    expected_headers = list(DEFAULT_SYNC_HEADERS)
+    expected_set = set(expected_headers)
 
-    if not headers:
-        headers = list(DEFAULT_SYNC_HEADERS)
+    try:
+        first_row_values = [str(h).strip() for h in worksheet.row_values(1) if str(h).strip()]
+    except Exception:
+        first_row_values = []
+
+    has_header_overlap = len(set(first_row_values) & expected_set) >= 2
+    if has_header_overlap:
+        headers = first_row_values
+    else:
+        headers = expected_headers
         try:
-            worksheet.update("A1", [headers])
-        except Exception:
-            pass
+            if first_row_values:
+                worksheet.insert_row(headers, index=1, value_input_option="USER_ENTERED")
+            else:
+                worksheet.update("A1", [headers])
+        except Exception as e:
+            return False, f"初始化試算表表頭失敗：{e}"
 
     row = [row_dict.get(col, "") for col in headers]
     if len(row) != len(headers):

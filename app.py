@@ -1228,6 +1228,22 @@ elif st.session_state.step == 4:
             st.markdown(f'<div class="alert-green"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
 
     st.markdown("---")
+    st.markdown('<div class="section-title">⚖️ 動態多重加權（R × I × S）</div>', unsafe_allow_html=True)
+
+    st.session_state.low_carbon_procurement = st.checkbox(
+        "落實低碳採購（如租賃限電動/油電車、工程使用低碳建材）",
+        value=st.session_state.low_carbon_procurement,
+        help="勾選後影響因子 I 會提高。"
+    )
+    social_group_options = ["高齡者", "身心障礙者", "新住民"]
+    st.session_state.social_resilience_groups = st.multiselect(
+        "受益對象涵蓋之氣候脆弱族群（可複選）",
+        options=social_group_options,
+        default=st.session_state.social_resilience_groups,
+        help="每涵蓋1類脆弱族群，社會韌性係數 S 增加0.05（最高1.20）。"
+    )
+
+    st.markdown("---")
     st.markdown('<div class="section-title">🧩 政策對接補充欄位</div>', unsafe_allow_html=True)
 
     st.session_state.green_spending_category = st.multiselect(

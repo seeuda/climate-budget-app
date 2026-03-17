@@ -49,17 +49,35 @@ streamlit run app.py
 
 步驟五已改為：**先同步至預設 Google 試算表，成功後才可下載 JSON/CSV**。
 
-請擇一設定 webhook URL：
+支援兩種同步模式（擇一）：
 
-1. **建議：Streamlit secrets**（避免把敏感網址寫進 repo）
-   在 `.streamlit/secrets.toml` 加入：
+1. **Webhook 模式（原本做法）**
+   在 `.streamlit/secrets.toml` 設定：
 
    ```toml
    google_sheet_webhook_url = "https://script.google.com/macros/s/你的部署ID/exec"
+   google_sheet_id = "你的試算表ID"
+   google_sheet_worksheet = "工作表1"
    ```
 
-2. **備援：`data/config.json`**
-   填入 `integrations.google_sheet_webhook_url`。
+2. **Service Account 直接寫入（新做法）**
+   若未設定 webhook，系統會改用 service account 直接 append。
+
+   ```toml
+   google_sheet_id = "10Z_wgmfqv4h4rk4oKDsP-V4jSS9XmO6PGAy_jrpTU7Q"
+   google_sheet_worksheet = "工作表1"
+
+   [gcp_service_account]
+   type = "service_account"
+   project_id = "..."
+   private_key_id = "..."
+   private_key = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+   client_email = "changhuaclimate@elated-parser-486413-m5.iam.gserviceaccount.com"
+   client_id = "..."
+   token_uri = "https://oauth2.googleapis.com/token"
+   ```
+
+`data/config.json` 可保留 `integrations.google_sheet_id / google_sheet_worksheet` 作為預設值。
 
 ### 2026/03 清單分析後的規則補強
 

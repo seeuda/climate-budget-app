@@ -630,6 +630,27 @@ def load_registered_cases():
     return cleaned.reset_index(drop=True), ""
 
 
+def parse_budget_from_sheet(raw_value):
+    """Safely parse budget value from sheet cell."""
+    if raw_value is None or (isinstance(raw_value, float) and pd.isna(raw_value)):
+        return 0
+
+    if isinstance(raw_value, (int, float)):
+        try:
+            return max(int(float(raw_value)), 0)
+        except (TypeError, ValueError):
+            return 0
+
+    raw_text = str(raw_value).strip().replace(",", "")
+    if not raw_text:
+        return 0
+
+    try:
+        return max(int(float(raw_text)), 0)
+    except ValueError:
+        return 0
+
+
 def sync_to_google_sheet(payload):
     """Send assessment payload to Google Sheet webhook."""
     webhook_url = get_google_sheet_webhook_url()
@@ -833,6 +854,11 @@ if st.session_state.step == 0:
                         st.session_state.agency_name = str(auto_selected["機關名稱"]).strip()
                         st.session_state.unit_name = str(auto_selected["單位名稱"]).strip()
                         st.session_state.dept = st.session_state.unit_name
+                else:
+                    case_name = ""
+                    st.session_state.case_name = ""
+                    st.session_state.budget = 0
+                    st.session_state.dept = ""
 
         if use_manual_case_input:
             case_name = st.text_input(
@@ -873,10 +899,7 @@ if st.session_state.step == 0:
         else:
             selected_dept = unit if unit != "（請選擇）" else "（請選擇）"
             if auto_selected is not None:
-                raw_budget = str(auto_selected.get("決標金額", "")).strip()
-                numeric_budget = "".join(ch for ch in raw_budget if ch.isdigit())
-                if numeric_budget:
-                    st.session_state.budget = int(numeric_budget)
+                st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
             st.text_input("📌 標案名稱", value=case_name, disabled=True)
             st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
             budget_input = st.text_input(

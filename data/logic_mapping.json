@@ -342,6 +342,33 @@
               ],
               "policy": "農業節水與調適",
               "alert": ""
+            },
+            {
+              "label": "資源回收再生系統（如輔具維修回收再利用）",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "資源循環再利用",
+              "alert": ""
+            },
+            {
+              "label": "焚化底渣/飛灰資源化處理",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "循環材料替代原生資源",
+              "alert": ""
+            },
+            {
+              "label": "畜牧糞尿氨氮回收與沼氣發電",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "農業與環境部門減碳整合",
+              "alert": ""
             }
           ]
         }
@@ -717,6 +744,24 @@
               ],
               "policy": "被動式建築節能",
               "alert": ""
+            },
+            {
+              "label": "有機廢棄物現地堆肥化/資源化",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "維護作業低碳化",
+              "alert": ""
+            },
+            {
+              "label": "使用電力驅動維護機具（如電動割草機）",
+              "mitigation_codes": [
+                "能源-2"
+              ],
+              "adaptation_codes": [],
+              "policy": "維護設備電動化",
+              "alert": ""
             }
           ]
         }
@@ -914,24 +959,51 @@
     },
     {
       "id": "G",
-      "label": "其他計畫類別（彈性填報）",
-      "icon": "🧩",
-      "description": "無法歸入既有類別時可選，後續再由工項與預算判讀",
+      "label": "公正轉型與社會韌性",
+      "icon": "🤝",
+      "description": "聚焦脆弱族群氣候防護、平權與社區韌性能力建構",
       "sub_categories": [
         {
           "id": "G1",
-          "label": "其他或跨域計畫",
-          "examples": "如：跨局處整合方案、試辦計畫、特殊委辦案件",
+          "label": "弱勢族群低碳交通與防災據點",
+          "examples": "如：電動復康巴士、身障中心、長照關懷中心",
           "items": [
             {
-              "label": "其他氣候相關作為（請於後續說明）",
+              "label": "弱勢族群低碳交通平權（如電動復康巴士）",
+              "mitigation_codes": [
+                "運輸-2"
+              ],
+              "adaptation_codes": [
+                "調適-社會"
+              ],
+              "policy": "交通平權與公正轉型",
+              "alert": ""
+            },
+            {
+              "label": "氣候脆弱族群避暑與防災據點（身障中心/長照關懷中心營運）",
+              "mitigation_codes": [],
+              "adaptation_codes": [
+                "調適-社會"
+              ],
+              "policy": "社福據點氣候韌性",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "G2",
+          "label": "基層氣候能力建構",
+          "examples": "如：社區大學營運、社區規劃師駐地輔導",
+          "items": [
+            {
+              "label": "基層氣候能力建構與綠生活推廣（社區大學/社區規劃師）",
               "mitigation_codes": [
                 "淨零教育-1"
               ],
               "adaptation_codes": [
                 "調適-政策"
               ],
-              "policy": "保留彈性填報，後續依內容判讀",
+              "policy": "社區韌性與公民參與",
               "alert": ""
             }
           ]

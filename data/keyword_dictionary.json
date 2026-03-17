@@ -465,5 +465,61 @@
       "category_id": "E",
       "sub_id": "E2"
     }
+  ],
+  "exclusion_keywords": [
+    "法律",
+    "訴願",
+    "審計",
+    "精算",
+    "疫苗",
+    "接種",
+    "防毒",
+    "頻寬",
+    "監視",
+    "保全",
+    "影印",
+    "粉刷",
+    "印製",
+    "宣傳品"
+  ],
+  "keyword_logic": [
+    {
+      "triggers": [
+        "租賃",
+        "公務車"
+      ],
+      "suggested_item": "車輛租賃低碳化（限電動車/油電車）",
+      "category_id": "C",
+      "sub_id": "C2"
+    },
+    {
+      "triggers": [
+        "評估",
+        "規劃",
+        "徵收"
+      ],
+      "suggested_item": "氣候變遷風險與韌性評估",
+      "category_id": "F",
+      "sub_id": "F1"
+    },
+    {
+      "triggers": [
+        "資訊",
+        "系統"
+      ],
+      "suggested_item": "災害預警或智慧水網監測系統",
+      "category_id": "F",
+      "sub_id": "F2",
+      "note": "提示排除一般行政 IT 維運系統"
+    },
+    {
+      "triggers": [
+        "出流管制",
+        "水保"
+      ],
+      "suggested_item": "防洪排水與滯洪設施",
+      "category_id": "B",
+      "sub_id": "B1"
+    }
   ]
 }

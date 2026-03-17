@@ -464,6 +464,83 @@
       "code": "住商-4",
       "category_id": "E",
       "sub_id": "E2"
+    },
+    {
+      "keyword": "推進",
+      "suggested_item": "推進管線/潛盾工程（降低明挖碳排）",
+      "code": "水利-節能",
+      "category_id": "B",
+      "sub_id": "B3"
+    },
+    {
+      "keyword": "HDPE",
+      "suggested_item": "使用低碳或長壽命管材（如HDPE管）",
+      "code": "水利-材料",
+      "category_id": "B",
+      "sub_id": "B3"
+    },
+    {
+      "keyword": "刨除料",
+      "suggested_item": "瀝青刨除料(RAP)再利用或溫拌瀝青",
+      "code": "環境-5",
+      "category_id": "A",
+      "sub_id": "A3"
+    },
+    {
+      "keyword": "溫拌瀝青",
+      "suggested_item": "瀝青刨除料(RAP)再利用或溫拌瀝青",
+      "code": "環境-5",
+      "category_id": "A",
+      "sub_id": "A3"
+    },
+    {
+      "keyword": "長軌",
+      "suggested_item": "採用長軌(CWR)減少焊接與接頭損耗",
+      "code": "運輸-輕量化",
+      "category_id": "C",
+      "sub_id": "C3"
+    },
+    {
+      "keyword": "道碴",
+      "suggested_item": "軌道道碴資源循環就地再利用",
+      "code": "環境-5",
+      "category_id": "C",
+      "sub_id": "C3"
+    },
+    {
+      "keyword": "無柱懸吊",
+      "suggested_item": "採用無柱懸吊技術減少結構材料",
+      "code": "運輸-輕量化",
+      "category_id": "C",
+      "sub_id": "C3"
+    },
+    {
+      "keyword": "石籠",
+      "suggested_item": "自然解方(NBS)生態護岸與固床工",
+      "code": "農業-生態",
+      "category_id": "D",
+      "sub_id": "D3"
+    },
+    {
+      "keyword": "砌石",
+      "suggested_item": "自然解方(NBS)生態護岸與固床工",
+      "code": "農業-生態",
+      "category_id": "D",
+      "sub_id": "D3"
+    },
+    {
+      "keyword": "野溪",
+      "suggested_item": "野溪整治結合植生碳匯營造",
+      "code": "農業-5",
+      "category_id": "D",
+      "sub_id": "D3"
+    },
+    {
+      "keyword": "農塘",
+      "suggested_item": "農塘營造與微氣候水資源調適",
+      "code": "調適-水",
+      "category_id": "D",
+      "sub_id": "D3"
     }
   ],
   "exclusion_keywords": [

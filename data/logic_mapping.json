@@ -193,6 +193,41 @@
               "alert": ""
             }
           ]
+        },
+        {
+          "id": "A3",
+          "label": "公路與橋梁特殊減碳工法",
+          "examples": "如：RAP再利用、溫拌瀝青、橋梁預鑄節塊吊裝",
+          "items": [
+            {
+              "label": "瀝青刨除料(RAP)再利用或溫拌瀝青",
+              "mitigation_codes": [
+                "運輸-5",
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "公路工程綠色材料",
+              "alert": ""
+            },
+            {
+              "label": "橋梁採預鑄節塊吊裝或支撐先進工法（減少場鑄能耗）",
+              "mitigation_codes": [
+                "運輸-3"
+              ],
+              "adaptation_codes": [],
+              "policy": "國道/公路綠色工法",
+              "alert": ""
+            },
+            {
+              "label": "路堤回填採用瀝青刨除料或再生粒料",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "國道工程資源循環",
+              "alert": ""
+            }
+          ]
         }
       ]
     },
@@ -371,6 +406,40 @@
               "alert": ""
             }
           ]
+        },
+        {
+          "id": "B3",
+          "label": "下水道與管線減碳設計",
+          "examples": "如：重力流設計、長壽命管材、施工用水循環利用",
+          "items": [
+            {
+              "label": "地勢評估採用重力流設計（節省抽送能源）",
+              "mitigation_codes": [
+                "水利-節能"
+              ],
+              "adaptation_codes": [],
+              "policy": "下水道指引：減少營運耗能",
+              "alert": ""
+            },
+            {
+              "label": "採用長壽命管材（如HDPE高密度聚乙烯管）",
+              "mitigation_codes": [
+                "水利-材料"
+              ],
+              "adaptation_codes": [],
+              "policy": "下水道指引：延長設施壽命",
+              "alert": ""
+            },
+            {
+              "label": "施工用水取用污水廠放流水（減少自來水碳排）",
+              "mitigation_codes": [],
+              "adaptation_codes": [
+                "調適-水"
+              ],
+              "policy": "下水道指引：水資源循環",
+              "alert": ""
+            }
+          ]
         }
       ]
     },
@@ -496,6 +565,40 @@
               "green_spending_type": "綠色能源"
             }
           ]
+        },
+        {
+          "id": "C3",
+          "label": "軌道與鐵道系統優化",
+          "examples": "如：長軌無縫化、無柱懸吊、道碴循環再利用",
+          "items": [
+            {
+              "label": "採用長軌(CWR)無縫技術與道岔優化設計",
+              "mitigation_codes": [
+                "運輸-輕量化"
+              ],
+              "adaptation_codes": [],
+              "policy": "鐵道指引：綠色工法",
+              "alert": ""
+            },
+            {
+              "label": "電車線採用無柱懸吊技術（減少支柱材料）",
+              "mitigation_codes": [
+                "運輸-輕量化"
+              ],
+              "adaptation_codes": [],
+              "policy": "鐵道指引：減量設計",
+              "alert": ""
+            },
+            {
+              "label": "道碴碎石區域內重複再利用",
+              "mitigation_codes": [
+                "環境-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "鐵道指引：就地取材",
+              "alert": ""
+            }
+          ]
         }
       ]
     },
@@ -608,6 +711,40 @@
                 "調適-生態"
               ],
               "policy": "海岸韌性與碳匯",
+              "alert": ""
+            }
+          ]
+        },
+        {
+          "id": "D3",
+          "label": "農村水保與自然解方(NBS)",
+          "examples": "如：砌石石籠護岸、野溪復育、農塘調適設施",
+          "items": [
+            {
+              "label": "採用砌石、石籠等自然材料工法（減少混凝土）",
+              "mitigation_codes": [
+                "農業-生態"
+              ],
+              "adaptation_codes": [],
+              "policy": "水保指引：低碳材料與NBS",
+              "alert": ""
+            },
+            {
+              "label": "野溪復育、崩塌地處理結合植生碳匯營造",
+              "mitigation_codes": [
+                "農業-5"
+              ],
+              "adaptation_codes": [],
+              "policy": "水保指引：增加土壤與植生碳匯",
+              "alert": ""
+            },
+            {
+              "label": "農塘營造與蓄排水調適設施",
+              "mitigation_codes": [],
+              "adaptation_codes": [
+                "調適-水"
+              ],
+              "policy": "水保指引：氣候韌性調適",
               "alert": ""
             }
           ]
@@ -1018,7 +1155,11 @@
     "景觀",
     "軌道",
     "下水道",
-    "港口"
+    "港口",
+    "公路",
+    "國道",
+    "鐵道",
+    "農村水保"
   ],
   "central_sector_strategies": {
     "住商部門": [

@@ -428,16 +428,32 @@ def detect_text_keywords(text, keywords):
     return [k for k in keywords if k and k in text]
 
 
+def get_weighting_parameters():
+    """Read weighting parameters from config with safe defaults."""
+    weighting = CONFIG.get("weighting_parameters", {})
+    impact_cfg = weighting.get("impact_factor", {})
+    social_cfg = weighting.get("social_resilience_factor", {})
+    return {
+        "impact_default": impact_cfg.get("default", 1.0),
+        "impact_boost": impact_cfg.get("boost", 1.15),
+        "social_default": social_cfg.get("default", 1.0),
+        "social_per_group": social_cfg.get("per_vulnerable_group", 0.05),
+        "social_max": social_cfg.get("max", 1.2),
+    }
+
+
 def get_impact_factor(low_carbon_procurement):
     """Calculate impact factor I for low-carbon procurement commitments."""
-    return 1.15 if low_carbon_procurement else 1.0
+    params = get_weighting_parameters()
+    return params["impact_boost"] if low_carbon_procurement else params["impact_default"]
 
 
 def get_social_resilience_factor(beneficiary_groups):
     """Calculate social resilience factor S based on vulnerable groups coverage."""
-    base = 1.0
-    bonus = min(len(beneficiary_groups) * 0.05, 0.2)
-    return round(base + bonus, 2)
+    params = get_weighting_parameters()
+    base = params["social_default"]
+    bonus = len(beneficiary_groups) * params["social_per_group"]
+    return round(min(base + bonus, params["social_max"]), 2)
 
 
 def calc_weighted_climate_budget(raw_budget, impact_factor, social_factor):
@@ -800,8 +816,9 @@ if st.session_state.step == 0:
     # Proceed button
     selected_dept = dept_other if dept == "其他" else dept
 
-    weighting_params = CONFIG.get("weighting_parameters", {})
-    forced_review_threshold = weighting_params.get("high_budget_forced_review_threshold", 50000000)
+    forced_review_threshold = CONFIG.get("weighting_parameters", {}).get(
+        "high_budget_forced_review_threshold", 50000000
+    )
     high_budget_forced_review = (
         budget_val >= forced_review_threshold and case_name and not kw_matches
     )

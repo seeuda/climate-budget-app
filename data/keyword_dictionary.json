@@ -541,6 +541,55 @@
       "code": "調適-水",
       "category_id": "D",
       "sub_id": "D3"
+    },
+    {
+      "keyword": "重力流",
+      "suggested_item": "地勢評估採用重力流設計（節省抽送能源）",
+      "code": "水利-節能",
+      "category_id": "B",
+      "sub_id": "B3"
+    },
+    {
+      "keyword": "預鑄",
+      "suggested_item": "模組化預鑄構件（如預鑄溝蓋、預鑄環片、系統模板）",
+      "code": "環境-5",
+      "category_id": "A",
+      "sub_id": "A1"
+    },
+    {
+      "keyword": "LEBR",
+      "suggested_item": "取得低碳(低蘊含碳)建築標示(LEBR)或候選證書",
+      "code": "住商-1",
+      "category_id": "A",
+      "sub_id": "A1"
+    },
+    {
+      "keyword": "低碳建築",
+      "suggested_item": "取得低碳(低蘊含碳)建築標示(LEBR)或候選證書",
+      "code": "住商-1",
+      "category_id": "A",
+      "sub_id": "A1"
+    },
+    {
+      "keyword": "加勁",
+      "suggested_item": "地工合成加勁材擋土牆（取代傳統混凝土擋土牆）",
+      "code": "農業-減碳",
+      "category_id": "D",
+      "sub_id": "D3"
+    },
+    {
+      "keyword": "變頻",
+      "suggested_item": "水泵、閘門採用高能源效率或變頻裝置",
+      "code": "能源-節能",
+      "category_id": "B",
+      "sub_id": "B1"
+    },
+    {
+      "keyword": "木排樁",
+      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法",
+      "code": "農業-生態",
+      "category_id": "D",
+      "sub_id": "D3"
     }
   ],
   "exclusion_keywords": [

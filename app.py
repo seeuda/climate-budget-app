@@ -1398,27 +1398,64 @@ elif st.session_state.step == 2:
     for entry in item_source_entries:
         cat = entry["category"]
         sub = entry["sub"]
-        st.markdown(f"**• {cat['icon']} {cat['label']}｜{sub['label']}**")
+        # ── 群組標題（橫跨全寬）
+        st.markdown(
+            f'<div style="background:#e8f0e8;border-left:4px solid #2d6a4f;'
+            f'padding:0.45rem 0.8rem;border-radius:0 6px 6px 0;margin:0.8rem 0 0.4rem 0;'
+            f'font-weight:700;font-size:0.92rem;color:#1a4731;">'
+            f'{cat["icon"]} {cat["label"]}｜{sub["label"]}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # 收集此 sub 下尚未渲染的工項
+        sub_items_to_render = []
         for item in sub["items"]:
             if item["label"] in rendered:
                 continue
             rendered.add(item["label"])
+            sub_items_to_render.append(item)
+
+        if not sub_items_to_render:
+            st.caption("（本細項工項已於其他群組顯示）")
+            continue
+
+        # ── 兩欄並排
+        col_left, col_right = st.columns(2)
+        for idx, item in enumerate(sub_items_to_render):
             is_suggested = item["label"] in suggested_items_labels or any(
                 kw["suggested_item"] == item["label"] for kw in st.session_state.kw_matches
             )
             is_checked = item["label"] in selected_items
+            col = col_left if idx % 2 == 0 else col_right
 
-            col_chk, col_info = st.columns([1, 8])
-            with col_chk:
-                checked = st.checkbox("", value=is_checked, key=f"item_{safe_key(item['label'])}")
-            with col_info:
+            with col:
                 star = "⭐ " if is_suggested else ""
-                codes_html = " ".join([f'<span class="code-badge">{c}</span>' for c in item.get("mitigation_codes", []) + item.get("adaptation_codes", [])])
-                alert_html = f'<span style="color:#e74c3c;font-size:0.78rem;"> ⚠️ {item["alert"]}</span>' if item.get("alert") else ""
+                codes_html = " ".join([
+                    f'<span class="code-badge">{c}</span>'
+                    for c in item.get("mitigation_codes", []) + item.get("adaptation_codes", [])
+                ])
+                alert_html = (
+                    f'<br><span style="color:#e74c3c;font-size:0.75rem;">⚠️ {item["alert"]}</span>'
+                    if item.get("alert") else ""
+                )
+                card_bg = "#f0fdf0" if is_checked else ("#fffbf0" if is_suggested else "#fafcfa")
+                card_border = "#2d6a4f" if is_checked else ("#f39c12" if is_suggested else "#dde8dd")
+
+                # 卡片本體（HTML，純展示）
                 st.markdown(
-                    f'{star}**{item["label"]}** {codes_html}{alert_html}<br>'
-                    f'<span style="font-size:0.78rem;color:#666;">📋 {item["policy"]}</span>',
-                    unsafe_allow_html=True
+                    f'<div style="background:{card_bg};border:1.5px solid {card_border};'
+                    f'border-radius:8px;padding:0.55rem 0.7rem;margin-bottom:0.1rem;min-height:72px;">'
+                    f'<span style="font-size:0.88rem;font-weight:600;color:#1a4731;">{star}{item["label"]}</span> '
+                    f'{codes_html}{alert_html}'
+                    f'<br><span style="font-size:0.74rem;color:#666;">📋 {item["policy"]}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                # checkbox 緊貼卡片下方
+                checked = st.checkbox(
+                    "選取此工項" if not is_checked else "✅ 已選取",
+                    value=is_checked,
+                    key=f"item_{safe_key(item['label'])}",
                 )
 
             if checked and item["label"] not in selected_items:
@@ -1649,20 +1686,57 @@ elif st.session_state.step == 4:
     st.markdown("---")
     st.markdown('<div class="section-title">🧩 政策對接補充欄位</div>', unsafe_allow_html=True)
 
-    st.session_state.green_spending_category = st.multiselect(
-        "綠色預算支出分類（可複選）",
-        options=CONFIG.get("green_spending_category", []),
-        default=st.session_state.green_spending_category,
-        help="對接中央綠色經費四大面向"
-    )
+    # ── 綠色預算支出分類（按鈕多選，兩欄）
+    st.markdown("**綠色預算支出分類**（可複選，對接中央綠色經費四大面向）")
+    green_options = CONFIG.get("green_spending_category", [])
+    current_green = list(st.session_state.green_spending_category)
+    gcol1, gcol2 = st.columns(2)
+    for gi, gopt in enumerate(green_options):
+        g_selected = gopt in current_green
+        gcol = gcol1 if gi % 2 == 0 else gcol2
+        gkey = f"green_{safe_key(gopt)}"
+        inject_button_style(gkey, is_selected=g_selected)
+        with gcol:
+            if st.button(
+                f"{'✅ ' if g_selected else ''}{gopt}",
+                key=gkey,
+                use_container_width=True,
+                type="secondary",
+            ):
+                if gopt in current_green:
+                    current_green.remove(gopt)
+                else:
+                    current_green.append(gopt)
+                st.session_state.green_spending_category = current_green
+                st.rerun()
+    st.session_state.green_spending_category = current_green
 
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── 氣候政策加分因子（按鈕多選，兩欄）
+    st.markdown("**氣候政策加分因子**（可複選，補充難以工程量化但可強化氣候效益的執行方案因子）")
     qualitative_options = UI.get("qualitative_factors", [])
-    st.session_state.qualitative_factors = st.multiselect(
-        "氣候政策加分因子（可複選）",
-        options=qualitative_options,
-        default=st.session_state.qualitative_factors,
-        help="補充難以工程量化但可強化氣候效益的執行方案因子"
-    )
+    current_qual = list(st.session_state.qualitative_factors)
+    qcol1, qcol2 = st.columns(2)
+    for qi, qopt in enumerate(qualitative_options):
+        q_selected = qopt in current_qual
+        qcol = qcol1 if qi % 2 == 0 else qcol2
+        qkey = f"qual_{safe_key(qopt)}"
+        inject_button_style(qkey, is_selected=q_selected)
+        with qcol:
+            if st.button(
+                f"{'✅ ' if q_selected else ''}{qopt}",
+                key=qkey,
+                use_container_width=True,
+                type="secondary",
+            ):
+                if qopt in current_qual:
+                    current_qual.remove(qopt)
+                else:
+                    current_qual.append(qopt)
+                st.session_state.qualitative_factors = current_qual
+                st.rerun()
+    st.session_state.qualitative_factors = current_qual
 
     # Export section
     st.markdown("---")

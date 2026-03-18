@@ -1541,7 +1541,12 @@ elif st.session_state.step == 4:
 
     if st.session_state.sync_message:
         if st.session_state.sync_done:
-            st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
+            if sheet_target.get("spreadsheet_id"):
+                st.markdown(
+                    f"✅ 已完成同步：已直接寫入[試算表](https://docs.google.com/spreadsheets/d/{sheet_target['spreadsheet_id']}/edit?gid=0#gid=0)"
+                )
+            else:
+                st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
         else:
             st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
 

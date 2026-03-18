@@ -504,9 +504,8 @@ def get_item_by_label(sub, label):
     return None
 
 def safe_key(text):
-    """Convert arbitrary text to a safe Streamlit widget key (alphanumeric + underscore)."""
-    import re
-    return re.sub(r"[^A-Za-z0-9_]", "_", text)
+    """Hash arbitrary text to a short, collision-free, alphanumeric Streamlit widget key."""
+    return hashlib.md5(text.encode("utf-8")).hexdigest()[:12]
 
 def inject_button_style(key, *, is_selected=False, is_suggested=False):
     """Inject CSS so specific Streamlit buttons can visually reflect state."""

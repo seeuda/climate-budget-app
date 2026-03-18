@@ -576,6 +576,41 @@ def inject_button_style(key, *, is_selected=False, is_suggested=False):
         unsafe_allow_html=True,
     )
 
+# ── 工項 → 量體縮減欄位觸發對應表 ──────────────────────────────────────────
+# key: 工項 label（部分比對）, value: 觸發哪些量體縮減欄位
+# 欄位: soil_reduction_ton（減少土方購置, 公噸）, waste_reduction_ton（減少廢棄物外運, 公噸）
+PHYSICAL_REDUCTION_TRIGGERS = {
+    # 土方平衡 → 兩者都可能
+    "現地土方平衡": ["soil_reduction_ton", "waste_reduction_ton"],
+    # RAP 刨除料再利用 → 減少廢棄物外運
+    "瀝青刨除料": ["waste_reduction_ton"],
+    "路堤回填採用瀝青刨除料": ["waste_reduction_ton"],
+    "道碴碎石": ["waste_reduction_ton"],
+    # 污泥、廢水再利用 → 減少廢棄物外運
+    "廢水污泥再利用": ["waste_reduction_ton"],
+    "焚化底渣": ["waste_reduction_ton"],
+    # 循環建材 → 減少廢棄物外運
+    "導入低蘊含碳建材或循環建材": ["waste_reduction_ton"],
+    "模組化預鑄構件": ["waste_reduction_ton"],
+    # 加勁擋土牆（取代混凝土）→ 減少廢棄物外運（少用混凝土）
+    "地工合成加勁材擋土牆": ["waste_reduction_ton"],
+    # 堆肥化
+    "有機廢棄物現地堆肥化": ["waste_reduction_ton"],
+    # 再生粒料
+    "應用再生粒料": ["waste_reduction_ton"],
+}
+
+def get_physical_reduction_fields(item_budgets):
+    """依已選工項，回傳需顯示的量體縮減欄位集合。"""
+    fields = set()
+    for ib in item_budgets:
+        label = ib.get("label", "")
+        for trigger, trigger_fields in PHYSICAL_REDUCTION_TRIGGERS.items():
+            if trigger in label:
+                fields.update(trigger_fields)
+    return fields
+
+
 def generate_export_json(state):
     """Generate the export JSON object."""
     selected_categories = state.get("selected_categories", [])
@@ -601,10 +636,10 @@ def generate_export_json(state):
             i.get("amount", 0) for i in state.get("item_budgets", [])
         ),
         "impact_level": get_alert_level(state.get("budget", 0))["level"],
+        "physical_reductions": state.get("physical_reductions", {}),
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
-            "green_spending_category": state.get("green_spending_category", []),
-            "qualitative_factors": state.get("qualitative_factors", []),
+            "user_note": state.get("user_note", ""),
         },
     }
     return result
@@ -714,21 +749,26 @@ def build_sync_row_dict(payload):
     metadata   = payload.get("project_metadata", {})
     assessment = payload.get("climate_assessment", {})
     ameta      = payload.get("assessment_metadata", {})
+    phys       = payload.get("physical_reductions", {})
     climate_total  = payload.get("climate_budget_total", 0)
     total_budget   = metadata.get("total_budget", 0)
     climate_ratio  = round(climate_total / total_budget * 100, 1) if total_budget else 0
 
-    # 氣候工項：多個工項合併成逗號分隔字串
+    # 氣候工項
     items = assessment.get("selected_items", [])
     items_text = "、".join(i.get("label", "") for i in items if i.get("label"))
 
-    # 綠色預算分類
-    green_cats = ameta.get("green_spending_category", [])
-    green_text = "、".join(green_cats) if green_cats else ""
+    # 量體縮減摘要（若有填入）
+    phys_parts = []
+    if phys.get("soil_reduction_ton", 0):
+        phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
+    if phys.get("waste_reduction_ton", 0):
+        phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
+    phys_text = "；".join(phys_parts)
 
-    # 加分因子
-    qual_factors = ameta.get("qualitative_factors", [])
-    qual_text = "、".join(qual_factors) if qual_factors else ""
+    # 備註 = user_note + 量體縮減摘要
+    note_parts = [s for s in [ameta.get("user_note", ""), phys_text] if s]
+    note_text = "｜".join(note_parts)
 
     return {
         "填報日期"         : datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -741,9 +781,9 @@ def build_sync_row_dict(payload):
         "計畫類別"         : assessment.get("category_labels", ""),
         "細項分類"         : assessment.get("sub_category_labels", ""),
         "氣候工項"         : items_text,
-        "綠色預算分類"     : green_text,
-        "氣候政策加分因子" : qual_text,
-        "備註"             : "",
+        "綠色預算分類"     : "",
+        "氣候政策加分因子" : "",
+        "備註"             : note_text,
     }
 
 
@@ -961,6 +1001,8 @@ def init_state():
         "sync_signature": "",
         "negative_filter_override": False,
         "selection_warning": "",
+        "user_note": "",
+        "physical_reductions": {},
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -1501,7 +1543,7 @@ elif st.session_state.step == 2:
             st.caption("（本細項工項已於其他群組顯示）")
             continue
 
-        # ── 兩欄並排
+        # ── 兩欄並排，點卡片切換選取
         col_left, col_right = st.columns(2)
         for idx, item in enumerate(sub_items_to_render):
             is_suggested = item["label"] in suggested_items_labels or any(
@@ -1509,41 +1551,31 @@ elif st.session_state.step == 2:
             )
             is_checked = item["label"] in selected_items
             col = col_left if idx % 2 == 0 else col_right
+            item_key = f"item_{safe_key(item['label'])}"
 
             with col:
                 star = "⭐ " if is_suggested else ""
-                codes_html = " ".join([
-                    f'<span class="code-badge">{c}</span>'
-                    for c in item.get("mitigation_codes", []) + item.get("adaptation_codes", [])
-                ])
-                alert_html = (
-                    f'<br><span style="color:#e74c3c;font-size:0.75rem;">⚠️ {item["alert"]}</span>'
-                    if item.get("alert") else ""
+                codes_str = "  ".join(
+                    item.get("mitigation_codes", []) + item.get("adaptation_codes", [])
                 )
-                card_bg = "#f0fdf0" if is_checked else ("#fffbf0" if is_suggested else "#fafcfa")
-                card_border = "#2d6a4f" if is_checked else ("#f39c12" if is_suggested else "#dde8dd")
+                alert_txt = f"\n⚠️ {item['alert']}" if item.get("alert") else ""
+                check_mark = "✅ " if is_checked else ""
 
-                # 卡片本體（HTML，純展示）
-                st.markdown(
-                    f'<div style="background:{card_bg};border:1.5px solid {card_border};'
-                    f'border-radius:8px;padding:0.55rem 0.7rem;margin-bottom:0.1rem;min-height:72px;">'
-                    f'<span style="font-size:0.88rem;font-weight:600;color:#1a4731;">{star}{item["label"]}</span> '
-                    f'{codes_html}{alert_html}'
-                    f'<br><span style="font-size:0.74rem;color:#666;">📋 {item["policy"]}</span>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-                # checkbox 緊貼卡片下方
-                checked = st.checkbox(
-                    "選取此工項" if not is_checked else "✅ 已選取",
-                    value=is_checked,
-                    key=f"item_{safe_key(item['label'])}",
-                )
+                # 按鈕樣式注入
+                inject_button_style(item_key, is_selected=is_checked, is_suggested=is_suggested and not is_checked)
 
-            if checked and item["label"] not in selected_items:
-                selected_items.append(item["label"])
-            elif not checked and item["label"] in selected_items:
-                selected_items.remove(item["label"])
+                btn_label = (
+                    f"{check_mark}{star}{item['label']}\n"
+                    f"{codes_str}{alert_txt}\n"
+                    f"📋 {item['policy'][:36]}{'…' if len(item['policy']) > 36 else ''}"
+                )
+                if st.button(btn_label, key=item_key, use_container_width=True, type="secondary"):
+                    if item["label"] in selected_items:
+                        selected_items.remove(item["label"])
+                    else:
+                        selected_items.append(item["label"])
+                    st.session_state.selected_items = selected_items
+                    st.rerun()
 
     st.session_state.selected_items = selected_items
 
@@ -1698,6 +1730,56 @@ elif st.session_state.step == 3:
 
     st.session_state.item_budgets = updated_items
 
+    # ── 量體縮減估算欄位（依已選工項動態顯示）─────────────────────────────
+    reduction_fields = get_physical_reduction_fields(updated_items)
+    if reduction_fields:
+        st.markdown("---")
+        st.markdown(
+            '<div class="section-title">📐 工程量體縮減效益估算（選填）</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "以下工項涉及**現地材料再利用或量體縮減**，節省下來的成本可能不會直接出現在氣候預算中，"
+            "但仍是重要的減碳效益。若能估算數量，可填入作為補充說明依據。"
+        )
+
+        current_reductions = dict(st.session_state.get("physical_reductions", {}))
+        rcol1, rcol2 = st.columns(2)
+
+        if "soil_reduction_ton" in reduction_fields:
+            with rcol1:
+                soil_val = current_reductions.get("soil_reduction_ton", 0)
+                soil_new = st.number_input(
+                    "🪨 減少土方購置量（公噸）",
+                    min_value=0,
+                    value=int(soil_val),
+                    step=100,
+                    help="因現地土方挖填平衡、就地取材，減少外購土石方的估算量。",
+                    key="soil_reduction_input",
+                )
+                current_reductions["soil_reduction_ton"] = int(soil_new)
+                if soil_new > 0:
+                    co2_eq = round(soil_new * 0.005, 1)  # 粗估：每公噸土方運輸約 0.005 tCO2e
+                    st.caption(f"粗估減碳效益：約 {co2_eq} tCO₂e（以平均運距 20km 估算）")
+
+        if "waste_reduction_ton" in reduction_fields:
+            with rcol2:
+                waste_val = current_reductions.get("waste_reduction_ton", 0)
+                waste_new = st.number_input(
+                    "♻️ 減少廢棄物外運處理量（公噸）",
+                    min_value=0,
+                    value=int(waste_val),
+                    step=100,
+                    help="因現地再利用（RAP、道碴、污泥資源化等），減少需外運廢棄物的估算量。",
+                    key="waste_reduction_input",
+                )
+                current_reductions["waste_reduction_ton"] = int(waste_new)
+                if waste_new > 0:
+                    co2_eq = round(waste_new * 0.008, 1)  # 粗估：廢棄物處理約 0.008 tCO2e/公噸
+                    st.caption(f"粗估減碳效益：約 {co2_eq} tCO₂e（以一般廢棄物處理排放係數估算）")
+
+        st.session_state.physical_reductions = current_reductions
+
     # Recalculate for button state
     total_allocated = sum(ib.get("amount", 0) or 0 for ib in updated_items)
     over_budget = total_allocated > total_budget
@@ -1771,6 +1853,22 @@ elif st.session_state.step == 4:
             pct = ib['amount'] / state.budget * 100 if state.budget else 0
             st.markdown(f"- {ib['label']}：{fmt_twd(ib['amount'])} （{pct:.1f}%）")
 
+        # 量體縮減摘要
+        phys = state.get("physical_reductions", {})
+        phys_lines = []
+        if phys.get("soil_reduction_ton", 0):
+            phys_lines.append(f"🪨 減少土方購置 **{phys['soil_reduction_ton']}** 公噸")
+        if phys.get("waste_reduction_ton", 0):
+            phys_lines.append(f"♻️ 減少廢棄物外運 **{phys['waste_reduction_ton']}** 公噸")
+        if phys_lines:
+            st.markdown("**📐 量體縮減效益：**")
+            for line in phys_lines:
+                st.markdown(f"- {line}")
+
+        # 補充說明
+        if state.get("user_note", ""):
+            st.markdown(f"**📝 補充說明：** {state.user_note}")
+
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_chart:
@@ -1794,59 +1892,37 @@ elif st.session_state.step == 4:
             st.markdown(f'<div class="alert-green"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown('<div class="section-title">🧩 政策對接補充欄位</div>', unsafe_allow_html=True)
 
-    # ── 綠色預算支出分類（按鈕多選，兩欄）
-    st.markdown("**綠色預算支出分類**（可複選，對接中央綠色經費四大面向）")
-    green_options = CONFIG.get("green_spending_category", [])
-    current_green = list(st.session_state.green_spending_category)
-    gcol1, gcol2 = st.columns(2)
-    for gi, gopt in enumerate(green_options):
-        g_selected = gopt in current_green
-        gcol = gcol1 if gi % 2 == 0 else gcol2
-        gkey = f"green_{safe_key(gopt)}"
-        inject_button_style(gkey, is_selected=g_selected)
-        with gcol:
-            if st.button(
-                f"{'✅ ' if g_selected else ''}{gopt}",
-                key=gkey,
-                use_container_width=True,
-                type="secondary",
-            ):
-                if gopt in current_green:
-                    current_green.remove(gopt)
-                else:
-                    current_green.append(gopt)
-                st.session_state.green_spending_category = current_green
-                st.rerun()
-    st.session_state.green_spending_category = current_green
+    # ── 氣候行動加分提示（純展示，折疊說明，不點選不輸出）
+    with st.expander("💡 氣候行動加分提示（展開閱讀）", expanded=False):
+        st.markdown(
+            "以下是各部會工程減碳指引與氣候政策中，**難以工程金額量化但具重要氣候效益**的行動。"
+            "若您的計畫內容或未來規劃符合其中項目，代表計畫的氣候加值程度更高，"
+            "建議於補充說明欄位中簡要描述。"
+        )
+        qualitative_options = UI.get("qualitative_factors", [])
+        green_options = CONFIG.get("green_spending_category", [])
+        col_q1, col_q2 = st.columns(2)
+        for qi, qopt in enumerate(qualitative_options):
+            with (col_q1 if qi % 2 == 0 else col_q2):
+                st.markdown(f"- {qopt}")
+        if green_options:
+            st.markdown("**📊 可對接的中央綠色預算支出分類：**")
+            for gopt in green_options:
+                st.markdown(f"- {gopt}")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── 氣候政策加分因子（按鈕多選，兩欄）
-    st.markdown("**氣候政策加分因子**（可複選，補充難以工程量化但可強化氣候效益的執行方案因子）")
-    qualitative_options = UI.get("qualitative_factors", [])
-    current_qual = list(st.session_state.qualitative_factors)
-    qcol1, qcol2 = st.columns(2)
-    for qi, qopt in enumerate(qualitative_options):
-        q_selected = qopt in current_qual
-        qcol = qcol1 if qi % 2 == 0 else qcol2
-        qkey = f"qual_{safe_key(qopt)}"
-        inject_button_style(qkey, is_selected=q_selected)
-        with qcol:
-            if st.button(
-                f"{'✅ ' if q_selected else ''}{qopt}",
-                key=qkey,
-                use_container_width=True,
-                type="secondary",
-            ):
-                if qopt in current_qual:
-                    current_qual.remove(qopt)
-                else:
-                    current_qual.append(qopt)
-                st.session_state.qualitative_factors = current_qual
-                st.rerun()
-    st.session_state.qualitative_factors = current_qual
+    # ── 補充說明（選填，同步至試算表 備註欄）
+    st.markdown("**📝 補充說明（選填）**")
+    st.caption("可填入表單無法正確量化、需額外說明的事項，例如：符合上方加分提示的具體執行內容、特殊工法說明、跨局處協調事項等。")
+    user_note = st.text_area(
+        "補充說明",
+        value=st.session_state.get("user_note", ""),
+        placeholder="例：本案護岸工程規劃採用砌石護岸（自然解方），並預計在施工期間取用附近污水廠放流水作為工程用水……",
+        height=100,
+        label_visibility="collapsed",
+        key="user_note_input",
+    )
+    st.session_state.user_note = user_note
 
     # Export section
     st.markdown("---")
@@ -1861,8 +1937,8 @@ elif st.session_state.step == 4:
         "selected_sub_categories": state.selected_sub_categories,
         "item_budgets": state.item_budgets,
         "engineering_guideline_type": state.engineering_guideline_type,
-        "green_spending_category": state.green_spending_category,
-        "qualitative_factors": state.qualitative_factors,
+        "physical_reductions": state.get("physical_reductions", {}),
+        "user_note": state.get("user_note", ""),
     }
     export_data = generate_export_json(export_payload)
 
@@ -1908,8 +1984,16 @@ elif st.session_state.step == 4:
     rows = []
     category_labels = format_category_labels(state.selected_categories)
     sub_category_labels = format_sub_category_labels(state.selected_sub_categories)
-    green_text = "、".join(state.green_spending_category) if state.green_spending_category else ""
-    qual_text  = "、".join(state.qualitative_factors)     if state.qualitative_factors     else ""
+    phys = state.get("physical_reductions", {})
+    phys_parts = []
+    if phys.get("soil_reduction_ton", 0):
+        phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
+    if phys.get("waste_reduction_ton", 0):
+        phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
+    phys_text = "；".join(phys_parts)
+    note_parts = [s for s in [state.get("user_note", ""), phys_text] if s]
+    combined_note = "｜".join(note_parts)
+
     for ib in state.item_budgets:
         item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
         rows.append({
@@ -1925,8 +2009,7 @@ elif st.session_state.step == 4:
             "氣候工項"        : ib["label"],
             "工項金額"        : ib["amount"],
             "工項佔總預算%"   : item_ratio,
-            "綠色預算分類"    : green_text,
-            "氣候政策加分因子": qual_text,
+            "備註"            : combined_note,
         })
 
     csv_df = pd.DataFrame(rows)

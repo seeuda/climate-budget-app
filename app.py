@@ -446,7 +446,6 @@ def get_item_by_label(sub, label):
             return item
     return None
 
-
 def inject_button_style(key, *, is_selected=False, is_suggested=False):
     """Inject CSS so specific Streamlit buttons can visually reflect state."""
     if is_selected:
@@ -492,7 +491,6 @@ def inject_button_style(key, *, is_selected=False, is_suggested=False):
         """,
         unsafe_allow_html=True,
     )
-
 
 def generate_export_json(state):
     """Generate the export JSON object."""

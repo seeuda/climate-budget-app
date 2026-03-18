@@ -465,8 +465,12 @@ def inject_button_style(key, *, is_selected=False, is_suggested=False):
         border = "#9ec5ab"
         shadow = "none"
 
-    hover_border = "#2d6a4f" if not is_suggested else "#f39c12"
-    hover_bg = "#f0f9f0" if not is_suggested else "#fff6dd"
+    if is_selected:
+        hover_border = border
+        hover_bg = bg
+    else:
+        hover_border = "#2d6a4f" if not is_suggested else "#f39c12"
+        hover_bg = "#f0f9f0" if not is_suggested else "#fff6dd"
 
     st.markdown(
         f"""

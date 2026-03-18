@@ -446,6 +446,52 @@ def get_item_by_label(sub, label):
             return item
     return None
 
+def inject_button_style(key, *, is_selected=False, is_suggested=False):
+    """Inject CSS so specific Streamlit buttons can visually reflect state."""
+    if is_selected:
+        bg = "#2d6a4f"
+        text = "#ffffff"
+        border = "#2d6a4f"
+        shadow = "0 4px 16px rgba(45,106,79,0.18)"
+    elif is_suggested:
+        bg = "#fffbf0"
+        text = "#8f5c00"
+        border = "#f39c12"
+        shadow = "0 4px 16px rgba(243,156,18,0.2)"
+    else:
+        bg = "#e9f3ec"
+        text = "#1a4731"
+        border = "#9ec5ab"
+        shadow = "none"
+
+    if is_selected:
+        hover_border = border
+        hover_bg = bg
+    else:
+        hover_border = "#2d6a4f" if not is_suggested else "#f39c12"
+        hover_bg = "#f0f9f0" if not is_suggested else "#fff6dd"
+
+    st.markdown(
+        f"""
+        <style>
+        .st-key-{key} button {{
+            background: {bg} !important;
+            color: {text} !important;
+            border: 1px solid {border} !important;
+            box-shadow: {shadow} !important;
+            min-height: 3rem;
+            white-space: normal;
+        }}
+        .st-key-{key} button:hover {{
+            border-color: {hover_border} !important;
+            background: {hover_bg} !important;
+            color: {text} !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def generate_export_json(state):
     """Generate the export JSON object."""
     result = {
@@ -848,7 +894,7 @@ st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', un
 # ═══════════════════════════════════════════════════════════════════
 
 if st.session_state.step == 0:
-    st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊(已預載)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊(依<a href="https://docs.google.com/spreadsheets/d/1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">預載清單</a>)</div>', unsafe_allow_html=True)
 
     case_df, case_error = load_registered_cases()
     use_manual_case_input = st.checkbox(
@@ -1134,14 +1180,15 @@ elif st.session_state.step == 1:
 
         with (col1 if i % 2 == 0 else col2):
             badge = "⭐ 建議類別 · " if is_suggested else ""
-            card_style = "highlighted" if is_suggested else ("selected" if is_selected else "")
             selected_mark = "✅ " if is_selected else ""
+            button_key = f"cat_{cat['id']}"
+            inject_button_style(button_key, is_selected=is_selected, is_suggested=is_suggested)
 
             if st.button(
                 f"{selected_mark}{cat['icon']} {cat['label']}\n{badge}（{cat['description'][:20]}…）",
-                key=f"cat_{cat['id']}",
+                key=button_key,
                 use_container_width=True,
-                type="primary" if is_selected else "secondary"
+                type="secondary"
             ):
                 st.session_state.selected_category = cat["id"]
                 st.session_state.selected_sub = None
@@ -1166,11 +1213,13 @@ elif st.session_state.step == 1:
             with (subcol1 if j % 2 == 0 else subcol2):
                 badge = "⭐ " if is_sub_suggested else ""
                 selected_mark = "✅ " if is_sub_selected else ""
+                button_key = f"sub_{sub['id']}"
+                inject_button_style(button_key, is_selected=is_sub_selected, is_suggested=is_sub_suggested)
                 if st.button(
                     f"{selected_mark}{badge}{sub['label']}\n📌 {sub['examples'][:30]}",
-                    key=f"sub_{sub['id']}",
+                    key=button_key,
                     use_container_width=True,
-                    type="primary" if is_sub_selected else "secondary"
+                    type="secondary"
                 ):
                     st.session_state.selected_sub = sub["id"]
                     st.session_state.selected_items = []

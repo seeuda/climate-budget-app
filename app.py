@@ -434,11 +434,67 @@ def get_taxonomy_by_id(cat_id):
             return cat
     return None
 
+def get_taxonomies_by_ids(cat_ids):
+    return [cat for cat_id in cat_ids if (cat := get_taxonomy_by_id(cat_id))]
+
 def get_sub_by_id(cat, sub_id):
     for sub in cat.get("sub_categories", []):
         if sub["id"] == sub_id:
             return sub
     return None
+
+def get_sub_by_id_global(sub_id):
+    for cat in LOGIC["taxonomy"]:
+        sub = get_sub_by_id(cat, sub_id)
+        if sub:
+            return cat, sub
+    return None, None
+
+def get_available_sub_entries(selected_categories):
+    entries = []
+    for cat in get_taxonomies_by_ids(selected_categories):
+        for sub in cat.get("sub_categories", []):
+            entries.append({"category": cat, "sub": sub})
+    return entries
+
+def get_item_sources(selected_categories, selected_sub_categories):
+    if selected_sub_categories:
+        sources = []
+        for sub_id in selected_sub_categories:
+            cat, sub = get_sub_by_id_global(sub_id)
+            if cat and sub:
+                sources.append({"category": cat, "sub": sub})
+        return sources
+    return get_available_sub_entries(selected_categories)
+
+def get_available_item_labels(selected_categories, selected_sub_categories):
+    labels = set()
+    for entry in get_item_sources(selected_categories, selected_sub_categories):
+        for item in entry["sub"].get("items", []):
+            labels.add(item["label"])
+    return labels
+
+def prune_invalid_selections(selected_items, item_budgets, valid_labels):
+    valid_item_budgets = [ib for ib in item_budgets if ib.get("label") in valid_labels]
+    valid_selected_items = [label for label in selected_items if label in valid_labels]
+    removed_labels = [
+        label for label in selected_items
+        if label not in valid_labels
+    ]
+    return valid_selected_items, valid_item_budgets, removed_labels
+
+def format_category_labels(category_ids):
+    return "、".join(
+        cat["label"] for cat in get_taxonomies_by_ids(category_ids)
+    )
+
+def format_sub_category_labels(sub_ids):
+    labels = []
+    for sub_id in sub_ids:
+        _, sub = get_sub_by_id_global(sub_id)
+        if sub:
+            labels.append(sub["label"])
+    return "、".join(labels)
 
 def get_item_by_label(sub, label):
     for item in sub.get("items", []):
@@ -504,8 +560,8 @@ def generate_export_json(state):
             "assessment_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
         },
         "climate_assessment": {
-            "category": state.get("selected_category", ""),
-            "sub_category": state.get("selected_sub", ""),
+            "categories": state.get("selected_categories", []),
+            "sub_categories": state.get("selected_sub_categories", []),
             "selected_items": state.get("item_budgets", []),
             "alert_level": get_alert_level(state.get("budget", 0))["label"],
         },
@@ -623,6 +679,8 @@ def sync_to_google_sheet_direct(payload):
 
     metadata = payload.get("project_metadata", {})
     assessment = payload.get("climate_assessment", {})
+    category_text = format_category_labels(assessment.get("categories", []))
+    sub_category_text = format_sub_category_labels(assessment.get("sub_categories", []))
     row_dict = {
         "填報日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "案件編號": metadata.get("uid", ""),
@@ -630,8 +688,8 @@ def sync_to_google_sheet_direct(payload):
         "主辦局處": metadata.get("dept", ""),
         "決標金額": metadata.get("total_budget", 0),
         "氣候預算": payload.get("climate_budget_total", 0),
-        "判讀主類別": assessment.get("category", ""),
-        "判讀子類別": assessment.get("sub_category", ""),
+        "判讀主類別": category_text,
+        "判讀子類別": sub_category_text,
         "風險等級": assessment.get("alert_level", ""),
     }
 
@@ -800,8 +858,8 @@ def init_state():
         "use_manual_case_input": False,
         "manual_override": False,
         "kw_matches": [],
-        "selected_category": None,
-        "selected_sub": None,
+        "selected_categories": [],
+        "selected_sub_categories": [],
         "selected_items": [],
         "item_budgets": [],
         "engineering_guideline_type": "",
@@ -811,6 +869,7 @@ def init_state():
         "sync_message": "",
         "sync_signature": "",
         "negative_filter_override": False,
+        "selection_warning": "",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -830,10 +889,10 @@ with st.sidebar:
 **評估流程：**
 1. 帶入計畫基本資訊
 2. 系統自動偵測關鍵字
-3. 選擇工程類別
-4. 勾選氣候相關工項
+3. 複選計畫類別（最多 3 項）
+4. 複選細項分類與氣候工項
 5. 填寫各工項預算
-6. 匯出評估報告
+6. 確認並匯出評估報告
     """)
     st.markdown("---")
     st.markdown("**預算警示門檻**")
@@ -877,16 +936,22 @@ st.markdown(step_html, unsafe_allow_html=True)
 bc_parts = ["彰化縣氣候預算系統"]
 if st.session_state.case_name:
     bc_parts.append(st.session_state.case_name[:20] + ("…" if len(st.session_state.case_name) > 20 else ""))
-if st.session_state.selected_category:
-    cat = get_taxonomy_by_id(st.session_state.selected_category)
-    if cat:
-        bc_parts.append(cat["label"][:15])
-if st.session_state.selected_sub:
-    cat = get_taxonomy_by_id(st.session_state.selected_category)
-    if cat:
-        sub = get_sub_by_id(cat, st.session_state.selected_sub)
-        if sub:
-            bc_parts.append(sub["label"][:15])
+selected_cats = get_taxonomies_by_ids(st.session_state.selected_categories)
+if selected_cats:
+    cat_summary = "、".join(cat["label"] for cat in selected_cats[:2])
+    if len(selected_cats) > 2:
+        cat_summary += "…"
+    bc_parts.append(cat_summary[:18])
+selected_sub_labels = []
+for sub_id in st.session_state.selected_sub_categories[:2]:
+    _, sub = get_sub_by_id_global(sub_id)
+    if sub:
+        selected_sub_labels.append(sub["label"])
+if selected_sub_labels:
+    sub_summary = "、".join(selected_sub_labels)
+    if len(st.session_state.selected_sub_categories) > 2:
+        sub_summary += "…"
+    bc_parts.append(sub_summary[:18])
 st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1160,7 +1225,8 @@ if st.session_state.step == 0:
 # ═══════════════════════════════════════════════════════════════════
 
 elif st.session_state.step == 1:
-    st.markdown('<div class="section-title">步驟二：選擇計畫類別（建議先選最接近者，後續可再補充）</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟二：複選計畫類別（最多 3 項）</div>', unsafe_allow_html=True)
+    st.caption("可先選最接近者，再補選其他相關類別；補選類別或細項時，不會直接清空既有工項。")
 
     # Show keyword suggestions
     if st.session_state.kw_matches:
@@ -1176,7 +1242,7 @@ elif st.session_state.step == 1:
 
     for i, cat in enumerate(taxonomy):
         is_suggested = cat["id"] in suggested_cats
-        is_selected = st.session_state.selected_category == cat["id"]
+        is_selected = cat["id"] in st.session_state.selected_categories
 
         with (col1 if i % 2 == 0 else col2):
             badge = "⭐ 建議類別 · " if is_suggested else ""
@@ -1190,40 +1256,78 @@ elif st.session_state.step == 1:
                 use_container_width=True,
                 type="secondary"
             ):
-                st.session_state.selected_category = cat["id"]
-                st.session_state.selected_sub = None
-                st.session_state.selected_items = []
-                if cat["id"] != "A":
+                updated_categories = list(st.session_state.selected_categories)
+                if cat["id"] in updated_categories:
+                    updated_categories.remove(cat["id"])
+                elif len(updated_categories) >= 3:
+                    st.session_state.selection_warning = "計畫類別最多可選 3 項，請先取消其中一項再補選。"
+                    st.rerun()
+                else:
+                    updated_categories.append(cat["id"])
+
+                st.session_state.selected_categories = updated_categories
+
+                valid_sub_ids = {entry["sub"]["id"] for entry in get_available_sub_entries(updated_categories)}
+                st.session_state.selected_sub_categories = [
+                    sub_id for sub_id in st.session_state.selected_sub_categories
+                    if sub_id in valid_sub_ids
+                ]
+
+                if "A" not in updated_categories:
                     st.session_state.engineering_guideline_type = ""
                 st.rerun()
 
     # Sub-category selection
-    if st.session_state.selected_category:
+    if st.session_state.selected_categories:
         st.markdown("---")
-        cat = get_taxonomy_by_id(st.session_state.selected_category)
-        st.markdown(f'<div class="section-title">選擇細項分類 — {cat["icon"]} {cat["label"]}</div>', unsafe_allow_html=True)
+        selected_categories = get_taxonomies_by_ids(st.session_state.selected_categories)
+        st.markdown('<div class="section-title">選擇細項分類（依已選類別聯合顯示，可複選）</div>', unsafe_allow_html=True)
+        st.caption("若未勾選細項，下一步將自動展開所有已選計畫類別底下的細項工項聯集。")
 
-        suggested_subs = list({kw["sub_id"] for kw in st.session_state.kw_matches
-                               if kw.get("category_id") == st.session_state.selected_category})
+        suggested_subs = list({
+            kw["sub_id"] for kw in st.session_state.kw_matches
+            if kw.get("category_id") in st.session_state.selected_categories
+        })
 
+        available_sub_entries = get_available_sub_entries(st.session_state.selected_categories)
         subcol1, subcol2 = st.columns(2)
-        for j, sub in enumerate(cat.get("sub_categories", [])):
+        for j, entry in enumerate(available_sub_entries):
+            cat = entry["category"]
+            sub = entry["sub"]
             is_sub_suggested = sub["id"] in suggested_subs
-            is_sub_selected = st.session_state.selected_sub == sub["id"]
+            is_sub_selected = sub["id"] in st.session_state.selected_sub_categories
             with (subcol1 if j % 2 == 0 else subcol2):
                 badge = "⭐ " if is_sub_suggested else ""
                 selected_mark = "✅ " if is_sub_selected else ""
                 button_key = f"sub_{sub['id']}"
                 inject_button_style(button_key, is_selected=is_sub_selected, is_suggested=is_sub_suggested)
                 if st.button(
-                    f"{selected_mark}{badge}{sub['label']}\n📌 {sub['examples'][:30]}",
+                    f"{selected_mark}{badge}{cat['icon']} {sub['label']}\n📌 {cat['label'][:14]}｜{sub['examples'][:18]}",
                     key=button_key,
                     use_container_width=True,
                     type="secondary"
                 ):
-                    st.session_state.selected_sub = sub["id"]
-                    st.session_state.selected_items = []
+                    updated_sub_categories = list(st.session_state.selected_sub_categories)
+                    if sub["id"] in updated_sub_categories:
+                        updated_sub_categories.remove(sub["id"])
+                    else:
+                        updated_sub_categories.append(sub["id"])
+                    st.session_state.selected_sub_categories = updated_sub_categories
                     st.rerun()
+
+        selected_cat_labels = "、".join(cat["label"] for cat in selected_categories)
+        st.info(f"已選計畫類別（{len(selected_categories)}/3）：{selected_cat_labels}")
+        if st.session_state.selected_sub_categories:
+            selected_sub_text = "、".join(
+                sub["label"]
+                for sub_id in st.session_state.selected_sub_categories
+                if (sub := get_sub_by_id_global(sub_id)[1])
+            )
+            st.info(f"已選細項分類（{len(st.session_state.selected_sub_categories)} 項）：{selected_sub_text}")
+
+    if st.session_state.selection_warning:
+        st.warning(st.session_state.selection_warning)
+        st.session_state.selection_warning = ""
 
     col_back, col_next = st.columns([1, 3])
     with col_back:
@@ -1231,7 +1335,7 @@ elif st.session_state.step == 1:
             st.session_state.step = 0
             st.rerun()
     with col_next:
-        can_next = bool(st.session_state.selected_category)
+        can_next = bool(st.session_state.selected_categories)
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
             st.session_state.step = 2
             st.rerun()
@@ -1241,19 +1345,29 @@ elif st.session_state.step == 1:
 # ═══════════════════════════════════════════════════════════════════
 
 elif st.session_state.step == 2:
-    st.markdown('<div class="section-title">步驟三：勾選氣候相關工項</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">步驟三：勾選氣候相關工項（依已選細項聯合顯示）</div>', unsafe_allow_html=True)
 
-    cat = get_taxonomy_by_id(st.session_state.selected_category)
-    sub = get_sub_by_id(cat, st.session_state.selected_sub) if st.session_state.selected_sub else None
+    selected_categories = st.session_state.selected_categories
+    selected_sub_categories = st.session_state.selected_sub_categories
+    item_source_entries = get_item_sources(selected_categories, selected_sub_categories)
 
-    if sub:
-        st.markdown(f"**{cat['icon']} {cat['label']}  ›  {sub['label']}**")
-        st.caption(f"📌 {sub['examples']}")
-        item_sources = [sub]
+    if selected_sub_categories:
+        selected_sub_descriptions = []
+        for entry in item_source_entries:
+            cat = entry["category"]
+            sub = entry["sub"]
+            selected_sub_descriptions.append(f"{cat['icon']} {cat['label']} › {sub['label']}")
+        st.markdown("**已選細項聯集：**")
+        for desc in selected_sub_descriptions:
+            st.markdown(f"- {desc}")
+        st.caption("📌 以下顯示已選細項的工項聯集，重複工項會自動去重。")
     else:
-        st.markdown(f"**{cat['icon']} {cat['label']}（全部細項工項）**")
-        st.caption("📌 已展開該計畫類別下所有細項，請複選適用工項。")
-        item_sources = cat.get("sub_categories", [])
+        selected_cat_text = "、".join(
+            f"{cat['icon']} {cat['label']}"
+            for cat in get_taxonomies_by_ids(selected_categories)
+        )
+        st.markdown(f"**已選計畫類別：** {selected_cat_text}")
+        st.caption("📌 尚未限定細項，以下顯示所有已選計畫類別的細項工項聯集。")
 
     # Suggested items from keywords
     suggested_items_labels = {kw["suggested_item"] for kw in st.session_state.kw_matches}
@@ -1261,11 +1375,23 @@ elif st.session_state.step == 2:
     st.markdown("**請勾選本案中包含的氣候相關工項（可複選）：**")
 
     selected_items = list(st.session_state.selected_items)
+    valid_item_labels = get_available_item_labels(selected_categories, selected_sub_categories)
+    invalid_selected_items = [
+        label for label in selected_items
+        if label not in valid_item_labels
+    ]
+    if invalid_selected_items:
+        st.warning(
+            "以下既有工項已不再屬於目前類別/細項範圍，進入下一步時將自動移除："
+            + "、".join(invalid_selected_items)
+        )
+
     rendered = set()
-    for src in item_sources:
-        if not sub:
-            st.markdown(f"**• {src['label']}**")
-        for item in src["items"]:
+    for entry in item_source_entries:
+        cat = entry["category"]
+        sub = entry["sub"]
+        st.markdown(f"**• {cat['icon']} {cat['label']}｜{sub['label']}**")
+        for item in sub["items"]:
             if item["label"] in rendered:
                 continue
             rendered.add(item["label"])
@@ -1304,8 +1430,18 @@ elif st.session_state.step == 2:
             st.rerun()
     with col_next:
         if st.button("下一步：填寫工項預算 →", type="primary", use_container_width=True):
+            selected_items, valid_item_budgets, removed_labels = prune_invalid_selections(
+                selected_items,
+                st.session_state.item_budgets,
+                valid_item_labels,
+            )
+            st.session_state.selected_items = selected_items
+
+            if removed_labels:
+                st.session_state.selection_warning = "已移除不再適用的工項：" + "、".join(removed_labels)
+
             # Init item_budgets
-            existing = {ib["label"]: ib for ib in st.session_state.item_budgets}
+            existing = {ib["label"]: ib for ib in valid_item_budgets}
             st.session_state.item_budgets = [
                 existing.get(label, {"label": label, "ratio": None, "amount": 0})
                 for label in selected_items
@@ -1319,6 +1455,10 @@ elif st.session_state.step == 2:
 
 elif st.session_state.step == 3:
     st.markdown('<div class="section-title">步驟四：填寫各工項氣候預算</div>', unsafe_allow_html=True)
+
+    if st.session_state.selection_warning:
+        st.info(st.session_state.selection_warning)
+        st.session_state.selection_warning = ""
 
     total_budget = st.session_state.budget
     item_budgets = st.session_state.item_budgets
@@ -1424,8 +1564,12 @@ elif st.session_state.step == 4:
 
     state = st.session_state
     alert = get_alert_level(state.budget)
-    cat = get_taxonomy_by_id(state.selected_category)
-    sub = get_sub_by_id(cat, state.selected_sub) if cat else None
+    selected_cats = get_taxonomies_by_ids(state.selected_categories)
+    selected_sub_entries = []
+    for sub_id in state.selected_sub_categories:
+        cat, sub = get_sub_by_id_global(sub_id)
+        if cat and sub:
+            selected_sub_entries.append({"category": cat, "sub": sub})
 
     climate_total = sum(ib.get("amount", 0) for ib in state.item_budgets)
     climate_ratio = climate_total / state.budget * 100 if state.budget else 0
@@ -1445,12 +1589,17 @@ elif st.session_state.step == 4:
 **{alert['badge']} 風險等級：** {alert['label']} — {alert['desc']}
         """)
 
-        if cat and sub:
-            st.markdown(f"""
-**{cat['icon']} 標案類別：** {cat['label']}
+        if selected_cats:
+            st.markdown("**🗂️ 計畫類別：**")
+            for cat in selected_cats:
+                st.markdown(f"- {cat['icon']} {cat['label']}")
 
-**📂 細項分類：** {sub['label']}
-            """)
+        if selected_sub_entries:
+            st.markdown("**📂 細項分類：**")
+            for entry in selected_sub_entries:
+                st.markdown(f"- {entry['category']['icon']} {entry['sub']['label']}")
+        elif selected_cats:
+            st.markdown("**📂 細項分類：** 未限定（已採所有已選類別的細項工項聯集）")
 
         st.markdown("**✅ 氣候相關工項：**")
         for ib in state.item_budgets:
@@ -1506,8 +1655,8 @@ elif st.session_state.step == 4:
         "dept": state.dept,
         "budget": state.budget,
         "manual_override": state.manual_override,
-        "selected_category": state.selected_category,
-        "selected_sub": state.selected_sub,
+        "selected_categories": state.selected_categories,
+        "selected_sub_categories": state.selected_sub_categories,
         "item_budgets": state.item_budgets,
         "engineering_guideline_type": state.engineering_guideline_type,
         "green_spending_category": state.green_spending_category,
@@ -1555,12 +1704,16 @@ elif st.session_state.step == 4:
     json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
 
     rows = []
+    category_labels = format_category_labels(state.selected_categories)
+    sub_category_labels = format_sub_category_labels(state.selected_sub_categories)
     for ib in state.item_budgets:
         rows.append({
             "評估日期": datetime.now().strftime("%Y-%m-%d"),
             "標案名稱": state.case_name,
             "主辦局處": state.dept,
             "決標金額": state.budget,
+            "計畫類別": category_labels,
+            "細項分類": sub_category_labels,
             "風險等級": alert["label"],
             "氣候工項": ib["label"],
             "工項金額": ib["amount"],

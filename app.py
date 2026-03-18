@@ -497,10 +497,16 @@ def format_sub_category_labels(sub_ids):
     return "、".join(labels)
 
 def get_item_by_label(sub, label):
+    """Look up an item by label within a single sub-category dict."""
     for item in sub.get("items", []):
         if item.get("label") == label:
             return item
     return None
+
+def safe_key(text):
+    """Convert arbitrary text to a safe Streamlit widget key (alphanumeric + underscore)."""
+    import re
+    return re.sub(r"[^A-Za-z0-9_]", "_", text)
 
 def inject_button_style(key, *, is_selected=False, is_suggested=False):
     """Inject CSS so specific Streamlit buttons can visually reflect state."""
@@ -550,6 +556,8 @@ def inject_button_style(key, *, is_selected=False, is_suggested=False):
 
 def generate_export_json(state):
     """Generate the export JSON object."""
+    selected_categories = state.get("selected_categories", [])
+    selected_sub_categories = state.get("selected_sub_categories", [])
     result = {
         "project_metadata": {
             "uid": f"CHC-{datetime.now().strftime('%Y%m%d%H%M')}",
@@ -560,8 +568,10 @@ def generate_export_json(state):
             "assessment_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
         },
         "climate_assessment": {
-            "categories": state.get("selected_categories", []),
-            "sub_categories": state.get("selected_sub_categories", []),
+            "categories": selected_categories,
+            "category_labels": format_category_labels(selected_categories),
+            "sub_categories": selected_sub_categories,
+            "sub_category_labels": format_sub_category_labels(selected_sub_categories),
             "selected_items": state.get("item_budgets", []),
             "alert_level": get_alert_level(state.get("budget", 0))["label"],
         },
@@ -1228,6 +1238,11 @@ elif st.session_state.step == 1:
     st.markdown('<div class="section-title">步驟二：複選計畫類別（最多 3 項）</div>', unsafe_allow_html=True)
     st.caption("可先選最接近者，再補選其他相關類別；補選類別或細項時，不會直接清空既有工項。")
 
+    # 顯示前一步產生的警告（例如超過 3 項的提示）
+    if st.session_state.selection_warning:
+        st.warning(st.session_state.selection_warning)
+        st.session_state.selection_warning = ""
+
     # Show keyword suggestions
     if st.session_state.kw_matches:
         suggested_cats = list({kw["category_id"] for kw in st.session_state.kw_matches})
@@ -1258,23 +1273,21 @@ elif st.session_state.step == 1:
             ):
                 updated_categories = list(st.session_state.selected_categories)
                 if cat["id"] in updated_categories:
+                    # 取消選取：同時清除不再有效的細項
                     updated_categories.remove(cat["id"])
+                    valid_sub_ids = {entry["sub"]["id"] for entry in get_available_sub_entries(updated_categories)}
+                    st.session_state.selected_sub_categories = [
+                        sub_id for sub_id in st.session_state.selected_sub_categories
+                        if sub_id in valid_sub_ids
+                    ]
+                    st.session_state.selected_categories = updated_categories
+                    if "A" not in updated_categories:
+                        st.session_state.engineering_guideline_type = ""
                 elif len(updated_categories) >= 3:
-                    st.session_state.selection_warning = "計畫類別最多可選 3 項，請先取消其中一項再補選。"
-                    st.rerun()
+                    st.session_state.selection_warning = "⚠️ 計畫類別最多可選 3 項，請先取消其中一項再補選。"
                 else:
                     updated_categories.append(cat["id"])
-
-                st.session_state.selected_categories = updated_categories
-
-                valid_sub_ids = {entry["sub"]["id"] for entry in get_available_sub_entries(updated_categories)}
-                st.session_state.selected_sub_categories = [
-                    sub_id for sub_id in st.session_state.selected_sub_categories
-                    if sub_id in valid_sub_ids
-                ]
-
-                if "A" not in updated_categories:
-                    st.session_state.engineering_guideline_type = ""
+                    st.session_state.selected_categories = updated_categories
                 st.rerun()
 
     # Sub-category selection
@@ -1324,10 +1337,6 @@ elif st.session_state.step == 1:
                 if (sub := get_sub_by_id_global(sub_id)[1])
             )
             st.info(f"已選細項分類（{len(st.session_state.selected_sub_categories)} 項）：{selected_sub_text}")
-
-    if st.session_state.selection_warning:
-        st.warning(st.session_state.selection_warning)
-        st.session_state.selection_warning = ""
 
     col_back, col_next = st.columns([1, 3])
     with col_back:
@@ -1382,8 +1391,8 @@ elif st.session_state.step == 2:
     ]
     if invalid_selected_items:
         st.warning(
-            "以下既有工項已不再屬於目前類別/細項範圍，進入下一步時將自動移除："
-            + "、".join(invalid_selected_items)
+            "⚠️ 下列已勾選工項在目前類別/細項範圍外，**按「下一步」時**才會自動移除，"
+            "現在補選回對應類別即可保留：" + "、".join(invalid_selected_items)
         )
 
     rendered = set()
@@ -1402,7 +1411,7 @@ elif st.session_state.step == 2:
 
             col_chk, col_info = st.columns([1, 8])
             with col_chk:
-                checked = st.checkbox("", value=is_checked, key=f"item_{item['label']}")
+                checked = st.checkbox("", value=is_checked, key=f"item_{safe_key(item['label'])}")
             with col_info:
                 star = "⭐ " if is_suggested else ""
                 codes_html = " ".join([f'<span class="code-badge">{c}</span>' for c in item.get("mitigation_codes", []) + item.get("adaptation_codes", [])])
@@ -1420,7 +1429,16 @@ elif st.session_state.step == 2:
 
     st.session_state.selected_items = selected_items
 
-    if not selected_items:
+    # 顯示目前已勾選工項數摘要
+    valid_count = len([l for l in selected_items if l in valid_item_labels])
+    total_count = len(selected_items)
+    if total_count > 0:
+        extra = total_count - valid_count
+        count_msg = f"✅ 已勾選 **{valid_count}** 個氣候工項"
+        if extra > 0:
+            count_msg += f"，另有 **{extra}** 個超出範圍（進入下一步時自動移除）"
+        st.info(count_msg)
+    else:
         st.caption("本步驟可先略過，下一步可直接進行預算檢視與補充。")
 
     col_back, col_next = st.columns([1, 3])
@@ -1537,7 +1555,8 @@ elif st.session_state.step == 3:
     # Recalculate for button state
     total_allocated = sum(ib.get("amount", 0) or 0 for ib in updated_items)
     over_budget = total_allocated > total_budget
-    all_set = all(ib.get("amount", 0) > 0 for ib in updated_items)
+    # 若有工項，必須全部填入金額才可繼續；若無工項，允許直接繼續
+    all_set = (not updated_items) or all(ib.get("amount", 0) > 0 for ib in updated_items)
 
     col_back, col_next = st.columns([1, 3])
     with col_back:
@@ -1551,9 +1570,9 @@ elif st.session_state.step == 3:
             st.rerun()
         if not can_next:
             if over_budget:
-                st.caption("🚫 工項金額加總超出總預算，請調整。")
+                st.caption("🚫 工項金額加總超出標案總預算，請調整。")
             elif not all_set:
-                st.caption("⚠️ 請為所有工項設定預算金額。")
+                st.caption("⚠️ 請為所有工項設定預算金額（填入大於 0 的數值）。")
 
 # ═══════════════════════════════════════════════════════════════════
 # STEP 4 — 確認與匯出
@@ -1590,16 +1609,16 @@ elif st.session_state.step == 4:
         """)
 
         if selected_cats:
-            st.markdown("**🗂️ 計畫類別：**")
+            st.markdown("**🗂️ 計畫類別（複選）：**")
             for cat in selected_cats:
                 st.markdown(f"- {cat['icon']} {cat['label']}")
 
         if selected_sub_entries:
-            st.markdown("**📂 細項分類：**")
+            st.markdown("**📂 細項分類（複選）：**")
             for entry in selected_sub_entries:
                 st.markdown(f"- {entry['category']['icon']} {entry['sub']['label']}")
         elif selected_cats:
-            st.markdown("**📂 細項分類：** 未限定（已採所有已選類別的細項工項聯集）")
+            st.markdown("**📂 細項分類：** 未限定（採所有已選類別之工項聯集）")
 
         st.markdown("**✅ 氣候相關工項：**")
         for ib in state.item_budgets:

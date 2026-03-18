@@ -1396,7 +1396,7 @@ elif st.session_state.step == 1:
                 button_key = f"sub_{sub['id']}"
                 inject_button_style(button_key, is_selected=is_sub_selected, is_suggested=is_sub_suggested)
                 if st.button(
-                    f"{selected_mark}{badge}{cat['icon']} {sub['label']}\n📌 {cat['label'][:14]}｜{sub['examples'][:18]}",
+                    f"{selected_mark}{badge}{cat['icon']} {sub['label']}\n📌 {sub['examples'][:28]}",
                     key=button_key,
                     use_container_width=True,
                     type="secondary"
@@ -1558,6 +1558,34 @@ elif st.session_state.step == 2:
         st.info(count_msg)
     else:
         st.caption("本步驟可先略過，下一步可直接進行預算檢視與補充。")
+
+    # ── 專業工程減碳檢核提示（依已選計畫類別，展開式顯示）────────
+    checklists = LOGIC.get("engineering_checklists", {})
+    checklist_cats = [
+        cat for cat in get_taxonomies_by_ids(selected_categories)
+        if cat["id"] in checklists
+    ]
+    if checklist_cats:
+        st.markdown("---")
+        st.markdown(
+            '<div class="section-title">🔍 工程減碳指引自主檢核</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption("依您選擇的計畫類別，列出各部會工程減碳指引的常見自主檢核項目，供填報參考。")
+        for cat in checklist_cats:
+            items_html = "".join(
+                f'<li style="margin:0.3rem 0;font-size:0.86rem;">{it}</li>'
+                for it in checklists[cat["id"]]
+            )
+            st.markdown(
+                f'<details style="background:#f8fdf8;border:1px solid #c8e6c9;border-radius:8px;'
+                f'padding:0.6rem 1rem;margin:0.4rem 0;">'
+                f'<summary style="font-weight:700;color:#1a4731;cursor:pointer;">'
+                f'{cat["icon"]} {cat["label"]} — 減碳指引檢核清單</summary>'
+                f'<ul style="margin:0.5rem 0 0 1rem;padding:0;">{items_html}</ul>'
+                f'</details>',
+                unsafe_allow_html=True,
+            )
 
     col_back, col_next = st.columns([1, 3])
     with col_back:

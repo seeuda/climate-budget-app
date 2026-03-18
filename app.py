@@ -20,13 +20,36 @@ DEFAULT_SYNC_HEADERS = [
     "填報日期",
     "案件編號",
     "標案名稱",
-    "主辦局處",
+    "主辦單位",
     "決標金額",
     "氣候預算",
-    "判讀主類別",
-    "判讀子類別",
-    "風險等級",
+    "氣候預算比例%",
+    "計畫類別",
+    "細項分類",
+    "氣候工項",
+    "綠色預算分類",
+    "氣候政策加分因子",
+    "備註",
 ]
+
+# 欄位別名映射：試算表欄位名稱（含使用者自訂異動）→ 標準欄位 key
+# 比對邏輯：先精確比對，再依此表做「包含」模糊比對
+HEADER_ALIAS_MAP = {
+    # 標準 key          : [可接受的欄位名稱關鍵字（任一符合即採用）]
+    "填報日期"          : ["填報日期", "填報", "日期", "時間"],
+    "案件編號"          : ["案件編號", "案號", "uid"],
+    "標案名稱"          : ["標案名稱", "計畫名稱", "標案"],
+    "主辦單位"          : ["主辦單位", "主辦局處", "局處", "單位名稱", "單位"],
+    "決標金額"          : ["決標金額", "預算金額", "金額"],
+    "氣候預算"          : ["氣候預算", "氣候經費"],
+    "氣候預算比例%"     : ["氣候預算比例", "氣候比例", "比例"],
+    "計畫類別"          : ["計畫類別", "判讀主類別", "主類別"],
+    "細項分類"          : ["細項分類", "判讀子類別", "子類別", "細項"],
+    "氣候工項"          : ["氣候工項", "工項", "工項清單"],
+    "綠色預算分類"      : ["綠色預算分類", "綠色預算", "綠色分類"],
+    "氣候政策加分因子"  : ["加分因子", "氣候政策", "政策因子", "加分"],
+    "備註"              : ["備註", "note", "說明"],
+}
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -666,73 +689,132 @@ def get_google_sheet_client():
         return None, f"service account 驗證失敗：{e}"
 
 
+def resolve_header_key(col_name):
+    """
+    模糊比對試算表欄位名稱 → 標準資料 key。
+    比對順序：1) 精確比對標準 key  2) 依 HEADER_ALIAS_MAP 做關鍵字包含比對
+    回傳標準 key 字串；若無法比對則回傳 None（該欄填空白）。
+    """
+    col_stripped = col_name.strip()
+    # 精確比對
+    if col_stripped in HEADER_ALIAS_MAP:
+        return col_stripped
+    # 模糊比對：遍歷每個標準 key 的別名清單
+    for std_key, aliases in HEADER_ALIAS_MAP.items():
+        for alias in aliases:
+            if alias in col_stripped or col_stripped in alias:
+                return std_key
+    return None
+
+
+def build_sync_row_dict(payload):
+    """
+    從 export JSON payload 組出所有可能欄位的資料字典（以標準 key 為 key）。
+    """
+    metadata   = payload.get("project_metadata", {})
+    assessment = payload.get("climate_assessment", {})
+    ameta      = payload.get("assessment_metadata", {})
+    climate_total  = payload.get("climate_budget_total", 0)
+    total_budget   = metadata.get("total_budget", 0)
+    climate_ratio  = round(climate_total / total_budget * 100, 1) if total_budget else 0
+
+    # 氣候工項：多個工項合併成逗號分隔字串
+    items = assessment.get("selected_items", [])
+    items_text = "、".join(i.get("label", "") for i in items if i.get("label"))
+
+    # 綠色預算分類
+    green_cats = ameta.get("green_spending_category", [])
+    green_text = "、".join(green_cats) if green_cats else ""
+
+    # 加分因子
+    qual_factors = ameta.get("qualitative_factors", [])
+    qual_text = "、".join(qual_factors) if qual_factors else ""
+
+    return {
+        "填報日期"         : datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "案件編號"         : metadata.get("uid", ""),
+        "標案名稱"         : metadata.get("name", ""),
+        "主辦單位"         : metadata.get("dept", ""),
+        "決標金額"         : total_budget,
+        "氣候預算"         : climate_total,
+        "氣候預算比例%"    : climate_ratio,
+        "計畫類別"         : assessment.get("category_labels", ""),
+        "細項分類"         : assessment.get("sub_category_labels", ""),
+        "氣候工項"         : items_text,
+        "綠色預算分類"     : green_text,
+        "氣候政策加分因子" : qual_text,
+        "備註"             : "",
+    }
+
+
 def sync_to_google_sheet_direct(payload):
-    """Append assessment payload directly to Google Sheets by service account."""
+    """Append assessment payload directly to Google Sheets by service account.
+
+    欄位對應邏輯：
+    - 試算表第一列若已有表頭，以試算表欄位為準，依 resolve_header_key() 模糊比對填入。
+    - 若試算表為空，自動寫入 DEFAULT_SYNC_HEADERS 作為表頭。
+    - 試算表欄位無法比對時填入空字串，確保欄位順序不錯位。
+    """
     client, err = get_google_sheet_client()
     if err:
         return False, err
 
     target = get_google_sheet_target()
-    spreadsheet_id = target.get("spreadsheet_id")
-    worksheet_name = target.get("worksheet_name") or "工作表1"
+    spreadsheet_id  = target.get("spreadsheet_id")
+    worksheet_name  = target.get("worksheet_name") or "工作表1"
     if not spreadsheet_id:
         return False, "尚未設定 google_sheet_id"
 
     try:
         spreadsheet = client.open_by_key(spreadsheet_id)
-        worksheet = spreadsheet.worksheet(worksheet_name)
+        worksheet   = spreadsheet.worksheet(worksheet_name)
     except gspread.WorksheetNotFound:
         worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=30)
     except Exception as e:
         return False, f"無法連線試算表：{e}"
 
-    metadata = payload.get("project_metadata", {})
-    assessment = payload.get("climate_assessment", {})
-    category_text = format_category_labels(assessment.get("categories", []))
-    sub_category_text = format_sub_category_labels(assessment.get("sub_categories", []))
-    row_dict = {
-        "填報日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "案件編號": metadata.get("uid", ""),
-        "標案名稱": metadata.get("name", ""),
-        "主辦局處": metadata.get("dept", ""),
-        "決標金額": metadata.get("total_budget", 0),
-        "氣候預算": payload.get("climate_budget_total", 0),
-        "判讀主類別": category_text,
-        "判讀子類別": sub_category_text,
-        "風險等級": assessment.get("alert_level", ""),
-    }
-
-    expected_headers = list(DEFAULT_SYNC_HEADERS)
-    expected_set = set(expected_headers)
-
+    # ── 取得現有表頭（第一列）
     try:
-        first_row_values = [str(h).strip() for h in worksheet.row_values(1) if str(h).strip()]
+        first_row_values = [str(h).strip() for h in worksheet.row_values(1)]
+        # 過濾尾端空欄
+        while first_row_values and not first_row_values[-1]:
+            first_row_values.pop()
     except Exception:
         first_row_values = []
 
-    has_header_overlap = len(set(first_row_values) & expected_set) >= 2
-    if has_header_overlap:
+    # ── 決定要使用的表頭
+    if first_row_values:
+        # 試算表已有表頭：沿用，不覆蓋
         headers = first_row_values
     else:
-        headers = expected_headers
+        # 試算表為空：寫入預設表頭
+        headers = list(DEFAULT_SYNC_HEADERS)
         try:
-            if first_row_values:
-                worksheet.insert_row(headers, index=1, value_input_option="USER_ENTERED")
-            else:
-                worksheet.update("A1", [headers])
+            worksheet.update("A1", [headers])
         except Exception as e:
             return False, f"初始化試算表表頭失敗：{e}"
 
-    row = [row_dict.get(col, "") for col in headers]
-    if len(row) != len(headers):
-        return False, "資料欄位長度與試算表表頭不一致"
+    # ── 組資料字典（以標準 key 為索引）
+    row_dict = build_sync_row_dict(payload)
 
+    # ── 依試算表表頭順序，模糊比對填入每欄值
+    row = []
+    for col_name in headers:
+        std_key = resolve_header_key(col_name)
+        row.append(row_dict.get(std_key, "") if std_key else "")
+
+    # ── 寫入
     try:
         worksheet.append_row(row, value_input_option="USER_ENTERED")
     except Exception as e:
         return False, f"寫入試算表失敗：{e}"
 
-    return True, f"已直接寫入試算表 {spreadsheet_id} / {worksheet_name}"
+    matched = sum(1 for col in headers if resolve_header_key(col))
+    unmatched = [col for col in headers if not resolve_header_key(col)]
+    msg = f"已寫入試算表 {spreadsheet_id}（{matched}/{len(headers)} 欄比對成功）"
+    if unmatched:
+        msg += f"，未比對欄位留空：{'、'.join(unmatched)}"
+    return True, msg
 
 
 @st.cache_data(ttl=600)
@@ -1798,20 +1880,25 @@ elif st.session_state.step == 4:
     rows = []
     category_labels = format_category_labels(state.selected_categories)
     sub_category_labels = format_sub_category_labels(state.selected_sub_categories)
+    green_text = "、".join(state.green_spending_category) if state.green_spending_category else ""
+    qual_text  = "、".join(state.qualitative_factors)     if state.qualitative_factors     else ""
     for ib in state.item_budgets:
+        item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
         rows.append({
-            "評估日期": datetime.now().strftime("%Y-%m-%d"),
-            "標案名稱": state.case_name,
-            "主辦局處": state.dept,
-            "決標金額": state.budget,
-            "計畫類別": category_labels,
-            "細項分類": sub_category_labels,
-            "風險等級": alert["label"],
-            "氣候工項": ib["label"],
-            "工項金額": ib["amount"],
-            "工項比例(%)": round(ib["amount"] / state.budget * 100, 1) if state.budget else 0,
-            "氣候預算合計": climate_total,
-            "氣候預算比例(%)": round(climate_ratio, 1),
+            "評估日期"        : datetime.now().strftime("%Y-%m-%d"),
+            "案件編號"        : export_data["project_metadata"]["uid"],
+            "標案名稱"        : state.case_name,
+            "主辦單位"        : state.dept,
+            "決標金額"        : state.budget,
+            "氣候預算合計"    : climate_total,
+            "氣候預算比例%"   : round(climate_ratio, 1),
+            "計畫類別"        : category_labels,
+            "細項分類"        : sub_category_labels,
+            "氣候工項"        : ib["label"],
+            "工項金額"        : ib["amount"],
+            "工項佔總預算%"   : item_ratio,
+            "綠色預算分類"    : green_text,
+            "氣候政策加分因子": qual_text,
         })
 
     csv_df = pd.DataFrame(rows)

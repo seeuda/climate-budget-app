@@ -1,4 +1,14 @@
 {
+  "schema_version": {
+    "config_version": "1.1.0",
+    "effective_date": "2026-03-19",
+    "updated_at": "2026-03-19",
+    "updated_by": "氣候變遷科",
+    "change_log": [
+      "v1.1.0 (2026-03-19): Phase 1 — 新增版本管理欄位；配合 app.py v1.1 信心分數與判讀理由面板",
+      "v1.0.0 (2025-12-01): 初版上線"
+    ]
+  },
   "system_parameters": {
     "min_threshold": 3000000,
     "medium_alert_threshold": 10000000,
@@ -8,7 +18,7 @@
   },
   "ui_text": {
     "app_title": "彰化縣氣候預算導引式判讀系統",
-    "app_subtitle": "Climate Budget Assessment Tool v1.0",
+    "app_subtitle": "Climate Budget Assessment Tool v1.1",
     "exclusion_warning": "⚠️ 本案經費未達建議評估門檻（300萬元），建議挑選其他計畫進行評估。",
     "manual_override_label": "本案經費未達建議評估門檻，但業務單位認為與氣候變遷高度相關，勾選後繼續評估作業。",
     "extreme_alert_warning": "🔴 本案經費達1億元以上，屬重大公共建設，強烈建議檢核淨零與氣候韌性指標。",

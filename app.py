@@ -1,6 +1,7 @@
 """
 彰化縣氣候預算導引式判讀系統
 Climate Budget Assessment Tool for Changhua County Government
+v1.1 — Phase 1: 判讀理由面板、信心分數、UID強化、排除說明
 """
 
 import streamlit as st
@@ -9,6 +10,8 @@ import pandas as pd
 from datetime import datetime
 TZ_TAIPEI = __import__('datetime').timezone(__import__('datetime').timedelta(hours=8))
 import io
+import random
+import string
 from urllib import request, error
 import hashlib
 import gspread
@@ -28,6 +31,8 @@ DEFAULT_SYNC_HEADERS = [
     "計畫類別",
     "細項分類",
     "氣候工項",
+    "判讀信心",
+    "命中關鍵字",
     "工程量體縮減效益",
     "補充說明",
 ]
@@ -46,6 +51,8 @@ HEADER_ALIAS_MAP = {
     "計畫類別"          : ["計畫類別", "判讀主類別", "主類別"],
     "細項分類"          : ["細項分類", "判讀子類別", "子類別", "細項"],
     "氣候工項"          : ["氣候工項", "工項", "工項清單"],
+    "判讀信心"          : ["判讀信心", "信心", "信心分數", "confidence"],
+    "命中關鍵字"        : ["命中關鍵字", "關鍵字", "觸發關鍵字", "keywords"],
     "工程量體縮減效益"  : ["工程量體縮減效益", "量體縮減", "量體效益", "縮減效益"],
     "補充說明"          : ["補充說明", "備註", "note", "說明"],
 }
@@ -365,8 +372,130 @@ html, body, [class*="css"] {
     margin-bottom: 1rem;
 }
 
-/* Divider */
-hr { border-color: #d4e8d4; }
+/* Confidence badges */
+.confidence-high {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 0.25rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+.confidence-medium {
+    display: inline-block;
+    background: #f39c12;
+    color: white;
+    padding: 0.25rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+.confidence-low {
+    display: inline-block;
+    background: #e74c3c;
+    color: white;
+    padding: 0.25rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+/* Explainability panel */
+.explain-panel {
+    background: #fafcff;
+    border: 1px solid #bcd4f0;
+    border-left: 4px solid #2980b9;
+    border-radius: 0 10px 10px 0;
+    padding: 0.9rem 1.1rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+}
+.explain-panel .explain-title {
+    font-weight: 700;
+    color: #1a5276;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+.explain-row {
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #e8f0f8;
+    font-size: 0.84rem;
+    color: #2c3e50;
+}
+.explain-row:last-child { border-bottom: none; }
+.explain-type-strong {
+    display: inline-block;
+    background: #eaf4fb;
+    color: #1a5276;
+    border: 1px solid #aed6f1;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    margin-left: 0.3rem;
+}
+.explain-type-logic {
+    display: inline-block;
+    background: #fef9e7;
+    color: #7d6608;
+    border: 1px solid #f9e79f;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    margin-left: 0.3rem;
+}
+.explain-type-budget {
+    display: inline-block;
+    background: #fdedec;
+    color: #922b21;
+    border: 1px solid #f5b7b1;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    margin-left: 0.3rem;
+}
+.explain-type-manual {
+    display: inline-block;
+    background: #f4f6f7;
+    color: #555;
+    border: 1px solid #ccc;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    margin-left: 0.3rem;
+}
+
+/* Exclusion reason box */
+.exclusion-reason {
+    background: #fff5f5;
+    border-left: 4px solid #e74c3c;
+    border-radius: 0 8px 8px 0;
+    padding: 0.75rem 1rem;
+    margin: 0.4rem 0;
+    font-size: 0.85rem;
+    color: #922b21;
+}
+.exclusion-reason .er-title {
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+/* Summary confidence section */
+.confidence-summary {
+    background: white;
+    border: 1px solid #e0e8e0;
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin: 0.5rem 0;
+}
+
 
 button[kind="primary"] {
     background: #2d6a4f !important;
@@ -438,9 +567,129 @@ def detect_keywords(text):
                 "category_id": rule.get("category_id", ""),
                 "sub_id": rule.get("sub_id", ""),
                 "note": rule.get("note", ""),
+                "_match_type": "logic",  # 標記為邏輯組合規則
             })
             seen.add(synthetic_keyword)
     return matches
+
+
+def compute_confidence(kw_matches, manual_override, budget, selected_items):
+    """
+    計算判讀信心等級。
+    回傳 dict: { level: "high"/"medium"/"low", label: str, badge_html: str, reasons: list[str] }
+    """
+    forced_review_threshold = CONFIG.get("weighting_parameters", {}).get(
+        "high_budget_forced_review_threshold", 50000000
+    )
+    strong_matches = [kw for kw in kw_matches if kw.get("_match_type") != "logic"]
+    logic_matches  = [kw for kw in kw_matches if kw.get("_match_type") == "logic"]
+
+    reasons = []
+
+    if manual_override:
+        level = "low"
+        reasons.append("使用者啟用「人工覆核模式」（未達門檻仍繼續評估）")
+    elif not kw_matches and not selected_items:
+        level = "low"
+        reasons.append("未命中任何關鍵字，工項全部為人工選擇")
+    elif not kw_matches and selected_items:
+        level = "low"
+        reasons.append("未命中任何關鍵字，工項依人工判斷填入")
+    elif len(strong_matches) >= 2:
+        level = "high"
+        kw_list = "、".join(f"「{kw['keyword']}」" for kw in strong_matches[:4])
+        reasons.append(f"命中 {len(strong_matches)} 個強觸發關鍵字：{kw_list}")
+        if logic_matches:
+            reasons.append(f"另命中 {len(logic_matches)} 個組合條件規則")
+    elif len(strong_matches) == 1:
+        level = "medium"
+        reasons.append(f"命中 1 個關鍵字：「{strong_matches[0]['keyword']}」，建議人工確認工項是否完整")
+    elif logic_matches:
+        level = "medium"
+        kw_list = "、".join(f"「{kw['keyword']}」" for kw in logic_matches[:3])
+        reasons.append(f"命中 {len(logic_matches)} 個組合條件規則：{kw_list}")
+    else:
+        level = "low"
+        reasons.append("未命中任何關鍵字，全部依人工選擇")
+
+    if budget >= forced_review_threshold and not kw_matches:
+        reasons.append(f"⚠️ 金額 ≥ {forced_review_threshold:,} 元且無關鍵字命中，已強制進入人工檢核")
+        if level == "high":
+            level = "medium"
+
+    labels = {"high": "🟢 高信心", "medium": "🟡 中信心", "low": "🔴 低信心"}
+    badges = {
+        "high":   '<span class="confidence-high">🟢 高信心</span>',
+        "medium": '<span class="confidence-medium">🟡 中信心</span>',
+        "low":    '<span class="confidence-low">🔴 低信心</span>',
+    }
+    descs = {
+        "high":   "關鍵字命中充分，判讀結果可信度高",
+        "medium": "部分命中，建議人工確認工項與類別",
+        "low":    "無關鍵字佐證，全部依人工選擇，建議加強說明",
+    }
+    return {
+        "level":      level,
+        "label":      labels[level],
+        "badge_html": badges[level],
+        "desc":       descs[level],
+        "reasons":    reasons,
+    }
+
+
+def build_explain_html(kw_matches, manual_override, budget):
+    """
+    組裝「判讀理由面板」的 HTML 字串，供 Step 1/Step 4 顯示。
+    """
+    forced_review_threshold = CONFIG.get("weighting_parameters", {}).get(
+        "high_budget_forced_review_threshold", 50000000
+    )
+
+    if not kw_matches and not manual_override and budget < forced_review_threshold:
+        return ""
+
+    rows_html = ""
+
+    if kw_matches:
+        for kw in kw_matches:
+            match_type = kw.get("_match_type", "exact")
+            if match_type == "logic":
+                type_badge = '<span class="explain-type-logic">組合條件</span>'
+                triggers = kw["keyword"].split("/")
+                kw_display = " ＋ ".join(f"「{t}」" for t in triggers)
+            else:
+                type_badge = '<span class="explain-type-strong">強觸發</span>'
+                kw_display = f"「{kw['keyword']}」"
+
+            cat_obj  = get_taxonomy_by_id(kw.get("category_id", ""))
+            cat_name = f"{cat_obj['icon']} {cat_obj['label']}" if cat_obj else kw.get("category_id", "–")
+            note_txt = f"｜{kw['note']}" if kw.get("note") else ""
+
+            rows_html += (
+                f'<div class="explain-row">'
+                f'🔑 關鍵字 {kw_display}{type_badge}'
+                f' → <b>{kw["suggested_item"]}</b>'
+                f' ／ 類別：{cat_name}{note_txt}'
+                f'</div>'
+            )
+    else:
+        rows_html += '<div class="explain-row">未偵測到任何關鍵字</div>'
+
+    if manual_override:
+        rows_html += '<div class="explain-row">⚠️ 使用者啟用人工覆核模式（手動繼續評估） <span class="explain-type-manual">人工覆核</span></div>'
+
+    if budget >= forced_review_threshold and not kw_matches:
+        rows_html += (
+            f'<div class="explain-row">🔴 金額 {budget:,} 元 ≥ {forced_review_threshold:,} 元 且無關鍵字命中，系統強制觸發人工檢核'
+            f' <span class="explain-type-budget">金額強制</span></div>'
+        )
+
+    return (
+        f'<div class="explain-panel">'
+        f'<div class="explain-title">🔍 判讀依據說明</div>'
+        f'{rows_html}'
+        f'</div>'
+    )
 
 def detect_text_keywords(text, keywords):
     """Return matched keywords contained in text."""
@@ -610,17 +859,34 @@ def get_physical_reduction_fields(item_budgets):
     return fields
 
 
+def generate_uid(case_name=""):
+    """Generate unique case ID with timestamp-seconds + name-hash + random suffix."""
+    ts   = datetime.now(tz=TZ_TAIPEI).strftime("%Y%m%d%H%M%S")
+    name_hash = hashlib.md5(case_name.encode("utf-8")).hexdigest()[:4].upper() if case_name else "XXXX"
+    rand_part = "".join(random.choices(string.ascii_uppercase + string.digits, k=3))
+    return f"CHC-{ts}-{name_hash}-{rand_part}"
+
+
 def generate_export_json(state):
     """Generate the export JSON object."""
     selected_categories = state.get("selected_categories", [])
     selected_sub_categories = state.get("selected_sub_categories", [])
+    item_budgets = state.get("item_budgets", [])
+    kw_matches = state.get("kw_matches", [])
+    manual_override = state.get("manual_override", False)
+    budget = state.get("budget", 0)
+
+    # Compute confidence
+    confidence = compute_confidence(kw_matches, manual_override, budget, item_budgets)
+    kw_labels  = [kw["keyword"] for kw in kw_matches]
+
     result = {
         "project_metadata": {
-            "uid": f"CHC-{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d%H%M')}",
+            "uid": generate_uid(state.get("case_name", "")),
             "name": state.get("case_name", ""),
             "dept": state.get("dept", ""),
-            "total_budget": state.get("budget", 0),
-            "is_manual_override": state.get("manual_override", False),
+            "total_budget": budget,
+            "is_manual_override": manual_override,
             "assessment_date": datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M"),
         },
         "climate_assessment": {
@@ -628,17 +894,25 @@ def generate_export_json(state):
             "category_labels": format_category_labels(selected_categories),
             "sub_categories": selected_sub_categories,
             "sub_category_labels": format_sub_category_labels(selected_sub_categories),
-            "selected_items": state.get("item_budgets", []),
-            "alert_level": get_alert_level(state.get("budget", 0))["label"],
+            "selected_items": item_budgets,
+            "alert_level": get_alert_level(budget)["label"],
         },
         "climate_budget_total": sum(
-            i.get("amount", 0) for i in state.get("item_budgets", [])
+            i.get("amount", 0) for i in item_budgets
         ),
-        "impact_level": get_alert_level(state.get("budget", 0))["level"],
+        "impact_level": get_alert_level(budget)["level"],
+        "confidence": {
+            "level":   confidence["level"],
+            "label":   confidence["label"],
+            "desc":    confidence["desc"],
+            "reasons": confidence["reasons"],
+        },
+        "matched_keywords": kw_labels,
         "physical_reductions": state.get("physical_reductions", {}),
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "user_note": state.get("user_note", ""),
+            "system_version": "1.1",
         },
     }
     return result
@@ -780,6 +1054,8 @@ def build_sync_row_dict(payload):
         "計畫類別"         : assessment.get("category_labels", ""),
         "細項分類"         : assessment.get("sub_category_labels", ""),
         "氣候工項"         : items_text,
+        "判讀信心"         : payload.get("confidence", {}).get("label", ""),
+        "命中關鍵字"       : "、".join(payload.get("matched_keywords", [])),
         "工程量體縮減效益" : phys_text,
         "補充說明"         : ameta.get("user_note", ""),
     }
@@ -1044,7 +1320,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>🌿 彰化縣氣候預算導引式判讀系統</h1>
-    <p>Changhua County · Climate Budget Assessment Tool · v1.0</p>
+    <p>Changhua County · Climate Budget Assessment Tool · v1.1</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1364,6 +1640,15 @@ elif st.session_state.step == 1:
         st.warning(st.session_state.selection_warning)
         st.session_state.selection_warning = ""
 
+    # ── 判讀理由面板（Phase 1 新增）──────────────────────────────
+    explain_html = build_explain_html(
+        st.session_state.kw_matches,
+        st.session_state.manual_override,
+        st.session_state.budget,
+    )
+    if explain_html:
+        st.markdown(explain_html, unsafe_allow_html=True)
+
     # Show keyword suggestions
     if st.session_state.kw_matches:
         suggested_cats = list({kw["category_id"] for kw in st.session_state.kw_matches})
@@ -1499,8 +1784,14 @@ elif st.session_state.step == 2:
         st.markdown(f"**已選計畫類別：** {selected_cat_text}")
         st.caption("📌 尚未限定細項，以下顯示所有已選計畫類別的細項工項聯集。")
 
-    # Suggested items from keywords
+    # Suggested items from keywords — build lookup: label → triggering keyword(s)
     suggested_items_labels = {kw["suggested_item"] for kw in st.session_state.kw_matches}
+    # map item label → list of keywords that triggered it (for explainability tooltip)
+    item_trigger_map: dict[str, list[str]] = {}
+    for kw in st.session_state.kw_matches:
+        lbl = kw.get("suggested_item", "")
+        if lbl:
+            item_trigger_map.setdefault(lbl, []).append(kw["keyword"])
 
     st.markdown("**請勾選本案中包含的氣候相關工項（可複選）：**")
 
@@ -1574,6 +1865,21 @@ elif st.session_state.step == 2:
                         selected_items.append(item["label"])
                     st.session_state.selected_items = selected_items
                     st.rerun()
+
+                # ── Phase 1：顯示觸發來源（關鍵字說明）─────────────
+                if is_suggested and item["label"] in item_trigger_map:
+                    triggers = item_trigger_map[item["label"]]
+                    kw_tags = "".join(
+                        f'<span style="display:inline-block;background:#f39c12;color:white;'
+                        f'padding:0.1rem 0.45rem;border-radius:10px;font-size:0.7rem;'
+                        f'font-weight:600;margin:0.1rem 0.15rem 0 0;">#{t}</span>'
+                        for t in triggers
+                    )
+                    st.markdown(
+                        f'<div style="font-size:0.75rem;color:#8f5c00;margin:-0.3rem 0 0.3rem 0.2rem;">'
+                        f'🔑 由關鍵字觸發：{kw_tags}</div>',
+                        unsafe_allow_html=True,
+                    )
 
     st.session_state.selected_items = selected_items
 
@@ -1870,6 +2176,7 @@ elif st.session_state.step == 4:
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_chart:
+        # ── 氣候預算金額顯示 ────────────────────────────────────
         st.markdown(f"""
         <div class="budget-display" style="margin-bottom:0.5rem">
             <div class="label">氣候變遷相關經費</div>
@@ -1888,6 +2195,35 @@ elif st.session_state.step == 4:
             st.markdown(f'<div class="alert-yellow"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="alert-green"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
+
+        # ── Phase 1：信心分數面板 ────────────────────────────────
+        confidence = compute_confidence(
+            state.kw_matches,
+            state.manual_override,
+            state.budget,
+            state.item_budgets,
+        )
+        conf_color_map = {"high": "#f0fdf4", "medium": "#fffbf0", "low": "#fff5f5"}
+        conf_border_map = {"high": "#27ae60", "medium": "#f39c12", "low": "#e74c3c"}
+        conf_bg    = conf_color_map[confidence["level"]]
+        conf_bdr   = conf_border_map[confidence["level"]]
+
+        reasons_html = "".join(
+            f'<div style="font-size:0.78rem;color:#444;padding:0.2rem 0;'
+            f'border-bottom:1px solid rgba(0,0,0,0.06);">'
+            f'• {r}</div>'
+            for r in confidence["reasons"]
+        )
+        st.markdown(
+            f'<div class="confidence-summary" style="border-left:4px solid {conf_bdr};background:{conf_bg};">'
+            f'<div style="font-weight:700;font-size:0.88rem;color:#333;margin-bottom:0.4rem;">'
+            f'📊 判讀信心評估</div>'
+            f'{confidence["badge_html"]}'
+            f'<div style="font-size:0.8rem;color:#555;margin-top:0.4rem;">{confidence["desc"]}</div>'
+            f'<div style="margin-top:0.5rem;">{reasons_html}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
 
@@ -1931,6 +2267,7 @@ elif st.session_state.step == 4:
         "dept": state.dept,
         "budget": state.budget,
         "manual_override": state.manual_override,
+        "kw_matches": state.kw_matches,
         "selected_categories": state.selected_categories,
         "selected_sub_categories": state.selected_sub_categories,
         "item_budgets": state.item_budgets,
@@ -2005,6 +2342,8 @@ elif st.session_state.step == 4:
             "氣候工項"          : ib["label"],
             "工項金額"          : ib["amount"],
             "工項佔總預算%"     : item_ratio,
+            "判讀信心"          : export_data.get("confidence", {}).get("label", ""),
+            "命中關鍵字"        : "、".join(export_data.get("matched_keywords", [])),
             "工程量體縮減效益"  : phys_text,
             "補充說明"          : state.get("user_note", ""),
         })
@@ -2055,7 +2394,7 @@ elif st.session_state.step == 4:
 st.markdown("---")
 st.markdown(
     '<p style="text-align:center;color:#888;font-size:0.78rem;">'
-    '彰化縣氣候預算導引式判讀系統 v1.0 · 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引'
+    '彰化縣氣候預算導引式判讀系統 v1.1 · Phase 1 更新：判讀理由面板 · 信心分數 · UID 強化 ｜ 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引'
     '</p>',
     unsafe_allow_html=True
 )

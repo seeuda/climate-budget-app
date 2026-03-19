@@ -1833,7 +1833,7 @@ elif st.session_state.step == 4:
 
 **💰 計畫總經費：** {fmt_twd(state.budget)}
 
-**{alert['badge']} 氣候預算潛力：** {alert['label']} — {alert['desc']}
+**{alert['badge']} 預算規模：** {alert['label']} — {alert['desc']}
         """)
 
         if selected_cats:

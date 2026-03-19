@@ -732,13 +732,32 @@ def get_available_sub_entries(selected_categories):
     return entries
 
 def get_item_sources(selected_categories, selected_sub_categories):
-    """回傳工項來源清單，同樣排除 enabled=False 的細項。"""
+    """回傳工項來源清單。
+    - 正常細項：直接取該細項工項。
+    - _NONE 虛擬細項（使用者選「無適合項目」）：展開對應類別全部啟用細項。
+    - 同樣排除 enabled=False 的細項。
+    """
     if selected_sub_categories:
         sources = []
+        seen_sub_ids = set()
         for sub_id in selected_sub_categories:
-            cat, sub = get_sub_by_id_global(sub_id)
-            if cat and sub and sub.get("enabled", True) is not False:
-                sources.append({"category": cat, "sub": sub})
+            if sub_id.endswith("_NONE"):
+                # 逃生出口：展開該 cat 底下所有啟用細項
+                cat_id = sub_id.replace("_NONE", "")
+                cat = get_taxonomy_by_id(cat_id)
+                if cat:
+                    for sub in cat.get("sub_categories", []):
+                        if sub.get("enabled", True) is False:
+                            continue
+                        if sub["id"] not in seen_sub_ids:
+                            seen_sub_ids.add(sub["id"])
+                            sources.append({"category": cat, "sub": sub})
+            else:
+                cat, sub = get_sub_by_id_global(sub_id)
+                if cat and sub and sub.get("enabled", True) is not False:
+                    if sub["id"] not in seen_sub_ids:
+                        seen_sub_ids.add(sub["id"])
+                        sources.append({"category": cat, "sub": sub})
         return sources
     return get_available_sub_entries(selected_categories)
 
@@ -1705,7 +1724,7 @@ elif st.session_state.step == 1:
         st.markdown("---")
         selected_categories = get_taxonomies_by_ids(st.session_state.selected_categories)
         st.markdown('<div class="section-title">選擇細項分類（依已選類別聯合顯示，可複選）</div>', unsafe_allow_html=True)
-        st.caption("若未勾選細項，下一步將自動展開所有已選計畫類別底下的細項工項聯集。")
+        st.caption("如果沒有合適的細項，可嘗試選取其他的計畫類別。")
 
         suggested_subs = list({
             kw["sub_id"] for kw in st.session_state.kw_matches
@@ -1713,40 +1732,119 @@ elif st.session_state.step == 1:
         })
 
         available_sub_entries = get_available_sub_entries(st.session_state.selected_categories)
-        subcol1, subcol2 = st.columns(2)
-        for j, entry in enumerate(available_sub_entries):
-            cat = entry["category"]
-            sub = entry["sub"]
-            is_sub_suggested = sub["id"] in suggested_subs
-            is_sub_selected = sub["id"] in st.session_state.selected_sub_categories
-            with (subcol1 if j % 2 == 0 else subcol2):
-                badge = "⭐ " if is_sub_suggested else ""
-                selected_mark = "✅ " if is_sub_selected else ""
-                button_key = f"sub_{sub['id']}"
-                inject_button_style(button_key, is_selected=is_sub_selected, is_suggested=is_sub_suggested)
-                if st.button(
-                    f"{selected_mark}{badge}{cat['icon']} {sub['label']}\n📌 {sub['examples'][:28]}",
-                    key=button_key,
-                    use_container_width=True,
-                    type="secondary"
-                ):
-                    updated_sub_categories = list(st.session_state.selected_sub_categories)
-                    if sub["id"] in updated_sub_categories:
-                        updated_sub_categories.remove(sub["id"])
-                    else:
-                        updated_sub_categories.append(sub["id"])
-                    st.session_state.selected_sub_categories = updated_sub_categories
-                    st.rerun()
+
+        # ── 依計畫類別分組渲染細項 + 各類末尾「無適合項目」逃生出口 ──
+        # 先將 available_sub_entries 按類別分組
+        cat_sub_groups: dict = {}
+        for entry in available_sub_entries:
+            cid = entry["category"]["id"]
+            cat_sub_groups.setdefault(cid, {"category": entry["category"], "subs": []})
+            cat_sub_groups[cid]["subs"].append(entry["sub"])
+
+        for cid, group in cat_sub_groups.items():
+            grp_cat = group["category"]
+            grp_subs = group["subs"]
+            none_id = f"{cid}_NONE"
+
+            # 該類別目前已選的細項（不含 _NONE）
+            cat_real_selected = [
+                sid for sid in st.session_state.selected_sub_categories
+                if sid != none_id and any(s["id"] == sid for s in grp_subs)
+            ]
+            none_selected = none_id in st.session_state.selected_sub_categories
+
+            # 類別群組標題
+            st.markdown(
+                f'<div style="background:#e8f0e8;border-left:4px solid #2d6a4f;'
+                f'padding:0.4rem 0.8rem;border-radius:0 6px 6px 0;margin:0.8rem 0 0.4rem 0;'
+                f'font-weight:700;font-size:0.9rem;color:#1a4731;">'
+                f'{grp_cat["icon"]} {grp_cat["label"]}</div>',
+                unsafe_allow_html=True,
+            )
+
+            # 正常細項（兩欄並排）
+            subcol1, subcol2 = st.columns(2)
+            all_items = grp_subs  # 正常細項清單
+            for j, sub in enumerate(all_items):
+                is_sub_suggested = sub["id"] in suggested_subs
+                is_sub_selected  = sub["id"] in st.session_state.selected_sub_categories
+                # 若本類別已選「_NONE」，其他細項強制顯示為不可選（disabled 透過樣式模擬）
+                force_disabled = none_selected
+
+                with (subcol1 if j % 2 == 0 else subcol2):
+                    badge        = "⭐ " if is_sub_suggested else ""
+                    selected_mark = "✅ " if is_sub_selected else ""
+                    button_key   = f"sub_{sub['id']}"
+                    inject_button_style(
+                        button_key,
+                        is_selected=is_sub_selected and not force_disabled,
+                        is_suggested=is_sub_suggested and not is_sub_selected and not force_disabled,
+                    )
+                    if st.button(
+                        f"{selected_mark}{badge}{grp_cat['icon']} {sub['label']}\n📌 {sub['examples'][:28]}",
+                        key=button_key,
+                        use_container_width=True,
+                        type="secondary",
+                        disabled=force_disabled,
+                    ):
+                        updated_sub = list(st.session_state.selected_sub_categories)
+                        if sub["id"] in updated_sub:
+                            updated_sub.remove(sub["id"])
+                        else:
+                            updated_sub.append(sub["id"])
+                        st.session_state.selected_sub_categories = updated_sub
+                        st.rerun()
+
+            # ── 逃生出口按鈕（各類別末尾，整列單獨一行）──
+            none_key = f"sub_{none_id}"
+            none_is_selected = none_selected
+            # 若本類別已有其他細項被勾選，_NONE 不可點
+            none_disabled = len(cat_real_selected) > 0
+            inject_button_style(none_key, is_selected=none_is_selected)
+            if st.button(
+                f"{'✅ ' if none_is_selected else ''}⬜ 無適合項目，在下一頁展開氣候工項檢查",
+                key=none_key,
+                use_container_width=True,
+                type="secondary",
+                disabled=none_disabled,
+                help="已點選其他細項時此按鈕不可用；若本類別確實沒有合適細項，點選此項即可繼續。",
+            ):
+                updated_sub = list(st.session_state.selected_sub_categories)
+                if none_id in updated_sub:
+                    updated_sub.remove(none_id)
+                else:
+                    # 清除本類別其他細項（理論上此時 cat_real_selected 已為空，雙重保險）
+                    for sid in cat_real_selected:
+                        if sid in updated_sub:
+                            updated_sub.remove(sid)
+                    updated_sub.append(none_id)
+                st.session_state.selected_sub_categories = updated_sub
+                st.rerun()
 
         selected_cat_labels = "、".join(cat["label"] for cat in selected_categories)
         st.info(f"已選計畫類別（{len(selected_categories)}/3）：{selected_cat_labels}")
         if st.session_state.selected_sub_categories:
-            selected_sub_text = "、".join(
-                sub["label"]
-                for sub_id in st.session_state.selected_sub_categories
-                if (sub := get_sub_by_id_global(sub_id)[1])
-            )
-            st.info(f"已選細項分類（{len(st.session_state.selected_sub_categories)} 項）：{selected_sub_text}")
+            # 顯示時過濾掉 _NONE 虛擬項目，只顯示真實細項名稱
+            real_sub_ids = [
+                sid for sid in st.session_state.selected_sub_categories
+                if not sid.endswith("_NONE")
+            ]
+            none_cat_labels = [
+                get_taxonomy_by_id(sid.replace("_NONE", ""))["label"]
+                for sid in st.session_state.selected_sub_categories
+                if sid.endswith("_NONE") and get_taxonomy_by_id(sid.replace("_NONE", ""))
+            ]
+            parts = []
+            if real_sub_ids:
+                real_text = "、".join(
+                    sub["label"]
+                    for sub_id in real_sub_ids
+                    if (sub := get_sub_by_id_global(sub_id)[1])
+                )
+                parts.append(real_text)
+            if none_cat_labels:
+                parts.append(f"（{' / '.join(none_cat_labels)} 類別展開全部工項）")
+            st.info("已選細項分類（" + str(len(real_sub_ids)) + " 項）：" + "　".join(parts))
 
     col_back, col_next = st.columns([1, 3])
     with col_back:
@@ -1754,7 +1852,19 @@ elif st.session_state.step == 1:
             st.session_state.step = 0
             st.rerun()
     with col_next:
-        can_next = bool(st.session_state.selected_categories)
+        # 必須至少選一個細項（含逃生出口 _NONE）才能繼續
+        has_sub_for_each_cat = all(
+            any(
+                sid == f"{cid}_NONE" or (
+                    (result := get_sub_by_id_global(sid)) and result[0] and result[0]["id"] == cid
+                )
+                for sid in st.session_state.selected_sub_categories
+            )
+            for cid in st.session_state.selected_categories
+        )
+        can_next = bool(st.session_state.selected_categories) and has_sub_for_each_cat
+        if not can_next and st.session_state.selected_categories:
+            st.caption("⚠️ 每個計畫類別都需至少選擇一個細項，或點選「無適合項目」後才能繼續。")
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
             st.session_state.step = 2
             st.rerun()
@@ -1770,23 +1880,32 @@ elif st.session_state.step == 2:
     selected_sub_categories = st.session_state.selected_sub_categories
     item_source_entries = get_item_sources(selected_categories, selected_sub_categories)
 
-    if selected_sub_categories:
-        selected_sub_descriptions = []
+    # 判斷是否有任何 _NONE 逃生出口（該類別展開全部工項）
+    none_cats = [
+        get_taxonomy_by_id(sid.replace("_NONE", ""))
+        for sid in selected_sub_categories if sid.endswith("_NONE")
+    ]
+    none_cats = [c for c in none_cats if c]
+    real_sub_ids = [sid for sid in selected_sub_categories if not sid.endswith("_NONE")]
+
+    if real_sub_ids or none_cats:
+        lines = []
         for entry in item_source_entries:
             cat = entry["category"]
             sub = entry["sub"]
-            selected_sub_descriptions.append(f"{cat['icon']} {cat['label']} › {sub['label']}")
+            # 判斷這條細項是來自真實選取，還是 _NONE 展開
+            is_from_none = cat in none_cats and sub["id"] not in real_sub_ids
+            marker = "（全部展開）" if is_from_none else ""
+            lines.append(f"{cat['icon']} {cat['label']} › {sub['label']}{marker}")
+        # 去重保持順序
+        seen = set(); deduped = []
+        for l in lines:
+            if l not in seen:
+                seen.add(l); deduped.append(l)
         st.markdown("**已選細項聯集：**")
-        for desc in selected_sub_descriptions:
+        for desc in deduped:
             st.markdown(f"- {desc}")
         st.caption("📌 以下顯示已選細項的工項聯集，重複工項會自動去重。")
-    else:
-        selected_cat_text = "、".join(
-            f"{cat['icon']} {cat['label']}"
-            for cat in get_taxonomies_by_ids(selected_categories)
-        )
-        st.markdown(f"**已選計畫類別：** {selected_cat_text}")
-        st.caption("📌 尚未限定細項，以下顯示所有已選計畫類別的細項工項聯集。")
 
     # Suggested items from keywords — build lookup: label → triggering keyword(s)
     suggested_items_labels = {kw["suggested_item"] for kw in st.session_state.kw_matches}

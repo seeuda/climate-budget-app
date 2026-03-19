@@ -722,18 +722,22 @@ def get_sub_by_id_global(sub_id):
     return None, None
 
 def get_available_sub_entries(selected_categories):
+    """回傳已選類別下所有啟用中的細項（enabled != False 才顯示）。"""
     entries = []
     for cat in get_taxonomies_by_ids(selected_categories):
         for sub in cat.get("sub_categories", []):
+            if sub.get("enabled", True) is False:
+                continue  # 已關閉的細項（如 C3 軌道鐵道）不顯示於 UI
             entries.append({"category": cat, "sub": sub})
     return entries
 
 def get_item_sources(selected_categories, selected_sub_categories):
+    """回傳工項來源清單，同樣排除 enabled=False 的細項。"""
     if selected_sub_categories:
         sources = []
         for sub_id in selected_sub_categories:
             cat, sub = get_sub_by_id_global(sub_id)
-            if cat and sub:
+            if cat and sub and sub.get("enabled", True) is not False:
                 sources.append({"category": cat, "sub": sub})
         return sources
     return get_available_sub_entries(selected_categories)
@@ -1803,8 +1807,9 @@ elif st.session_state.step == 2:
     ]
     if invalid_selected_items:
         st.warning(
-            "⚠️ 下列已勾選工項在目前類別/細項範圍外，**按「下一步」時**才會自動移除，"
-            "現在補選回對應類別即可保留：" + "、".join(invalid_selected_items)
+            "⚠️ 下列氣候工項：**" + "、".join(invalid_selected_items) + "**"
+            "　與您的計畫名稱有關，但上一步您並未點選對應的類別／細項。"
+            "如需補充，可至頁面下方按「返回」補充點選。"
         )
 
     rendered = set()

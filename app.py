@@ -1953,7 +1953,7 @@ elif st.session_state.step == 4:
 
     sheet_target = get_google_sheet_target()
     st.markdown("**步驟 1：先同步到預設 Google 試算表**")
-    if sheet_target.get("spreadsheet_id"):
+    # if sheet_target.get("spreadsheet_id"):
         # st.caption(
         #     f"預設同步目標：`{sheet_target['spreadsheet_id']}` / 分頁 `{sheet_target['worksheet_name']}`"
         # )

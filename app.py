@@ -402,16 +402,16 @@ def fmt_twd(n):
 def get_alert_level(budget):
     """Return alert level info dict based on budget."""
     if budget >= PARAMS["extreme_alert_threshold"]:
-        return {"level": "extreme", "label": "⛔ 極高風險", "desc": "重大公共建設，強制淨零檢核",
+        return {"level": "extreme", "label": "⛔ 氣候預算潛力：城市重塑", "desc": "重大公共建設，強烈建議淨零檢核",
                 "color": "#8e44ad", "badge": "🟣"}
     elif budget >= PARAMS["high_alert_threshold"]:
-        return {"level": "red", "label": "🔴 高碳影響力計畫", "desc": "金額≥2000萬，強調隱含碳檢核",
+        return {"level": "red", "label": "🔴 氣候預算潛力：部門轉型", "desc": "金額≥2000萬，強調隱含碳檢核",
                 "color": "#e74c3c", "badge": "🔴"}
     elif budget >= PARAMS["medium_alert_threshold"]:
-        return {"level": "yellow", "label": "🟡 設施改善重點計畫", "desc": "金額1000萬–2000萬",
+        return {"level": "yellow", "label": "🟡 氣候預算潛力：效能升級", "desc": "金額1000萬–2000萬",
                 "color": "#f39c12", "badge": "🟡"}
     else:
-        return {"level": "green", "label": "🟢 自然碳匯或一般維護", "desc": "金額300萬–1000萬",
+        return {"level": "green", "label": "🟢 氣候預算潛力：基層守護", "desc": "金額300萬–1000萬",
                 "color": "#2ecc71", "badge": "🟢"}
 
 def detect_keywords(text):

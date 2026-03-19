@@ -1954,9 +1954,9 @@ elif st.session_state.step == 4:
     sheet_target = get_google_sheet_target()
     st.markdown("**步驟 1：先同步到預設 Google 試算表**")
     if sheet_target.get("spreadsheet_id"):
-        st.caption(
-            f"預設同步目標：`{sheet_target['spreadsheet_id']}` / 分頁 `{sheet_target['worksheet_name']}`"
-        )
+        # st.caption(
+        #     f"預設同步目標：`{sheet_target['spreadsheet_id']}` / 分頁 `{sheet_target['worksheet_name']}`"
+        # )
     webhook_ready = is_sheet_sync_ready()
     if not webhook_ready:
         st.warning("⚠️ 尚未完成 Google 試算表同步設定（需 webhook 或 gcp_service_account + google_sheet_id），目前僅可下載本地報告。")

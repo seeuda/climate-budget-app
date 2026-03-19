@@ -27,9 +27,8 @@ DEFAULT_SYNC_HEADERS = [
     "計畫類別",
     "細項分類",
     "氣候工項",
-    "綠色預算分類",
-    "氣候政策加分因子",
-    "備註",
+    "工程量體縮減效益",
+    "補充說明",
 ]
 
 # 欄位別名映射：試算表欄位名稱（含使用者自訂異動）→ 標準欄位 key
@@ -46,9 +45,8 @@ HEADER_ALIAS_MAP = {
     "計畫類別"          : ["計畫類別", "判讀主類別", "主類別"],
     "細項分類"          : ["細項分類", "判讀子類別", "子類別", "細項"],
     "氣候工項"          : ["氣候工項", "工項", "工項清單"],
-    "綠色預算分類"      : ["綠色預算分類", "綠色預算", "綠色分類"],
-    "氣候政策加分因子"  : ["加分因子", "氣候政策", "政策因子", "加分"],
-    "備註"              : ["備註", "note", "說明"],
+    "工程量體縮減效益"  : ["工程量體縮減效益", "量體縮減", "量體效益", "縮減效益"],
+    "補充說明"          : ["補充說明", "備註", "note", "說明"],
 }
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -781,9 +779,8 @@ def build_sync_row_dict(payload):
         "計畫類別"         : assessment.get("category_labels", ""),
         "細項分類"         : assessment.get("sub_category_labels", ""),
         "氣候工項"         : items_text,
-        "綠色預算分類"     : "",
-        "氣候政策加分因子" : "",
-        "備註"             : note_text,
+        "工程量體縮減效益" : phys_text,
+        "補充說明"         : ameta.get("user_note", ""),
     }
 
 
@@ -1991,25 +1988,24 @@ elif st.session_state.step == 4:
     if phys.get("waste_reduction_ton", 0):
         phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
     phys_text = "；".join(phys_parts)
-    note_parts = [s for s in [state.get("user_note", ""), phys_text] if s]
-    combined_note = "｜".join(note_parts)
 
     for ib in state.item_budgets:
         item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
         rows.append({
-            "評估日期"        : datetime.now().strftime("%Y-%m-%d"),
-            "案件編號"        : export_data["project_metadata"]["uid"],
-            "標案名稱"        : state.case_name,
-            "主辦單位"        : state.dept,
-            "決標金額"        : state.budget,
-            "氣候預算合計"    : climate_total,
-            "氣候預算比例%"   : round(climate_ratio, 1),
-            "計畫類別"        : category_labels,
-            "細項分類"        : sub_category_labels,
-            "氣候工項"        : ib["label"],
-            "工項金額"        : ib["amount"],
-            "工項佔總預算%"   : item_ratio,
-            "備註"            : combined_note,
+            "評估日期"          : datetime.now().strftime("%Y-%m-%d"),
+            "案件編號"          : export_data["project_metadata"]["uid"],
+            "標案名稱"          : state.case_name,
+            "主辦單位"          : state.dept,
+            "決標金額"          : state.budget,
+            "氣候預算合計"      : climate_total,
+            "氣候預算比例%"     : round(climate_ratio, 1),
+            "計畫類別"          : category_labels,
+            "細項分類"          : sub_category_labels,
+            "氣候工項"          : ib["label"],
+            "工項金額"          : ib["amount"],
+            "工項佔總預算%"     : item_ratio,
+            "工程量體縮減效益"  : phys_text,
+            "補充說明"          : state.get("user_note", ""),
         })
 
     csv_df = pd.DataFrame(rows)

@@ -7,6 +7,7 @@ import streamlit as st
 import json
 import pandas as pd
 from datetime import datetime
+TZ_TAIPEI = __import__('datetime').timezone(__import__('datetime').timedelta(hours=8))
 import io
 from urllib import request, error
 import hashlib
@@ -615,12 +616,12 @@ def generate_export_json(state):
     selected_sub_categories = state.get("selected_sub_categories", [])
     result = {
         "project_metadata": {
-            "uid": f"CHC-{datetime.now().strftime('%Y%m%d%H%M')}",
+            "uid": f"CHC-{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d%H%M')}",
             "name": state.get("case_name", ""),
             "dept": state.get("dept", ""),
             "total_budget": state.get("budget", 0),
             "is_manual_override": state.get("manual_override", False),
-            "assessment_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "assessment_date": datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M"),
         },
         "climate_assessment": {
             "categories": selected_categories,
@@ -769,7 +770,7 @@ def build_sync_row_dict(payload):
     note_text = "｜".join(note_parts)
 
     return {
-        "填報日期"         : datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "填報日期"         : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
         "案件編號"         : metadata.get("uid", ""),
         "標案名稱"         : metadata.get("name", ""),
         "主辦單位"         : metadata.get("dept", ""),
@@ -1992,7 +1993,7 @@ elif st.session_state.step == 4:
     for ib in state.item_budgets:
         item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
         rows.append({
-            "評估日期"          : datetime.now().strftime("%Y-%m-%d"),
+            "評估日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d"),
             "案件編號"          : export_data["project_metadata"]["uid"],
             "標案名稱"          : state.case_name,
             "主辦單位"          : state.dept,
@@ -2018,7 +2019,7 @@ elif st.session_state.step == 4:
         st.download_button(
             label="⬇️ 下載 JSON 報告",
             data=json_str.encode("utf-8"),
-            file_name=f"climate_budget_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.json",
             mime="application/json",
             use_container_width=True,
             disabled=not st.session_state.sync_done,
@@ -2031,7 +2032,7 @@ elif st.session_state.step == 4:
         st.download_button(
             label="⬇️ 下載 CSV 報告",
             data=csv_bytes,
-            file_name=f"climate_budget_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.csv",
             mime="text/csv",
             use_container_width=True,
             disabled=not st.session_state.sync_done,

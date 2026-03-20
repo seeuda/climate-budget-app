@@ -66,14 +66,20 @@ st.set_page_config(
 )
 
 # ── Load JSON data ─────────────────────────────────────────────────────────────
-@st.cache_data
-def load_json(path):
+def _file_hash(path):
+    """回傳檔案內容 MD5，供 load_json 快取失效偵測使用。"""
+    with open(path, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+@st.cache_data(show_spinner=False)
+def load_json(path, _file_hash=""):
+    """載入 JSON；_file_hash 參數讓快取在檔案內容變更時自動失效。"""
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-CONFIG = load_json("data/config.json")
-LOGIC  = load_json("data/logic_mapping.json")
-KWDICT = load_json("data/keyword_dictionary.json")
+CONFIG = load_json("data/config.json", _file_hash=_file_hash("data/config.json"))
+LOGIC  = load_json("data/logic_mapping.json", _file_hash=_file_hash("data/logic_mapping.json"))
+KWDICT = load_json("data/keyword_dictionary.json", _file_hash=_file_hash("data/keyword_dictionary.json"))
 
 PARAMS = CONFIG["system_parameters"]
 UI     = CONFIG["ui_text"]
@@ -847,6 +853,27 @@ def inject_button_style(key, *, is_selected=False, is_suggested=False):
         unsafe_allow_html=True,
     )
 
+# ── 「零成本 / 少成本」工項清單（部分比對）──────────────────────────────
+# 這類工項本身不直接產生工程費用，步驟四不顯示金額輸入，改為引導填寫量體效益欄位
+ZERO_COST_ITEM_KEYWORDS = [
+    "現地土方平衡",
+    "瀝青刨除料",
+    "路堤回填採用瀝青刨除料",
+    "道碴碎石",
+    "廢水污泥再利用",
+    "焚化底渣",
+    "有機廢棄物現地堆肥化",
+    "應用再生粒料",
+    "導入低蘊含碳建材或循環建材",
+    "模組化預鑄構件",
+    "地工合成加勁材擋土牆",
+    "資源回收再生系統",
+]
+
+def is_zero_cost_item(label: str) -> bool:
+    """判斷工項是否屬於「不花錢/少花錢」性質。"""
+    return any(kw in label for kw in ZERO_COST_ITEM_KEYWORDS)
+
 # ── 工項 → 量體縮減欄位觸發對應表 ──────────────────────────────────────────
 # key: 工項 label（部分比對）, value: 觸發哪些量體縮減欄位
 # 欄位: soil_reduction_ton（減少土方購置, 公噸）, waste_reduction_ton（減少廢棄物外運, 公噸）
@@ -917,7 +944,10 @@ def generate_export_json(state):
             "category_labels": format_category_labels(selected_categories),
             "sub_categories": selected_sub_categories,
             "sub_category_labels": format_sub_category_labels(selected_sub_categories),
-            "selected_items": item_budgets,
+            "selected_items": [
+                {**ib, "is_zero_cost": ib.get("is_zero_cost", False)}
+                for ib in item_budgets
+            ],
             "alert_level": get_alert_level(budget)["label"],
         },
         "climate_budget_total": sum(
@@ -1060,6 +1090,10 @@ def build_sync_row_dict(payload):
         phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
     if phys.get("waste_reduction_ton", 0):
         phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
+    if phys.get("cement_reduction_ton", 0):
+        phys_parts.append(f"減少水泥等建材 {phys['cement_reduction_ton']} 公噸")
+    if phys.get("other_benefit_note", ""):
+        phys_parts.append(phys["other_benefit_note"])
     phys_text = "；".join(phys_parts)
 
     # 備註 = user_note + 量體縮減摘要
@@ -2130,51 +2164,69 @@ elif st.session_state.step == 3:
         label = ib["label"]
         st.markdown(f"**{idx+1}. {label}**")
 
-        col_amt, col_calc = st.columns([3, 2])
-
-        with col_amt:
-            saved_amount = int(ib.get("amount", 0) or 0)
-            clamped_amount = min(max(saved_amount, 0), total_budget)
-            amount = st.number_input(
-                "工項參考金額（元）",
-                min_value=0,
-                max_value=total_budget,
-                value=clamped_amount,
-                step=100000,
-                key=f"amt_{idx}"
+        if is_zero_cost_item(label):
+            # 零成本工項：不顯示金額輸入，改為引導提示
+            st.markdown(
+                '<div style="background:#fffbf0;border-left:4px solid #f39c12;'
+                'border-radius:0 8px 8px 0;padding:0.6rem 1rem;margin:0.3rem 0;'
+                'font-size:0.88rem;color:#7d5a00;">'
+                '💡 本工項屬於「不花錢／少花錢」的工法或設計選擇，不需填寫獨立預算金額。'
+                '請填寫下方「<b>工程量體縮減及其他效益（選填）</b>」欄位，記錄本工項的實質減碳效益。'
+                '</div>',
+                unsafe_allow_html=True,
             )
-
-        with col_calc:
-            pct_of_total = amount / total_budget * 100 if total_budget else 0
-            st.metric("佔總預算", f"{pct_of_total:.1f}%", delta=fmt_twd(amount))
+            # 金額固定為 0，不影響預算計算
+            amount = 0
+            pct_of_total = 0.0
+        else:
+            col_amt, col_calc = st.columns([3, 2])
+            with col_amt:
+                saved_amount = int(ib.get("amount", 0) or 0)
+                clamped_amount = min(max(saved_amount, 0), total_budget)
+                amount = st.number_input(
+                    "工項參考金額（元）",
+                    min_value=0,
+                    max_value=total_budget,
+                    value=clamped_amount,
+                    step=100000,
+                    key=f"amt_{idx}"
+                )
+            with col_calc:
+                pct_of_total = amount / total_budget * 100 if total_budget else 0
+                st.metric("佔總預算", f"{pct_of_total:.1f}%", delta=fmt_twd(amount))
 
         updated_items.append({
             "label": label,
             "ratio": round(pct_of_total, 1),
-            "amount": int(amount)
+            "amount": int(amount),
+            "is_zero_cost": is_zero_cost_item(label),
         })
 
         st.markdown("<hr style='margin:0.5rem 0; border-color:#e8f0e8'>", unsafe_allow_html=True)
 
     st.session_state.item_budgets = updated_items
 
-    # ── 量體縮減估算欄位（依已選工項動態顯示）─────────────────────────────
+    # ── 量體縮減及其他效益欄位（依已選工項動態顯示，零成本工項一律觸發）──
     reduction_fields = get_physical_reduction_fields(updated_items)
-    if reduction_fields:
+    has_zero_cost = any(ib.get("is_zero_cost", False) for ib in updated_items)
+    show_reduction_section = bool(reduction_fields) or has_zero_cost
+
+    if show_reduction_section:
         st.markdown("---")
         st.markdown(
-            '<div class="section-title">📐 工程量體縮減效益估算（選填）</div>',
+            '<div class="section-title">📐 工程量體縮減及其他效益（選填）</div>',
             unsafe_allow_html=True,
         )
         st.caption(
-            "以下工項涉及**現地材料再利用或量體縮減**，節省下來的成本可能不會直接出現在氣候預算中，"
-            "但仍是重要的減碳效益。若能估算數量，可填入作為補充說明依據。"
+            "以下工項涉及**現地材料再利用、量體縮減或設計端減量**，"
+            "這類效益節省下來的成本通常不直接出現在工程費用中，"
+            "但仍是重要的減碳貢獻。若能估算數量或說明效益，可填入作為評估依據。"
         )
 
         current_reductions = dict(st.session_state.get("physical_reductions", {}))
         rcol1, rcol2 = st.columns(2)
 
-        if "soil_reduction_ton" in reduction_fields:
+        if "soil_reduction_ton" in reduction_fields or has_zero_cost:
             with rcol1:
                 soil_val = current_reductions.get("soil_reduction_ton", 0)
                 soil_new = st.number_input(
@@ -2187,10 +2239,10 @@ elif st.session_state.step == 3:
                 )
                 current_reductions["soil_reduction_ton"] = int(soil_new)
                 if soil_new > 0:
-                    co2_eq = round(soil_new * 0.005, 1)  # 粗估：每公噸土方運輸約 0.005 tCO2e
+                    co2_eq = round(soil_new * 0.005, 1)
                     st.caption(f"粗估減碳效益：約 {co2_eq} tCO₂e（以平均運距 20km 估算）")
 
-        if "waste_reduction_ton" in reduction_fields:
+        if "waste_reduction_ton" in reduction_fields or has_zero_cost:
             with rcol2:
                 waste_val = current_reductions.get("waste_reduction_ton", 0)
                 waste_new = st.number_input(
@@ -2203,16 +2255,48 @@ elif st.session_state.step == 3:
                 )
                 current_reductions["waste_reduction_ton"] = int(waste_new)
                 if waste_new > 0:
-                    co2_eq = round(waste_new * 0.008, 1)  # 粗估：廢棄物處理約 0.008 tCO2e/公噸
+                    co2_eq = round(waste_new * 0.008, 1)
                     st.caption(f"粗估減碳效益：約 {co2_eq} tCO₂e（以一般廢棄物處理排放係數估算）")
+
+        # ── 新欄位：減少水泥等建材使用量 ──
+        with rcol1:
+            cement_val = current_reductions.get("cement_reduction_ton", 0)
+            cement_new = st.number_input(
+                "🏗️ 減少水泥等建材使用量（公噸）",
+                min_value=0,
+                value=int(cement_val),
+                step=10,
+                help="因結構輕量化、低碳建材替代、預鑄工法等，減少傳統水泥或高碳建材的使用量。",
+                key="cement_reduction_input",
+            )
+            current_reductions["cement_reduction_ton"] = int(cement_new)
+            if cement_new > 0:
+                co2_eq = round(cement_new * 0.83, 1)  # 粗估：生產1公噸水泥約排放0.83 tCO2e
+                st.caption(f"粗估減碳效益：約 {co2_eq} tCO₂e（以水泥生產排放係數估算）")
+
+        # ── 新欄位：其他未呈現於預算的效益說明 ──
+        with rcol2:
+            other_val = current_reductions.get("other_benefit_note", "")
+            other_new = st.text_area(
+                "📝 其他未呈現於預算的效益說明",
+                value=other_val,
+                placeholder="例：採用砌石護岸取代混凝土護岸，具備生態廊道功能；施工期間取用附近污水廠放流水作為工程用水，減少自來水使用……",
+                height=100,
+                help="填入難以量化但具有減碳、調適或生態效益的說明，供審查參考。",
+                key="other_benefit_input",
+            )
+            current_reductions["other_benefit_note"] = other_new.strip()
 
         st.session_state.physical_reductions = current_reductions
 
     # Recalculate for button state
     total_allocated = sum(ib.get("amount", 0) or 0 for ib in updated_items)
     over_budget = total_allocated > total_budget
-    # 若有工項，必須全部填入金額才可繼續；若無工項，允許直接繼續
-    all_set = (not updated_items) or all(ib.get("amount", 0) > 0 for ib in updated_items)
+    # 零成本工項不需填金額，只有「有經費」的工項才強制填 > 0
+    all_set = (not updated_items) or all(
+        ib.get("amount", 0) > 0 or ib.get("is_zero_cost", False)
+        for ib in updated_items
+    )
 
     col_back, col_next = st.columns([1, 3])
     with col_back:
@@ -2288,8 +2372,12 @@ elif st.session_state.step == 4:
             phys_lines.append(f"🪨 減少土方購置 **{phys['soil_reduction_ton']}** 公噸")
         if phys.get("waste_reduction_ton", 0):
             phys_lines.append(f"♻️ 減少廢棄物外運 **{phys['waste_reduction_ton']}** 公噸")
+        if phys.get("cement_reduction_ton", 0):
+            phys_lines.append(f"🏗️ 減少水泥等建材 **{phys['cement_reduction_ton']}** 公噸")
+        if phys.get("other_benefit_note", ""):
+            phys_lines.append(f"📝 其他效益：{phys['other_benefit_note']}")
         if phys_lines:
-            st.markdown("**📐 量體縮減效益：**")
+            st.markdown("**📐 工程量體縮減及其他效益：**")
             for line in phys_lines:
                 st.markdown(f"- {line}")
 
@@ -2449,6 +2537,10 @@ elif st.session_state.step == 4:
         phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
     if phys.get("waste_reduction_ton", 0):
         phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
+    if phys.get("cement_reduction_ton", 0):
+        phys_parts.append(f"減少水泥等建材 {phys['cement_reduction_ton']} 公噸")
+    if phys.get("other_benefit_note", ""):
+        phys_parts.append(phys["other_benefit_note"])
     phys_text = "；".join(phys_parts)
 
     for ib in state.item_budgets:

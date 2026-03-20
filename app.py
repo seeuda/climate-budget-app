@@ -31,8 +31,9 @@ DEFAULT_SYNC_HEADERS = [
     "計畫類別",
     "細項分類",
     "氣候工項",
-    "判讀信心",
+    "關鍵字信心",
     "命中關鍵字",
+    "減量資訊完整度",
     "工程量體縮減效益",
     "補充說明",
 ]
@@ -51,7 +52,8 @@ HEADER_ALIAS_MAP = {
     "計畫類別"          : ["計畫類別", "判讀主類別", "主類別"],
     "細項分類"          : ["細項分類", "判讀子類別", "子類別", "細項"],
     "氣候工項"          : ["氣候工項", "工項", "工項清單"],
-    "判讀信心"          : ["判讀信心", "信心", "信心分數", "confidence"],
+    "關鍵字信心"         : ["關鍵字信心", "判讀信心", "信心", "信心分數", "confidence"],
+    "減量資訊完整度"      : ["減量資訊完整度", "減量完整度", "工程減量完整度", "reduction_completeness"],
     "命中關鍵字"        : ["命中關鍵字", "關鍵字", "觸發關鍵字", "keywords"],
     "工程量體縮減效益"  : ["工程量體縮減效益", "量體縮減", "量體效益", "縮減效益"],
     "補充說明"          : ["補充說明", "備註", "note", "說明"],
@@ -646,6 +648,76 @@ def compute_confidence(kw_matches, manual_override, budget, selected_items):
     }
 
 
+def compute_reduction_completeness(item_budgets, physical_reductions):
+    """
+    工程減量資訊完整度。
+    只在有勾選「純零成本」或「量體減量觸發」工項時才回傳結果，否則回傳 None（不顯示）。
+
+    回傳 dict 或 None:
+    {
+        level: "high" / "medium" / "low",
+        label: str,
+        badge_html: str,
+        filled_count: int,   # 4 格中填了幾格
+        reasons: list[str],
+    }
+    """
+    # 判斷是否有任何減量相關工項被勾選
+    has_reduction_item = any(
+        is_pure_zero_cost(ib.get("label", "")) or is_smart_use_item(ib.get("label", ""))
+        or any(trigger in ib.get("label", "") for trigger in PHYSICAL_REDUCTION_TRIGGERS)
+        for ib in item_budgets
+    )
+
+    if not has_reduction_item:
+        return None   # 無減量工項，不顯示此指標
+
+    # 計算 4 個效益欄位中填了幾格
+    phys = physical_reductions or {}
+    filled = 0
+    details = []
+
+    if phys.get("soil_reduction_ton", 0):
+        filled += 1
+        details.append(f"已填：減少土方購置 {phys['soil_reduction_ton']} 公噸")
+    if phys.get("waste_reduction_ton", 0):
+        filled += 1
+        details.append(f"已填：減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
+    if phys.get("cement_reduction_ton", 0):
+        filled += 1
+        details.append(f"已填：減少水泥等建材 {phys['cement_reduction_ton']} 公噸")
+    if phys.get("other_benefit_note", "").strip():
+        filled += 1
+        details.append("已填：其他效益說明")
+
+    # 判定等級
+    if filled >= 1:
+        level = "high"
+        reasons = details + ["✅ 已提供工程減量佐證資料"]
+    else:
+        level = "low"
+        reasons = ["⚠️ 已勾選工程減量工項，但「工程量體縮減及其他效益」區塊尚未填寫任何資料",
+                   "建議返回步驟四，填寫至少一項效益估算或說明"]
+
+    labels = {"high": "🟢 完整", "low": "🔴 待補充"}
+    badges = {
+        "high": '<span class="confidence-high">🟢 完整</span>',
+        "low":  '<span class="confidence-low">🔴 待補充</span>',
+    }
+    descs = {
+        "high": f"已提供 {filled}/4 項效益佐證資料",
+        "low":  "已勾選減量工項但尚未填寫任何效益資料",
+    }
+    return {
+        "level":        level,
+        "label":        labels[level],
+        "badge_html":   badges[level],
+        "filled_count": filled,
+        "desc":         descs[level],
+        "reasons":      reasons,
+    }
+
+
 def build_explain_html(kw_matches, manual_override, budget):
     """
     組裝「判讀理由面板」的 HTML 字串，供 Step 1/Step 4 顯示。
@@ -978,6 +1050,12 @@ def generate_export_json(state):
             "desc":    confidence["desc"],
             "reasons": confidence["reasons"],
         },
+        "reduction_completeness": (lambda rc: {
+            "level":        rc["level"],
+            "label":        rc["label"],
+            "filled_count": rc["filled_count"],
+            "desc":         rc["desc"],
+        } if rc else None)(compute_reduction_completeness(item_budgets, state.get("physical_reductions", {}))),
         "matched_keywords": kw_labels,
         "physical_reductions": state.get("physical_reductions", {}),
         "assessment_metadata": {
@@ -1129,8 +1207,9 @@ def build_sync_row_dict(payload):
         "計畫類別"         : assessment.get("category_labels", ""),
         "細項分類"         : assessment.get("sub_category_labels", ""),
         "氣候工項"         : items_text,
-        "判讀信心"         : payload.get("confidence", {}).get("label", ""),
+        "關鍵字信心"       : payload.get("confidence", {}).get("label", ""),
         "命中關鍵字"       : "、".join(payload.get("matched_keywords", [])),
+        "減量資訊完整度"   : (payload.get("reduction_completeness") or {}).get("label", ""),
         "工程量體縮減效益" : phys_text,
         "補充說明"         : ameta.get("user_note", ""),
     }
@@ -2201,16 +2280,19 @@ elif st.session_state.step == 3:
             with col_amt:
                 saved_amount_wan = round((ib.get("amount", 0) or 0) / 10000, 1)
                 max_wan = round(total_budget / 10000, 1)
+                # 若尚未填過（0），value 傳 None 讓欄位顯示空白，避免預填 0.0 干擾輸入
+                default_wan = None if saved_amount_wan == 0.0 else saved_amount_wan
                 amount_wan = st.number_input(
                     "工項參考金額（萬元）",
                     min_value=0.0,
                     max_value=max_wan,
-                    value=saved_amount_wan,
+                    value=default_wan,
                     step=1.0,
                     format="%.1f",
+                    placeholder="請輸入金額（萬元）",
                     key=f"amt_{idx}"
                 )
-                amount = round(amount_wan * 10000)   # 內部仍以元儲存
+                amount = round((amount_wan or 0) * 10000)   # 內部仍以元儲存
             with col_calc:
                 pct_of_total = amount / total_budget * 100 if total_budget else 0
                 st.metric("佔總預算", f"{pct_of_total:.1f}%", delta=fmt_twd(amount))
@@ -2467,13 +2549,41 @@ elif st.session_state.step == 4:
         st.markdown(
             f'<div class="confidence-summary" style="border-left:4px solid {conf_bdr};background:{conf_bg};">'
             f'<div style="font-weight:700;font-size:0.88rem;color:#333;margin-bottom:0.4rem;">'
-            f'📊 判讀信心評估</div>'
+            f'📊 關鍵字信心評估</div>'
             f'{confidence["badge_html"]}'
             f'<div style="font-size:0.8rem;color:#555;margin-top:0.4rem;">{confidence["desc"]}</div>'
             f'<div style="margin-top:0.5rem;">{reasons_html}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
+
+        # ── 工程減量資訊完整度（有勾選減量工項時才顯示）────────────
+        reduction_completeness = compute_reduction_completeness(
+            state.item_budgets,
+            state.get("physical_reductions", {}),
+        )
+        if reduction_completeness is not None:
+            rc = reduction_completeness
+            rc_color_map = {"high": "#f0fdf4", "low": "#fff5f5"}
+            rc_border_map = {"high": "#27ae60", "low": "#e74c3c"}
+            rc_bg  = rc_color_map[rc["level"]]
+            rc_bdr = rc_border_map[rc["level"]]
+            rc_reasons_html = "".join(
+                f'<div style="font-size:0.78rem;color:#444;padding:0.2rem 0;'
+                f'border-bottom:1px solid rgba(0,0,0,0.06);">'
+                f'• {r}</div>'
+                for r in rc["reasons"]
+            )
+            st.markdown(
+                f'<div class="confidence-summary" style="border-left:4px solid {rc_bdr};background:{rc_bg};margin-top:0.5rem;">'
+                f'<div style="font-weight:700;font-size:0.88rem;color:#333;margin-bottom:0.4rem;">'
+                f'📐 工程減量資訊完整度</div>'
+                f'{rc["badge_html"]}'
+                f'<div style="font-size:0.8rem;color:#555;margin-top:0.4rem;">{rc["desc"]}</div>'
+                f'<div style="margin-top:0.5rem;">{rc_reasons_html}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
     st.markdown("---")
 
@@ -2596,7 +2706,8 @@ elif st.session_state.step == 4:
             "氣候工項"          : ib["label"],
             "工項金額"          : ib["amount"],
             "工項佔總預算%"     : item_ratio,
-            "判讀信心"          : export_data.get("confidence", {}).get("label", ""),
+            "關鍵字信心"        : export_data.get("confidence", {}).get("label", ""),
+            "減量資訊完整度"    : (export_data.get("reduction_completeness") or {}).get("label", ""),
             "命中關鍵字"        : "、".join(export_data.get("matched_keywords", [])),
             "工程量體縮減效益"  : phys_text,
             "補充說明"          : state.get("user_note", ""),

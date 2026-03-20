@@ -1,7 +1,7 @@
 # 🌿 彰化縣氣候預算導引式判讀系統
 
 **Climate Budget Assessment Tool for Changhua County Government**  
-版本 v1.1 · 基於國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引
+版本 v1.0 · 基於國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引
 
 ---
 

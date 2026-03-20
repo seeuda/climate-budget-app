@@ -534,18 +534,21 @@ def fmt_twd(n):
     return f"NT$ {int(n):,}"
 
 def get_alert_level(budget):
-    """Return alert level info dict based on budget."""
+    """Return alert level info dict based on total project budget.
+    此燈號依「計畫總經費」判定，反映計畫的隱含碳潛力與應投入的檢核力道，
+    與「氣候預算金額」（實際投入的氣候相關經費）為不同概念。
+    """
     if budget >= PARAMS["extreme_alert_threshold"]:
-        return {"level": "extreme", "label": "⛔ 氣候預算潛力：城市重塑", "desc": "重大公共建設，強烈建議淨零檢核",
+        return {"level": "extreme", "label": "⛔ 氣候預算潛力：城市重塑", "desc": "依計畫總經費判定；屬重大公共建設，強烈建議淨零檢核",
                 "color": "#8e44ad", "badge": "🟣"}
     elif budget >= PARAMS["high_alert_threshold"]:
-        return {"level": "red", "label": "🔴 氣候預算潛力：部門轉型", "desc": "金額≥2000萬，強調隱含碳檢核",
+        return {"level": "red", "label": "🔴 氣候預算潛力：部門轉型", "desc": "依計畫總經費判定；金額≥2000萬，強調隱含碳檢核",
                 "color": "#e74c3c", "badge": "🔴"}
     elif budget >= PARAMS["medium_alert_threshold"]:
-        return {"level": "yellow", "label": "🟡 氣候預算潛力：效能升級", "desc": "金額1000萬–2000萬",
+        return {"level": "yellow", "label": "🟡 氣候預算潛力：效能升級", "desc": "依計畫總經費判定；金額1000萬–2000萬",
                 "color": "#f39c12", "badge": "🟡"}
     else:
-        return {"level": "green", "label": "🟢 氣候預算潛力：基層守護", "desc": "金額300萬–1000萬",
+        return {"level": "green", "label": "🟢 氣候預算潛力：基層守護", "desc": "依計畫總經費判定；金額300萬–1000萬",
                 "color": "#2ecc71", "badge": "🟢"}
 
 def detect_keywords(text):
@@ -2148,6 +2151,7 @@ elif st.session_state.step == 3:
         <div class="budget-display">
             <div class="label">標案總預算</div>
             <div class="amount" style="font-size:1.4rem">{fmt_twd(total_budget)}</div>
+            <div style="font-size:0.78rem;opacity:0.75;margin-top:0.25rem">≈ {total_budget/10000:.1f} 萬元</div>
         </div>
         """, unsafe_allow_html=True)
     with c2:
@@ -2195,16 +2199,18 @@ elif st.session_state.step == 3:
         else:
             col_amt, col_calc = st.columns([3, 2])
             with col_amt:
-                saved_amount = int(ib.get("amount", 0) or 0)
-                clamped_amount = min(max(saved_amount, 0), total_budget)
-                amount = st.number_input(
-                    "工項參考金額（元）",
-                    min_value=0,
-                    max_value=total_budget,
-                    value=clamped_amount,
-                    step=100000,
+                saved_amount_wan = round((ib.get("amount", 0) or 0) / 10000, 1)
+                max_wan = round(total_budget / 10000, 1)
+                amount_wan = st.number_input(
+                    "工項參考金額（萬元）",
+                    min_value=0.0,
+                    max_value=max_wan,
+                    value=saved_amount_wan,
+                    step=1.0,
+                    format="%.1f",
                     key=f"amt_{idx}"
                 )
+                amount = round(amount_wan * 10000)   # 內部仍以元儲存
             with col_calc:
                 pct_of_total = amount / total_budget * 100 if total_budget else 0
                 st.metric("佔總預算", f"{pct_of_total:.1f}%", delta=fmt_twd(amount))
@@ -2374,7 +2380,9 @@ elif st.session_state.step == 4:
 
 **💰 計畫總經費：** {fmt_twd(state.budget)}
 
-**{alert['badge']} 預算規模：** {alert['label']} — {alert['desc']}
+**{alert['badge']} 計畫規模（隱含碳潛力）：** {alert['label']}
+
+<span style="font-size:0.82rem;color:#666;">{alert['desc']}</span>
         """)
 
         if selected_cats:
@@ -2426,16 +2434,17 @@ elif st.session_state.step == 4:
         </div>
         """, unsafe_allow_html=True)
 
-        # Alert box
+        # Alert box（依計畫總經費判定隱含碳潛力）
         level = alert["level"]
-        if level == "extreme":
-            st.markdown(f'<div class="alert-purple"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-        elif level == "red":
-            st.markdown(f'<div class="alert-red"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-        elif level == "yellow":
-            st.markdown(f'<div class="alert-yellow"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="alert-green"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
+        alert_class = {"extreme": "alert-purple", "red": "alert-red",
+                       "yellow": "alert-yellow", "green": "alert-green"}.get(level, "alert-green")
+        st.markdown(
+            f'<div class="{alert_class}">'
+            f'<b>{alert["label"]}</b><br>'
+            f'<span style="font-size:0.82rem;">{alert["desc"]}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
         # ── Phase 1：信心分數面板 ────────────────────────────────
         confidence = compute_confidence(

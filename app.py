@@ -853,9 +853,10 @@ def inject_button_style(key, *, is_selected=False, is_suggested=False):
         unsafe_allow_html=True,
     )
 
-# ── 「零成本 / 少成本」工項清單（部分比對）──────────────────────────────
-# 這類工項本身不直接產生工程費用，步驟四不顯示金額輸入，改為引導填寫量體效益欄位
-ZERO_COST_ITEM_KEYWORDS = [
+# ── 「純零成本」工項清單（部分比對）──────────────────────────────────
+# 這類工項是施工決策或現場再利用，本身不產生採購費用。
+# 步驟四不顯示金額輸入，改為引導填寫量體效益欄位。
+PURE_ZERO_COST_KEYWORDS = [
     "現地土方平衡",
     "瀝青刨除料",
     "路堤回填採用瀝青刨除料",
@@ -863,6 +864,12 @@ ZERO_COST_ITEM_KEYWORDS = [
     "廢水污泥再利用",
     "焚化底渣",
     "有機廢棄物現地堆肥化",
+]
+
+# ── 「聰明使用型」工項清單（部分比對）────────────────────────────────
+# 這類工項有採購行為（如 CLSM、循環建材、模組化預鑄），經費仍可填寫，
+# 但允許填 0，並加註提示引導填寫量體效益欄位。
+SMART_USE_KEYWORDS = [
     "應用再生粒料",
     "導入低蘊含碳建材或循環建材",
     "模組化預鑄構件",
@@ -870,9 +877,17 @@ ZERO_COST_ITEM_KEYWORDS = [
     "資源回收再生系統",
 ]
 
+def is_pure_zero_cost(label: str) -> bool:
+    """純零成本：施工決策/現場再利用，不產生採購費用。"""
+    return any(kw in label for kw in PURE_ZERO_COST_KEYWORDS)
+
+def is_smart_use_item(label: str) -> bool:
+    """聰明使用型：有採購行為但具量體減量效益，經費可填也可填 0。"""
+    return any(kw in label for kw in SMART_USE_KEYWORDS)
+
 def is_zero_cost_item(label: str) -> bool:
-    """判斷工項是否屬於「不花錢/少花錢」性質。"""
-    return any(kw in label for kw in ZERO_COST_ITEM_KEYWORDS)
+    """向下相容：純零成本 OR 聰明使用型，皆屬廣義「減量工項」。"""
+    return is_pure_zero_cost(label) or is_smart_use_item(label)
 
 # ── 工項 → 量體縮減欄位觸發對應表 ──────────────────────────────────────────
 # key: 工項 label（部分比對）, value: 觸發哪些量體縮減欄位
@@ -2164,8 +2179,8 @@ elif st.session_state.step == 3:
         label = ib["label"]
         st.markdown(f"**{idx+1}. {label}**")
 
-        if is_zero_cost_item(label):
-            # 零成本工項：不顯示金額輸入，改為引導提示
+        if is_pure_zero_cost(label):
+            # 純零成本：施工決策/現場再利用，不顯示金額欄，引導填效益
             st.markdown(
                 '<div style="background:#fffbf0;border-left:4px solid #f39c12;'
                 'border-radius:0 8px 8px 0;padding:0.6rem 1rem;margin:0.3rem 0;'
@@ -2175,7 +2190,6 @@ elif st.session_state.step == 3:
                 '</div>',
                 unsafe_allow_html=True,
             )
-            # 金額固定為 0，不影響預算計算
             amount = 0
             pct_of_total = 0.0
         else:
@@ -2194,12 +2208,25 @@ elif st.session_state.step == 3:
             with col_calc:
                 pct_of_total = amount / total_budget * 100 if total_budget else 0
                 st.metric("佔總預算", f"{pct_of_total:.1f}%", delta=fmt_twd(amount))
+            # 聰明使用型：金額欄下方加提示
+            if is_smart_use_item(label):
+                st.markdown(
+                    '<div style="background:#f0fdf4;border-left:3px solid #52b788;'
+                    'border-radius:0 6px 6px 0;padding:0.5rem 0.9rem;margin:0.2rem 0 0.4rem 0;'
+                    'font-size:0.82rem;color:#1a4731;">'
+                    '💡 本工項如涵蓋「不花錢／少花錢」的工法或設計選擇（如 CLSM 替代混凝土、'
+                    '循環建材導入），可於本頁下方「<b>工程量體縮減及其他效益（選填）</b>」欄位，'
+                    '記錄本工項的實質效益。'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
 
         updated_items.append({
             "label": label,
             "ratio": round(pct_of_total, 1),
             "amount": int(amount),
-            "is_zero_cost": is_zero_cost_item(label),
+            "is_zero_cost": is_pure_zero_cost(label),   # 純零成本：金額固定為 0
+            "is_smart_use": is_smart_use_item(label),   # 聰明使用型：有採購但涵蓋量體效益
         })
 
         st.markdown("<hr style='margin:0.5rem 0; border-color:#e8f0e8'>", unsafe_allow_html=True)
@@ -2292,9 +2319,11 @@ elif st.session_state.step == 3:
     # Recalculate for button state
     total_allocated = sum(ib.get("amount", 0) or 0 for ib in updated_items)
     over_budget = total_allocated > total_budget
-    # 零成本工項不需填金額，只有「有經費」的工項才強制填 > 0
+    # 純零成本工項金額固定為 0；聰明使用型允許填 0；一般工項才強制填 > 0
     all_set = (not updated_items) or all(
-        ib.get("amount", 0) > 0 or ib.get("is_zero_cost", False)
+        ib.get("amount", 0) > 0
+        or ib.get("is_zero_cost", False)
+        or ib.get("is_smart_use", False)
         for ib in updated_items
     )
 

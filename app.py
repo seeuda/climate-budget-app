@@ -1552,7 +1552,7 @@ if st.session_state.step == 0:
                 use_manual_case_input = True
                 st.session_state.use_manual_case_input = True
             else:
-                agency_options = ["（請選擇）"] + sorted(case_df["機關名稱"].unique().tolist())
+                agency_options = ["（請選擇）"] + list(dict.fromkeys(case_df["機關名稱"].tolist()))  # 維持試算表原始順序
                 default_agency = st.session_state.agency_name if st.session_state.agency_name in agency_options else "（請選擇）"
                 agency = st.selectbox(
                     "🏛️ 機關名稱",
@@ -1561,7 +1561,7 @@ if st.session_state.step == 0:
                 )
 
                 unit_pool = case_df[case_df["機關名稱"] == agency] if agency != "（請選擇）" else pd.DataFrame()
-                unit_options = ["（請選擇）"] + sorted(unit_pool["單位名稱"].unique().tolist()) if not unit_pool.empty else ["（請選擇）"]
+                unit_options = ["（請選擇）"] + list(dict.fromkeys(unit_pool["單位名稱"].tolist())) if not unit_pool.empty else ["（請選擇）"]  # 維持試算表原始順序
                 default_unit = st.session_state.unit_name if st.session_state.unit_name in unit_options else "（請選擇）"
                 unit = st.selectbox(
                     "🏢 單位名稱",
@@ -1571,7 +1571,7 @@ if st.session_state.step == 0:
                 )
 
                 case_pool = unit_pool[unit_pool["單位名稱"] == unit] if unit != "（請選擇）" else pd.DataFrame()
-                case_options = ["（請選擇）"] + sorted(case_pool["標案名稱"].unique().tolist()) if not case_pool.empty else ["（請選擇）"]
+                case_options = ["（請選擇）"] + list(dict.fromkeys(case_pool["標案名稱"].tolist())) if not case_pool.empty else ["（請選擇）"]  # 維持試算表原始順序
                 selected_case = case_name if case_name in case_options else "（請選擇）"
                 selected_case = st.selectbox(
                     "📌 標案名稱",
@@ -2347,11 +2347,12 @@ elif st.session_state.step == 3:
                 soil_new = st.number_input(
                     "🪨 減少土方購置量（公噸）",
                     min_value=0,
-                    value=int(soil_val),
-                    step=100,
+                    value=int(soil_val) if int(soil_val) > 0 else None,
+                    placeholder="請輸入公噸數",
                     help="因現地土方挖填平衡、就地取材，減少外購土石方的估算量。",
                     key="soil_reduction_input",
                 )
+                soil_new = soil_new or 0
                 current_reductions["soil_reduction_ton"] = int(soil_new)
                 if soil_new > 0:
                     co2_eq = round(soil_new * 0.005, 1)
@@ -2363,11 +2364,12 @@ elif st.session_state.step == 3:
                 waste_new = st.number_input(
                     "♻️ 減少廢棄物外運處理量（公噸）",
                     min_value=0,
-                    value=int(waste_val),
-                    step=100,
+                    value=int(waste_val) if int(waste_val) > 0 else None,
+                    placeholder="請輸入公噸數",
                     help="因現地再利用（RAP、道碴、污泥資源化等），減少需外運廢棄物的估算量。",
                     key="waste_reduction_input",
                 )
+                waste_new = waste_new or 0
                 current_reductions["waste_reduction_ton"] = int(waste_new)
                 if waste_new > 0:
                     co2_eq = round(waste_new * 0.008, 1)
@@ -2379,11 +2381,12 @@ elif st.session_state.step == 3:
             cement_new = st.number_input(
                 "🏗️ 減少水泥等建材使用量（公噸）",
                 min_value=0,
-                value=int(cement_val),
-                step=10,
+                value=int(cement_val) if int(cement_val) > 0 else None,
+                placeholder="請輸入公噸數",
                 help="因結構輕量化、低碳建材替代、預鑄工法等，減少傳統水泥或高碳建材的使用量。",
                 key="cement_reduction_input",
             )
+            cement_new = cement_new or 0
             current_reductions["cement_reduction_ton"] = int(cement_new)
             if cement_new > 0:
                 co2_eq = round(cement_new * 0.83, 1)  # 粗估：生產1公噸水泥約排放0.83 tCO2e
@@ -2463,9 +2466,12 @@ elif st.session_state.step == 4:
 **💰 計畫總經費：** {fmt_twd(state.budget)}
 
 **{alert['badge']} 計畫規模（隱含碳潛力）：** {alert['label']}
-
-<span style="font-size:0.82rem;color:#666;">{alert['desc']}</span>
         """)
+        st.markdown(
+            f'<div style="font-size:0.82rem;color:#666;margin-top:-0.5rem;margin-bottom:0.5rem;">'
+            f'{alert["desc"]}</div>',
+            unsafe_allow_html=True,
+        )
 
         if selected_cats:
             st.markdown("**🗂️ 計畫類別（複選）：**")

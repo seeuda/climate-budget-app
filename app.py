@@ -815,7 +815,7 @@ def get_available_sub_entries(selected_categories):
 def get_item_sources(selected_categories, selected_sub_categories):
     """回傳工項來源清單。
     - 正常細項：直接取該細項工項。
-    - _NONE 虛擬細項（使用者選「無適合項目」）：展開對應類別全部啟用細項。
+    - _NONE 虛擬細項（使用者選「不確定適合項目」）：展開對應類別全部啟用細項。
     - 同樣排除 enabled=False 的細項。
     """
     if selected_sub_categories:
@@ -1866,7 +1866,7 @@ elif st.session_state.step == 1:
 
         available_sub_entries = get_available_sub_entries(st.session_state.selected_categories)
 
-        # ── 依計畫類別分組渲染細項 + 各類末尾「無適合項目」逃生出口 ──
+        # ── 依計畫類別分組渲染細項 + 各類末尾「不確定適合項目」逃生出口 ──
         # 先將 available_sub_entries 按類別分組
         cat_sub_groups: dict = {}
         for entry in available_sub_entries:
@@ -1935,7 +1935,7 @@ elif st.session_state.step == 1:
             none_disabled = len(cat_real_selected) > 0
             inject_button_style(none_key, is_selected=none_is_selected)
             if st.button(
-                f"{'✅ ' if none_is_selected else ''}⬜ 無適合項目，在下一頁展開氣候工項檢查",
+                f"{'✅ ' if none_is_selected else ''}⬜ 不確定適合項目，在下一頁展開氣候工項檢查",
                 key=none_key,
                 use_container_width=True,
                 type="secondary",
@@ -1997,7 +1997,7 @@ elif st.session_state.step == 1:
         )
         can_next = bool(st.session_state.selected_categories) and has_sub_for_each_cat
         if not can_next and st.session_state.selected_categories:
-            st.caption("⚠️ 每個計畫類別都需至少選擇一個細項，或點選「無適合項目」後才能繼續。")
+            st.caption("⚠️ 每個計畫類別都需至少選擇一個細項，或點選「不確定適合項目」後才能繼續。")
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
             st.session_state.step = 2
             st.rerun()

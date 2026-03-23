@@ -1519,7 +1519,7 @@ st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', un
 # ═══════════════════════════════════════════════════════════════════
 # STEP 0 — 計畫基本資訊
 # ═══════════════════════════════════════════════════════════════════
-
+ 　st.markdown("📌 操作說明：https://reurl.cc/ppWKm8")
 if st.session_state.step == 0:
     st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊(依<a href="https://docs.google.com/spreadsheets/d/1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" style="color: #1a237e; text-decoration: underline;">預載清單</a>)</div>', unsafe_allow_html=True)
 

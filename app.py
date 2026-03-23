@@ -1441,7 +1441,7 @@ init_state()
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown("## 🌿 氣候預算系統")
+    st.markdown("## 🌿 氣候預算自評系統")
     st.markdown("---")
     st.markdown("**系統說明**")
     st.markdown("""

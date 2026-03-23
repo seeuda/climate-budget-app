@@ -1464,7 +1464,7 @@ with st.sidebar:
 - 🟣 1億以上：氣候預算潛力：城市重塑
     """)
     st.markdown("---")
-    st.markdown("📌 問題回報連結：https://line.me/ti/g/twX_HfMGBd")
+    st.markdown("📌 操作說明：https://reurl.cc/ppWKm8")
     if st.button("🔄 重新開始", use_container_width=True):
         for k in list(st.session_state.keys()):
             del st.session_state[k]

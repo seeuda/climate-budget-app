@@ -369,7 +369,11 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] h3 {
     color: #a8d5a8 !important;
 }
-
+[data-testid="stSidebar"] button {
+    background: rgba(255,255,255,0.15) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+}
 /* Section headers */
 .section-title {
     font-size: 1.05rem;

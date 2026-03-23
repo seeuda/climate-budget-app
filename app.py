@@ -102,7 +102,7 @@ html, body, [class*="css"] {
 .main-header {
     background: linear-gradient(135deg, #1a4731 0%, #2d6a4f 50%, #1a4731 100%);
     color: white;
-    padding: １rem 2.5rem;
+    padding: １.5rem 2rem;
     border-radius: 16px;
     margin-bottom: 1.5rem;
     position: relative;

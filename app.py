@@ -369,10 +369,16 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] h3 {
     color: #a8d5a8 !important;
 }
-[data-testid="stSidebar"] button {
+[data-testid="stSidebar"] button,
+[data-testid="stSidebar"] .stButton button,
+[data-testid="stSidebar"] div[data-testid="stButton"] button {
     background: rgba(255,255,255,0.15) !important;
     color: #ffffff !important;
     border: 1px solid rgba(255,255,255,0.3) !important;
+}
+[data-testid="stSidebar"] button p,
+[data-testid="stSidebar"] .stButton button p {
+    color: #ffffff !important;
 }
 /* Section headers */
 .section-title {

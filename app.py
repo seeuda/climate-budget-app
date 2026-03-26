@@ -14,6 +14,7 @@ TZ_TAIPEI = __import__('datetime').timezone(__import__('datetime').timedelta(hou
 import io
 import random
 import string
+import re
 from urllib import request, error
 import hashlib
 import gspread
@@ -50,6 +51,12 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "anti_pattern命中",       # 觸發的 anti_pattern id 與名稱
     "減量資訊完整度",
     "工程量體縮減效益",
+    "國家關鍵戰略 (戰略層面 - Why)",
+    "計畫工法類別 (技術層面 - What)",
+    "氣候屬性 (功能層面 - How)",
+    "潛在減緩/減碳亮點 (實務細節 - Action A)",
+    "潛在調適/韌性亮點 (實務細節 - Action B)",
+    "防呆提醒",
     "補充說明",
 ]
 
@@ -68,7 +75,7 @@ HEADER_ALIAS_MAP = {
     "標案名稱"          : ["標案名稱", "計畫名稱", "案件名稱"],
     "主辦單位"          : ["主辦單位", "主辦局處", "局處名稱", "承辦單位"],
     "決標金額"          : ["決標金額", "預算金額", "計畫金額"],
-    "氣候預算"          : ["氣候預算", "氣候相關經費", "氣候經費"],
+    "氣候預算"          : ["氣候預算", "氣候預算合計", "氣候相關經費", "氣候經費"],
     "氣候預算比例%"     : ["氣候預算比例%", "氣候預算比例", "氣候比例"],
     "計畫類別"          : ["計畫類別", "判讀主類別", "主類別"],
     "細項分類"          : ["細項分類", "判讀子類別", "子類別"],
@@ -82,8 +89,46 @@ HEADER_ALIAS_MAP = {
     "anti_pattern命中" : ["anti_pattern命中", "誤判提示", "反例命中"],
     "減量資訊完整度"    : ["減量資訊完整度", "減量完整度", "工程減量完整度"],
     "工程量體縮減效益"  : ["工程量體縮減效益", "量體縮減效益", "縮減效益"],
-    "補充說明"          : ["補充說明", "備註說明", "承辦人備註"],
+    "國家關鍵戰略 (戰略層面 - Why)": ["國家關鍵戰略 (戰略層面 - Why)", "國家關鍵戰略", "戰略層面-Why", "戰略層面 Why"],
+    "計畫工法類別 (技術層面 - What)": ["計畫工法類別 (技術層面 - What)", "計畫工法類別", "技術層面-What", "技術層面 What"],
+    "氣候屬性 (功能層面 - How)": ["氣候屬性 (功能層面 - How)", "氣候屬性", "功能層面-How", "功能層面 How"],
+    "潛在減緩/減碳亮點 (實務細節 - Action A)": ["潛在減緩/減碳亮點 (實務細節 - Action A)", "潛在減緩/減碳亮點", "Action A"],
+    "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
+    "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
+    "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
 }
+
+PRESET_REFERENCE_COLUMNS = {
+    "national_strategy_why": {
+        "label": "國家關鍵戰略 (戰略層面 - Why)",
+        "patterns": ["國家關鍵戰略", "戰略層面", "why"],
+    },
+    "methodology_what": {
+        "label": "計畫工法類別 (技術層面 - What)",
+        "patterns": ["計畫工法類別", "技術層面", "what"],
+    },
+    "climate_attribute_how": {
+        "label": "氣候屬性 (功能層面 - How)",
+        "patterns": ["氣候屬性", "功能層面", "how"],
+    },
+    "mitigation_highlight_action_a": {
+        "label": "潛在減緩/減碳亮點 (實務細節 - Action A)",
+        "patterns": ["潛在減緩", "減碳亮點", "action a"],
+    },
+    "adaptation_highlight_action_b": {
+        "label": "潛在調適/韌性亮點 (實務細節 - Action B)",
+        "patterns": ["潛在調適", "韌性亮點", "action b"],
+    },
+    "foolproof_notice": {
+        "label": "防呆提醒",
+        "patterns": ["防呆提醒", "防呆"],
+    },
+}
+
+
+def normalize_text_key(text: str) -> str:
+    """Normalize text for resilient column-name matching."""
+    return re.sub(r"\s+", "", str(text or "")).lower()
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -1367,6 +1412,7 @@ def generate_export_json(state):
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "user_note":     state.get("user_note", ""),
+            "preset_reference": state.get("preset_reference", {}),
             "system_version": "1.2",
         },
     }
@@ -1605,6 +1651,7 @@ def build_sync_row_dict(payload):
         f"kd={rv.get('kd_version','?')} "
         f"lm={rv.get('lm_version','?')}"
     ) if rv else ""
+    preset_ref = ameta.get("preset_reference", {}) or {}
 
     return {
         # ── 計算資料 ──────────────────────────────────────────────────
@@ -1627,6 +1674,12 @@ def build_sync_row_dict(payload):
         "anti_pattern命中"  : is_.get("anti_pattern_hits_text", "") if is_ else "",
         "減量資訊完整度"    : (payload.get("reduction_completeness") or {}).get("label", ""),
         "工程量體縮減效益"  : phys_text,
+        "國家關鍵戰略 (戰略層面 - Why)": preset_ref.get("national_strategy_why", ""),
+        "計畫工法類別 (技術層面 - What)": preset_ref.get("methodology_what", ""),
+        "氣候屬性 (功能層面 - How)": preset_ref.get("climate_attribute_how", ""),
+        "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
+        "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
+        "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
         "補充說明"          : ameta.get("user_note", ""),
     }
 
@@ -1757,11 +1810,22 @@ def load_registered_cases():
     else:
         renamed["決標金額"] = ""
 
-    cleaned = renamed[["機關名稱", "單位名稱", "標案名稱", "決標金額"]].copy()
+    cleaned = renamed.copy()
+    if "決標金額" not in cleaned.columns:
+        cleaned["決標金額"] = ""
     for col in ["機關名稱", "單位名稱", "標案名稱"]:
         cleaned[col] = cleaned[col].astype(str).str.strip()
     cleaned = cleaned[(cleaned["機關名稱"] != "") & (cleaned["單位名稱"] != "") & (cleaned["標案名稱"] != "")]
+    cleaned["_preset_ref_score"] = cleaned.apply(
+        lambda row: sum(
+            1 for v in extract_preset_reference(row).values()
+            if str(v).strip()
+        ),
+        axis=1
+    )
+    cleaned = cleaned.sort_values("_preset_ref_score", ascending=False)
     cleaned = cleaned.drop_duplicates(subset=["機關名稱", "單位名稱", "標案名稱"], keep="first")
+    cleaned = cleaned.drop(columns=["_preset_ref_score"], errors="ignore")
 
     if cleaned.empty:
         return pd.DataFrame(), "試算表中沒有可用案件資料。"
@@ -1788,6 +1852,34 @@ def parse_budget_from_sheet(raw_value):
         return max(int(float(raw_text)), 0)
     except ValueError:
         return 0
+
+
+def extract_preset_reference(raw_row: pd.Series | dict | None) -> dict:
+    """從預載清單列資料萃取補充參考欄位。"""
+    if raw_row is None:
+        return {}
+
+    row_data = raw_row.to_dict() if hasattr(raw_row, "to_dict") else dict(raw_row)
+    normalized_cols = {
+        normalize_text_key(col): col
+        for col in row_data.keys()
+    }
+
+    extracted = {}
+    for key, meta in PRESET_REFERENCE_COLUMNS.items():
+        value = ""
+        for pattern in meta.get("patterns", []):
+            normalized_pattern = normalize_text_key(pattern)
+            for normalized_col_name, original_col_name in normalized_cols.items():
+                if normalized_pattern and normalized_pattern in normalized_col_name:
+                    raw_value = row_data.get(original_col_name, "")
+                    value = "" if raw_value is None else str(raw_value).strip()
+                    break
+            if value:
+                break
+        extracted[key] = value
+
+    return extracted
 
 
 def sync_to_google_sheet(payload):
@@ -1885,6 +1977,7 @@ def init_state():
         "dept_hint":                 "",     # str：局處提示文字
         # ── Phase 1B 預留：公文摘要 ───────────────────────────────────
         "public_summary_text":       "",     # str：三層公文摘要組裝結果
+        "preset_reference":          {},     # dict：步驟一預載清單補充參考資訊
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -2045,13 +2138,16 @@ if st.session_state.step == 0:
                         st.session_state.agency_name = str(auto_selected["機關名稱"]).strip()
                         st.session_state.unit_name = str(auto_selected["單位名稱"]).strip()
                         st.session_state.dept = st.session_state.unit_name
+                        st.session_state.preset_reference = extract_preset_reference(auto_selected)
                 else:
                     case_name = ""
                     st.session_state.case_name = ""
                     st.session_state.budget = 0
                     st.session_state.dept = ""
+                    st.session_state.preset_reference = {}
 
         if use_manual_case_input:
+            st.session_state.preset_reference = {}
             case_name = st.text_input(
                 "📌 標案名稱",
                 value=st.session_state.case_name,
@@ -2100,6 +2196,15 @@ if st.session_state.step == 0:
                 help="此欄位由雲端試算表自動帶入"
             )
             dept = selected_dept
+            preset_reference = st.session_state.get("preset_reference", {})
+            preset_preview = [
+                f"• **{meta['label']}**：{preset_reference.get(key, '')}"
+                for key, meta in PRESET_REFERENCE_COLUMNS.items()
+                if preset_reference.get(key, "")
+            ]
+            if preset_preview:
+                st.markdown("**🧩 預載清單補充參考（送出時將同步保存）**")
+                st.markdown("\n".join(preset_preview))
 
     with col2:
         # Keyword detection live preview
@@ -3096,6 +3201,7 @@ elif st.session_state.step == 4:
         "engineering_guideline_type": state.engineering_guideline_type,
         "physical_reductions": state.get("physical_reductions", {}),
         "user_note": state.get("user_note", ""),
+        "preset_reference": state.get("preset_reference", {}),
     }
     export_data = generate_export_json(export_payload)
 
@@ -3142,6 +3248,7 @@ elif st.session_state.step == 4:
     category_labels = format_category_labels(state.selected_categories)
     sub_category_labels = format_sub_category_labels(state.selected_sub_categories)
     phys = state.get("physical_reductions", {})
+    preset_ref = state.get("preset_reference", {})
     phys_parts = []
     if phys.get("soil_reduction_ton", 0):
         phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
@@ -3172,6 +3279,12 @@ elif st.session_state.step == 4:
             "減量資訊完整度"    : (export_data.get("reduction_completeness") or {}).get("label", ""),
             "命中關鍵字"        : "、".join(export_data.get("matched_keywords", [])),
             "工程量體縮減效益"  : phys_text,
+            "國家關鍵戰略 (戰略層面 - Why)": preset_ref.get("national_strategy_why", ""),
+            "計畫工法類別 (技術層面 - What)": preset_ref.get("methodology_what", ""),
+            "氣候屬性 (功能層面 - How)": preset_ref.get("climate_attribute_how", ""),
+            "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
+            "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
+            "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
             "補充說明"          : state.get("user_note", ""),
         })
 

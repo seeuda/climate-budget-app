@@ -58,7 +58,14 @@
       "code": "1-7",
       "category_id": "E",
       "sub_id": "E1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_001"
     },
     {
       "keyword": "路燈",
@@ -66,7 +73,14 @@
       "code": "住商-3",
       "category_id": "C",
       "sub_id": "C1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_002"
     },
     {
       "keyword": "電動車",
@@ -74,7 +88,14 @@
       "code": "運輸-2",
       "category_id": "C",
       "sub_id": "C2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_003"
     },
     {
       "keyword": "充電",
@@ -82,7 +103,14 @@
       "code": "運輸-2",
       "category_id": "C",
       "sub_id": "C1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_004"
     },
     {
       "keyword": "滯洪池",
@@ -90,7 +118,14 @@
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_005"
     },
     {
       "keyword": "抽水站",
@@ -98,7 +133,14 @@
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_006"
     },
     {
       "keyword": "排水",
@@ -106,7 +148,16 @@
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        2
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_007"
     },
     {
       "keyword": "污水",
@@ -114,7 +165,14 @@
       "code": "環境-1",
       "category_id": "B",
       "sub_id": "B2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_008"
     },
     {
       "keyword": "下水道",
@@ -122,7 +180,14 @@
       "code": "環境-1",
       "category_id": "B",
       "sub_id": "B2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_009"
     },
     {
       "keyword": "綠建築",
@@ -130,7 +195,14 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_010"
     },
     {
       "keyword": "長照",
@@ -138,7 +210,16 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        4
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_011"
     },
     {
       "keyword": "長照衛福大樓",
@@ -146,7 +227,16 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        4
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_012"
     },
     {
       "keyword": "青年住宅",
@@ -154,7 +244,16 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        4
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_013"
     },
     {
       "keyword": "托嬰",
@@ -162,7 +261,16 @@
       "code": "住商-4",
       "category_id": "E",
       "sub_id": "E2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        4
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_014"
     },
     {
       "keyword": "太陽能",
@@ -170,7 +278,16 @@
       "code": "能源-1",
       "category_id": "E",
       "sub_id": "E1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [
+        5
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_015"
     },
     {
       "keyword": "光電",
@@ -178,7 +295,16 @@
       "code": "能源-1",
       "category_id": "E",
       "sub_id": "E1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [
+        5
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_016"
     },
     {
       "keyword": "植樹",
@@ -186,7 +312,14 @@
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_017"
     },
     {
       "keyword": "造林",
@@ -194,7 +327,14 @@
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_018"
     },
     {
       "keyword": "公園",
@@ -202,7 +342,16 @@
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.4,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [
+        3
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_019"
     },
     {
       "keyword": "紅樹林",
@@ -210,7 +359,14 @@
       "code": "農業-7",
       "category_id": "D",
       "sub_id": "D1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_020"
     },
     {
       "keyword": "濕地",
@@ -218,7 +374,14 @@
       "code": "農業-7",
       "category_id": "D",
       "sub_id": "D1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_021"
     },
     {
       "keyword": "人行空間",
@@ -226,7 +389,14 @@
       "code": "運輸-1",
       "category_id": "C",
       "sub_id": "C1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_022"
     },
     {
       "keyword": "自行車",
@@ -234,7 +404,14 @@
       "code": "運輸-1",
       "category_id": "C",
       "sub_id": "C1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_023"
     },
     {
       "keyword": "公共自行車",
@@ -242,7 +419,14 @@
       "code": "運輸-1",
       "category_id": "C",
       "sub_id": "C1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_024"
     },
     {
       "keyword": "智慧站牌",
@@ -250,7 +434,14 @@
       "code": "運輸-3",
       "category_id": "C",
       "sub_id": "C2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_025"
     },
     {
       "keyword": "淨零",
@@ -258,7 +449,14 @@
       "code": "淨零教育-1",
       "category_id": "F",
       "sub_id": "F1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_026"
     },
     {
       "keyword": "碳盤查",
@@ -266,7 +464,14 @@
       "code": "淨零教育-2",
       "category_id": "F",
       "sub_id": "F1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_027"
     },
     {
       "keyword": "監測",
@@ -274,7 +479,16 @@
       "code": "環境-4",
       "category_id": "F",
       "sub_id": "F2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [
+        8
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_028"
     },
     {
       "keyword": "空調",
@@ -282,7 +496,14 @@
       "code": "住商-4",
       "category_id": "E",
       "sub_id": "E1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_029"
     },
     {
       "keyword": "冷氣",
@@ -290,7 +511,14 @@
       "code": "住商-4",
       "category_id": "E",
       "sub_id": "E1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_030"
     },
     {
       "keyword": "節能",
@@ -298,7 +526,14 @@
       "code": "住商-5",
       "category_id": "E",
       "sub_id": "E1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_031"
     },
     {
       "keyword": "透水",
@@ -306,7 +541,14 @@
       "code": "調適-水",
       "category_id": "D",
       "sub_id": "D2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_032"
     },
     {
       "keyword": "底渣",
@@ -314,7 +556,14 @@
       "code": "環境-5",
       "category_id": "B",
       "sub_id": "B2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_033"
     },
     {
       "keyword": "資源回收",
@@ -322,7 +571,14 @@
       "code": "環境-5",
       "category_id": "F",
       "sub_id": "F2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_034"
     },
     {
       "keyword": "古蹟",
@@ -330,7 +586,14 @@
       "code": "住商-6",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_035"
     },
     {
       "keyword": "修復",
@@ -338,7 +601,16 @@
       "code": "住商-6",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        4
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_036"
     },
     {
       "keyword": "災修",
@@ -346,7 +618,16 @@
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        2
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_037"
     },
     {
       "keyword": "防洪",
@@ -354,7 +635,14 @@
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_038"
     },
     {
       "keyword": "道路改善",
@@ -362,7 +650,16 @@
       "code": "運輸-5",
       "category_id": "A",
       "sub_id": "A2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        1
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_039"
     },
     {
       "keyword": "環境教育",
@@ -370,7 +667,14 @@
       "code": "淨零教育-1",
       "category_id": "F",
       "sub_id": "F2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_040"
     },
     {
       "keyword": "清疏",
@@ -378,7 +682,16 @@
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        2
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_041"
     },
     {
       "keyword": "護岸",
@@ -386,7 +699,14 @@
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_042"
     },
     {
       "keyword": "抽水",
@@ -394,7 +714,14 @@
       "code": "調適-水",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_043"
     },
     {
       "keyword": "拓寬",
@@ -402,7 +729,16 @@
       "code": "運輸-3",
       "category_id": "A",
       "sub_id": "A2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.4,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [
+        9
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_044"
     },
     {
       "keyword": "新建",
@@ -410,7 +746,17 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        4,
+        9
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_045"
     },
     {
       "keyword": "宿舍",
@@ -418,7 +764,16 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        4
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_046"
     },
     {
       "keyword": "住宅",
@@ -426,7 +781,16 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        4
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_047"
     },
     {
       "keyword": "資收",
@@ -434,7 +798,14 @@
       "code": "環境-5",
       "category_id": "F",
       "sub_id": "F2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_048"
     },
     {
       "keyword": "BERS",
@@ -442,7 +813,14 @@
       "code": "住商-5",
       "category_id": "E",
       "sub_id": "E1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_049"
     },
     {
       "keyword": "nZEB",
@@ -450,7 +828,14 @@
       "code": "1-11",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_050"
     },
     {
       "keyword": "近零碳",
@@ -458,7 +843,14 @@
       "code": "1-11",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_051"
     },
     {
       "keyword": "沼氣",
@@ -466,7 +858,14 @@
       "code": "環境-5",
       "category_id": "B",
       "sub_id": "B2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_052"
     },
     {
       "keyword": "SRF",
@@ -474,7 +873,14 @@
       "code": "環境-5",
       "category_id": "F",
       "sub_id": "F2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_053"
     },
     {
       "keyword": "竹林",
@@ -482,7 +888,14 @@
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_054"
     },
     {
       "keyword": "海草床",
@@ -490,7 +903,14 @@
       "code": "農業-7",
       "category_id": "D",
       "sub_id": "D1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_055"
     },
     {
       "keyword": "間歇灌溉",
@@ -498,7 +918,14 @@
       "code": "農業-3",
       "category_id": "F",
       "sub_id": "F3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_056"
     },
     {
       "keyword": "電梯",
@@ -506,7 +933,14 @@
       "code": "住商-4",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_057"
     },
     {
       "keyword": "冷凍",
@@ -514,7 +948,14 @@
       "code": "住商-4",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_058"
     },
     {
       "keyword": "委託營運",
@@ -522,7 +963,14 @@
       "code": "住商-4",
       "category_id": "E",
       "sub_id": "E2",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_059"
     },
     {
       "keyword": "推進",
@@ -530,7 +978,14 @@
       "code": "水利-節能",
       "category_id": "B",
       "sub_id": "B3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_060"
     },
     {
       "keyword": "HDPE",
@@ -538,7 +993,14 @@
       "code": "水利-材料",
       "category_id": "B",
       "sub_id": "B3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_061"
     },
     {
       "keyword": "刨除料",
@@ -546,7 +1008,14 @@
       "code": "環境-5",
       "category_id": "A",
       "sub_id": "A3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_062"
     },
     {
       "keyword": "溫拌瀝青",
@@ -554,7 +1023,14 @@
       "code": "環境-5",
       "category_id": "A",
       "sub_id": "A3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_063"
     },
     {
       "keyword": "長軌",
@@ -562,7 +1038,14 @@
       "code": "運輸-輕量化",
       "category_id": "C",
       "sub_id": "C3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_064"
     },
     {
       "keyword": "道碴",
@@ -570,7 +1053,14 @@
       "code": "環境-5",
       "category_id": "C",
       "sub_id": "C3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_065"
     },
     {
       "keyword": "無柱懸吊",
@@ -578,7 +1068,14 @@
       "code": "運輸-輕量化",
       "category_id": "C",
       "sub_id": "C3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_066"
     },
     {
       "keyword": "石籠",
@@ -586,7 +1083,14 @@
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_067"
     },
     {
       "keyword": "砌石",
@@ -594,7 +1098,14 @@
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_068"
     },
     {
       "keyword": "野溪",
@@ -602,7 +1113,14 @@
       "code": "農業-5",
       "category_id": "D",
       "sub_id": "D3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_069"
     },
     {
       "keyword": "農塘",
@@ -610,7 +1128,14 @@
       "code": "調適-水",
       "category_id": "D",
       "sub_id": "D3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_070"
     },
     {
       "keyword": "重力流",
@@ -618,7 +1143,14 @@
       "code": "水利-節能",
       "category_id": "B",
       "sub_id": "B3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_071"
     },
     {
       "keyword": "預鑄",
@@ -626,7 +1158,14 @@
       "code": "環境-5",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_072"
     },
     {
       "keyword": "LEBR",
@@ -634,7 +1173,14 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_073"
     },
     {
       "keyword": "低碳建築",
@@ -642,7 +1188,14 @@
       "code": "住商-1",
       "category_id": "A",
       "sub_id": "A1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_074"
     },
     {
       "keyword": "加勁",
@@ -650,7 +1203,14 @@
       "code": "農業-減碳",
       "category_id": "D",
       "sub_id": "D3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_075"
     },
     {
       "keyword": "變頻",
@@ -658,7 +1218,14 @@
       "code": "能源-節能",
       "category_id": "B",
       "sub_id": "B1",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_076"
     },
     {
       "keyword": "木排樁",
@@ -666,7 +1233,14 @@
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
-      "_match_type": "exact"
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_077"
     }
   ],
   "exclusion_keywords": [
@@ -695,7 +1269,11 @@
       "category_id": "C",
       "sub_id": "C2",
       "_match_type": "logic",
-      "note": "需同時出現：租賃＋公務車"
+      "note": "需同時出現：租賃＋公務車",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_01"
     },
     {
       "triggers": [
@@ -707,7 +1285,11 @@
       "category_id": "F",
       "sub_id": "F1",
       "_match_type": "logic",
-      "note": "需同時出現：評估＋規劃＋徵收"
+      "note": "需同時出現：評估＋規劃＋徵收",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_02"
     },
     {
       "triggers": [
@@ -718,7 +1300,11 @@
       "category_id": "F",
       "sub_id": "F2",
       "note": "提示排除一般行政 IT 維運系統",
-      "_match_type": "logic"
+      "_match_type": "logic",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_03"
     },
     {
       "triggers": [
@@ -729,7 +1315,11 @@
       "category_id": "B",
       "sub_id": "B1",
       "_match_type": "logic",
-      "note": "需同時出現：出流管制＋水保"
+      "note": "需同時出現：出流管制＋水保",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_04"
     }
   ]
 }

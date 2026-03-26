@@ -1,13 +1,16 @@
 {
   "schema_version": {
-    "config_version": "1.1.0",
-    "effective_date": "2026-03-19",
-    "updated_at": "2026-03-19",
+    "config_version": "1.2.3",
+    "effective_date": "2026-03-25",
+    "updated_at": "2026-03-26",
     "updated_by": "氣候變遷科",
     "change_log": [
+      "v1.2.3 (2026-03-26): Phase 1A patch — AP1 觸發條件精修（新增 require_context_keywords=[改善]，排除農業/灌溉/設施），app.py anti_pattern_check 支援 require_context_keywords 欄位",
+      "v1.2.2 (2026-03-25): Phase 1A final — 補入 manifest 區塊（keyword_dictionary_version / logic_mapping_version / checksums / last_synced_at）；集中版控保留，個別檔案異動透過 manifest 追蹤",
       "v1.1.0 (2026-03-19): Phase 1 — 新增版本管理欄位；配合 app.py v1.1 信心分數與判讀理由面板",
       "v1.0.0 (2025-12-01): 初版上線"
-    ]
+    ],
+    "data_version": "1.0.0"
   },
   "system_parameters": {
     "min_threshold": 3000000,
@@ -144,5 +147,839 @@
       "max": 1.2
     },
     "high_budget_forced_review_threshold": 50000000
+  },
+  "anti_patterns": [
+    {
+      "id": 1,
+      "name": "道路改善誤判調適",
+      "trigger_keywords": [
+        "道路",
+        "路面"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "排水",
+        "滯洪",
+        "防洪",
+        "透水",
+        "熱島",
+        "農業",
+        "灌溉",
+        "設施"
+      ],
+      "warning_text": "⚠ 若本案僅為路面改善，未涉及排水設計或氣候韌性工項，通常不列為調適預算。請確認是否包含氣候相關設計。",
+      "default_purity": "P3_PARTIAL",
+      "note": "道路工程最常見的誤判情境，需確認是否有防洪/透水/熱島等氣候設計",
+      "severity": "caution",
+      "action_type": "suggest_review",
+      "require_context_keywords": [
+        "改善"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "排水工程非氣候設計",
+      "trigger_keywords": [
+        "排水",
+        "側溝",
+        "清淤"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "提升",
+        "強化",
+        "改善容量",
+        "滯洪",
+        "防洪",
+        "韌性"
+      ],
+      "warning_text": "⚠ 一般維護性排水未必屬氣候調適。請確認是否為因應極端降雨之排水能力提升設計，而非例行清淤維護。",
+      "default_purity": "P3_PARTIAL",
+      "note": "需區分「維護型排水」與「氣候韌性提升型排水」",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 3,
+      "name": "公園綠美化誤判",
+      "trigger_keywords": [
+        "公園",
+        "綠美化",
+        "景觀",
+        "植栽"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "降溫",
+        "碳匯",
+        "生態",
+        "NBS",
+        "透水",
+        "調適"
+      ],
+      "warning_text": "⚠ 單純景觀植栽或綠美化，未必具備氣候效益。若包含降溫設計、碳匯功能或生態調適工項，才建議納入氣候預算。",
+      "default_purity": "P4_LOW",
+      "note": "景觀工程誤判比例高，需確認是否有明確的氣候設計目的",
+      "severity": "caution",
+      "action_type": "remind"
+    },
+    {
+      "id": 4,
+      "name": "校舍整修誤判節能",
+      "trigger_keywords": [
+        "整修",
+        "改建",
+        "補強"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "節能",
+        "LED",
+        "能效",
+        "BERS",
+        "光電",
+        "太陽能"
+      ],
+      "warning_text": "⚠ 一般建物整修不一定具減碳效益。請確認是否包含節能設備更新或建築能效提升措施。",
+      "default_purity": "P4_LOW",
+      "note": "結構補強/室內整修與節能改善是兩件事，需分開評估",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 5,
+      "name": "光電工程全額誤列",
+      "trigger_keywords": [
+        "太陽能",
+        "光電"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [],
+      "warning_text": "⚠ 光電工程可能包含結構補強、基礎工程等非發電相關費用。建議區分「能源設備費」與「其他工程費」後，再計算氣候預算金額。",
+      "default_purity": "P1_HIGH_PURITY",
+      "note": "光電設備本身為高純度，但整案預算常含非氣候工程費用，需拆分",
+      "severity": "warning",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 6,
+      "name": "農業設施誤判調適",
+      "trigger_keywords": [
+        "農業",
+        "灌溉",
+        "設施改善"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "抗旱",
+        "耐熱",
+        "調適",
+        "韌性",
+        "農塘",
+        "間歇灌溉"
+      ],
+      "warning_text": "⚠ 農業設施改善不一定屬於氣候調適。請確認是否與氣候風險因應（如抗旱、極端降雨）直接相關。",
+      "default_purity": "P3_PARTIAL",
+      "note": "生產效率提升 vs 氣候韌性提升，需判斷主要目的",
+      "severity": "caution",
+      "action_type": "remind"
+    },
+    {
+      "id": 7,
+      "name": "水環境複合工程未拆分",
+      "trigger_keywords": [
+        "水環境",
+        "河川整治"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [],
+      "warning_text": "⚠ 本類案件常同時包含景觀、生態、防洪等多種功能。建議拆分具氣候效益之工項比例，而非整案列入氣候預算。",
+      "default_purity": "P3_PARTIAL",
+      "note": "複合型工程一定要拆分計算，避免非氣候部分被誤列",
+      "severity": "warning",
+      "action_type": "require_review"
+    },
+    {
+      "id": 8,
+      "name": "監測系統漏辨識",
+      "trigger_keywords": [
+        "監測",
+        "系統"
+      ],
+      "require_all_triggers": true,
+      "require_any_context": [
+        "氣象",
+        "水位",
+        "溫度",
+        "淹水",
+        "預警",
+        "氣候"
+      ],
+      "exclude_keywords": [],
+      "warning_text": "💡 若本案為氣候監測或預警系統，可能屬於調適措施（風險管理與預警）。請評估是否適合納入氣候預算。",
+      "default_purity": "P2_HIGH_RELEVANCE",
+      "note": "監測系統有可能是氣候調適的重要投資，但容易被系統漏辨識",
+      "severity": "info",
+      "action_type": "remind"
+    },
+    {
+      "id": 9,
+      "name": "交通建設誤判減碳",
+      "trigger_keywords": [
+        "新建",
+        "拓寬"
+      ],
+      "require_all_triggers": false,
+      "require_any_context": [
+        "道路",
+        "橋梁",
+        "交通"
+      ],
+      "exclude_keywords": [
+        "電動",
+        "公共運輸",
+        "低碳",
+        "自行車",
+        "人行"
+      ],
+      "warning_text": "⚠ 一般道路/橋梁新建或拓寬，不一定具備減碳效益。請確認是否包含低碳運輸或運具轉型措施。",
+      "default_purity": "P4_LOW",
+      "note": "新增道路基礎設施可能反而增加車流，需有明確的低碳設計才列入",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 10,
+      "name": "高溫勞安調適漏辨識",
+      "trigger_keywords": [
+        "工程",
+        "施工"
+      ],
+      "require_all_triggers": true,
+      "exclude_keywords": [
+        "勞安",
+        "工安",
+        "高溫",
+        "熱危害",
+        "遮蔭"
+      ],
+      "warning_text": "💡 本案若涉及戶外施工，可評估是否納入高溫作業防護措施（遮蔭設施、補充飲水、彈性工時調整）。此類措施屬於氣候健康調適，可列為管理型效益。",
+      "default_purity": "P5_MANAGEMENT",
+      "note": "觸發機制說明：此規則為 case-name 層級判斷（在 anti_pattern_check() 中實作）。當標案名稱包含「工程」或「施工」，但不含「勞安/工安/高溫/熱危害/遮蔭」時觸發。不依賴 keyword_triggers 或 item anti_pattern_ref，因為「工程/施工」過於泛用不適合列入觸發詞。Layer3 調適關鍵字中的勞安/熱危害等詞，若出現在標案名稱中，代表使用者已有意識，此規則則不觸發。",
+      "severity": "info",
+      "action_type": "remind"
+    }
+  ],
+  "department_presets": {
+    "水利資源處": {
+      "default_categories": [
+        "B"
+      ],
+      "secondary_categories": [
+        "D",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "water_flood",
+      "dept_hint": "水利資源處常見案件以防洪排水、污水下水道為主，系統已預先引導至B類工項",
+      "common_anti_pattern_ids": [
+        2,
+        7
+      ],
+      "category_priority_order": [
+        "B",
+        "D",
+        "F"
+      ],
+      "default_hint_mode": "adaptation"
+    },
+    "工務處": {
+      "default_categories": [
+        "A"
+      ],
+      "secondary_categories": [
+        "B",
+        "C"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "工務處案件以新建/改建/道路橋梁為主，請特別留意隱含碳檢核工項",
+      "common_anti_pattern_ids": [
+        1,
+        4,
+        9
+      ],
+      "category_priority_order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "建設處": {
+      "default_categories": [
+        "A"
+      ],
+      "secondary_categories": [
+        "C",
+        "E"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "建設處案件以建築新建/修繕為主，請留意建築能效與低碳材料工項",
+      "common_anti_pattern_ids": [
+        4,
+        5
+      ],
+      "category_priority_order": [
+        "A",
+        "C",
+        "E"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "農業處": {
+      "default_categories": [
+        "D"
+      ],
+      "secondary_categories": [
+        "B",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "農業處案件包含公園綠化、農村水保、NBS生態工法，請確認是否具備氣候效益",
+      "common_anti_pattern_ids": [
+        3,
+        6
+      ],
+      "category_priority_order": [
+        "D",
+        "B",
+        "F"
+      ],
+      "default_hint_mode": "adaptation"
+    },
+    "教育處": {
+      "default_categories": [
+        "E",
+        "G"
+      ],
+      "secondary_categories": [
+        "A",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "教育處案件常見節能設備汰換與場館整修，另可留意避暑/防災據點之社會韌性效益",
+      "common_anti_pattern_ids": [
+        4
+      ],
+      "category_priority_order": [
+        "E",
+        "G",
+        "A"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "社會處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "E",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "社會處案件請特別留意脆弱族群避暑防災據點（G1）及高溫健康調適（G3）工項",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F",
+        "E"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "交通處": {
+      "default_categories": [
+        "C"
+      ],
+      "secondary_categories": [
+        "A",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "交通處案件以綠色運輸為主，請確認是否為低碳運具或智慧運輸，避免一般道路工程誤列",
+      "common_anti_pattern_ids": [
+        1,
+        9
+      ],
+      "category_priority_order": [
+        "C",
+        "A",
+        "F"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "環境保護局": {
+      "default_categories": [
+        "F"
+      ],
+      "secondary_categories": [
+        "D",
+        "G"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "環保局案件以評估規劃、監測系統為主，請留意氣候監測系統的調適價值",
+      "common_anti_pattern_ids": [
+        8
+      ],
+      "category_priority_order": [
+        "F",
+        "D",
+        "G"
+      ],
+      "default_hint_mode": "monitoring"
+    },
+    "勞工處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "勞工處案件請特別留意高溫作業防護措施，此屬氣候健康調適的管理型效益",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "衛生局": {
+      "default_categories": [
+        "G",
+        "F"
+      ],
+      "secondary_categories": [],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "衛生局案件請留意極端高溫健康風險評估及脆弱族群保護措施",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "城市暨觀光發展處": {
+      "default_categories": [
+        "D",
+        "E"
+      ],
+      "secondary_categories": [
+        "A",
+        "C"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "城觀處案件包含景觀、場館、觀光設施，請確認景觀工程是否具備降溫或生態效益",
+      "common_anti_pattern_ids": [
+        3
+      ],
+      "category_priority_order": [
+        "D",
+        "E",
+        "A"
+      ],
+      "default_hint_mode": "general"
+    },
+    "消防局": {
+      "default_categories": [
+        "G",
+        "F"
+      ],
+      "secondary_categories": [
+        "A"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "消防局案件請留意防災據點與韌性評估之調適價值",
+      "common_anti_pattern_ids": [],
+      "category_priority_order": [
+        "G",
+        "F",
+        "A"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "民政處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "民政處案件請留意社區防災據點與脆弱族群服務的氣候調適效益",
+      "common_anti_pattern_ids": [],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "行政處": {
+      "default_categories": [
+        "E",
+        "F"
+      ],
+      "secondary_categories": [],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "行政處案件以設備汰換與規劃為主，請留意節能設備更新工項",
+      "common_anti_pattern_ids": [
+        4
+      ],
+      "category_priority_order": [
+        "E",
+        "F"
+      ],
+      "default_hint_mode": "general"
+    },
+    "經濟暨綠能發展處": {
+      "default_categories": [
+        "E",
+        "F"
+      ],
+      "secondary_categories": [
+        "C",
+        "D"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "綠能發展處案件以能源設施與評估規劃為主，請留意光電工程的費用拆分",
+      "common_anti_pattern_ids": [
+        5
+      ],
+      "category_priority_order": [
+        "E",
+        "F",
+        "C"
+      ],
+      "default_hint_mode": "general"
+    }
+  },
+  "adaptation_keyword_layers": {
+    "layer1_water_flood": {
+      "label": "水利防洪",
+      "description": "排水設施、防洪工程、水資源管理相關，最直接的調適類別",
+      "keywords": [
+        {
+          "term": "排水",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "抽水",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "水利",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "滯洪",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "清疏",
+          "weight": 0.8,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "護岸",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "防洪",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "災修",
+          "weight": 0.7,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "出流管制",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "農塘",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "透水鋪面",
+          "weight": 1.0,
+          "suggested_category": "A",
+          "suggested_sub": "A2"
+        }
+      ]
+    },
+    "layer2_ecology_cooling": {
+      "label": "降溫與生態",
+      "description": "都市降溫、自然解方（NBS）、生態工法、植栽碳匯，Phase 1B 新增",
+      "keywords": [
+        {
+          "term": "高溫",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3"
+        },
+        {
+          "term": "遮蔭",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3"
+        },
+        {
+          "term": "熱島",
+          "weight": 0.8,
+          "suggested_category": "A",
+          "suggested_sub": "A2"
+        },
+        {
+          "term": "NBS",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "生態工法",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "砌石",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "石籠",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "木排樁",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "野溪",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "都市降溫",
+          "weight": 0.8,
+          "suggested_category": "D",
+          "suggested_sub": "D2"
+        },
+        {
+          "term": "降溫綠廊",
+          "weight": 0.9,
+          "suggested_category": "D",
+          "suggested_sub": "D1"
+        },
+        {
+          "term": "海綿城市",
+          "weight": 0.8,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "透水",
+          "weight": 0.8,
+          "suggested_category": "A",
+          "suggested_sub": "A1"
+        }
+      ]
+    },
+    "layer3_social_resilience": {
+      "label": "社會韌性與健康調適",
+      "description": "脆弱族群防護、高溫健康風險、社區防災、勞工安全，Phase 1B 新增，完全空白補入",
+      "keywords": [
+        {
+          "term": "勞安",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "工安",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "熱危害",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "熱中暑",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "高溫作業",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "防暑",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "避暑",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "防災據點",
+          "weight": 1.0,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "避難",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "關懷據點",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "脆弱族群",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "社區韌性",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G2",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "氣候健康",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": []
+        }
+      ]
+    }
+  },
+  "purity_codes": {
+    "P1_HIGH_PURITY": {
+      "label": "高純度氣候工項",
+      "desc": "主要目的即為氣候行動，效益直接且明確",
+      "color": "#1a6b3c"
+    },
+    "P2_HIGH_RELEVANCE": {
+      "label": "高相關性氣候工項",
+      "desc": "氣候效益為主要組成之一，具直接關聯",
+      "color": "#2b7ab5"
+    },
+    "P3_PARTIAL": {
+      "label": "部分相關氣候工項",
+      "desc": "僅部分工項具氣候效益，其餘屬常規支出",
+      "color": "#b5762b"
+    },
+    "P4_LOW": {
+      "label": "低度相關氣候工項",
+      "desc": "間接或附帶效益，主要功能非氣候行動",
+      "color": "#888888"
+    },
+    "P5_MANAGEMENT": {
+      "label": "管理型效益",
+      "desc": "施工管理或行政層次，不列入預算金額，僅於摘要呈現",
+      "color": "#6b3b8b"
+    }
+  },
+  "weight_definitions": {
+    "1.0": "高專屬低歧義：關鍵字幾乎只對應單一氣候工項，命中即強觸發",
+    "0.8": "中專屬：關鍵字多數情境與氣候相關，但偶有例外",
+    "0.7": "中歧義：關鍵字有氣候涵義但也常出現在非氣候情境，保守觸發",
+    "0.6": "弱提示：廣泛工程用語，需搭配其他訊號才有意義",
+    "0.4": "教育型提示：主要為引導思考，不做強推薦"
+  },
+  "manifest": {
+    "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
+    "config_version": "1.2.3",
+    "data_version": "1.0.0",
+    "keyword_dictionary_version": "1.0.0",
+    "logic_mapping_version": "1.0.0",
+    "last_synced_at": "2026-03-26T01:37:47+08:00",
+    "checksums": {
+      "keyword_dictionary": "e7475ca197ef2503c822d91776248c29",
+      "logic_mapping": "03577b6ef595ea9a75b4c380fcdeb667"
+    },
+    "checksum_algorithm": "md5_json_normalized",
+    "checksum_updated_at": "2026-03-26T01:37:47+08:00"
   }
 }

@@ -1563,6 +1563,12 @@ def build_sync_row_dict(payload):
     total_budget  = metadata.get("total_budget", 0)
     climate_ratio = bs.get("climate_budget_ratio") \
         if bs else (round(climate_total / total_budget * 100, 1) if total_budget else 0)
+    # 試算表欄位改為「百分比格式」時，需要傳入 0~1 的小數值（例如 41% → 0.41）
+    climate_ratio_decimal = (
+        round(float(climate_ratio) / 100, 6)
+        if climate_ratio not in (None, "")
+        else ""
+    )
 
     # 工項文字
     if bs:
@@ -1608,7 +1614,7 @@ def build_sync_row_dict(payload):
         "主辦單位"          : metadata.get("dept", ""),
         "決標金額"          : total_budget,
         "氣候預算"          : climate_total,
-        "氣候預算比例%"     : climate_ratio,
+        "氣候預算比例%"     : climate_ratio_decimal,
         "計畫類別"          : cat_labels,
         "細項分類"          : sub_labels,
         "氣候工項（預算型）": items_text,

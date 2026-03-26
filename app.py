@@ -1210,13 +1210,13 @@ def should_trigger_heat_safety_prompt(project_name, category_ids, department):
       1) 主類別含工程類（A/B/C/D/E）即觸發
       2) 或標案名稱含工程關鍵字即觸發
     """
-    project_text = str(project_name or "")
-    if any(kw in project_text for kw in HEAT_SAFETY_EXCLUDE_KEYWORDS):
-        return False
-
     cat_ids = set(category_ids or [])
     if cat_ids & ENGINEERING_MAIN_CATEGORY_IDS:
         return True
+
+    project_text = str(project_name or "")
+    if any(kw in project_text for kw in HEAT_SAFETY_EXCLUDE_KEYWORDS):
+        return False
 
     return any(kw in project_text for kw in HEAT_SAFETY_KEYWORDS)
 

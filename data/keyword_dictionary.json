@@ -445,8 +445,8 @@
     },
     {
       "keyword": "淨零",
-      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
-      "code": "淨零教育-1",
+      "suggested_item": "各專業有關氣候/淨零相關計畫或策略研擬",
+      "code": "能力建構-1",
       "category_id": "F",
       "sub_id": "F1",
       "_match_type": "exact",
@@ -461,7 +461,7 @@
     {
       "keyword": "碳盤查",
       "suggested_item": "組織碳盤查或碳足跡評估",
-      "code": "淨零教育-2",
+      "code": "能力建構-2",
       "category_id": "F",
       "sub_id": "F1",
       "_match_type": "exact",

@@ -1816,6 +1816,9 @@ def load_registered_cases():
     for col in ["機關名稱", "單位名稱", "標案名稱"]:
         cleaned[col] = cleaned[col].astype(str).str.strip()
     cleaned = cleaned[(cleaned["機關名稱"] != "") & (cleaned["單位名稱"] != "") & (cleaned["標案名稱"] != "")]
+    cleaned["_row_index"] = range(len(cleaned))
+    cleaned["_budget_value"] = cleaned["決標金額"].apply(parse_budget_from_sheet)
+    cleaned["_has_budget"] = cleaned["_budget_value"].gt(0)
     cleaned["_preset_ref_score"] = cleaned.apply(
         lambda row: sum(
             1 for v in extract_preset_reference(row).values()
@@ -1823,9 +1826,15 @@ def load_registered_cases():
         ),
         axis=1
     )
-    cleaned = cleaned.sort_values("_preset_ref_score", ascending=False)
+    cleaned = cleaned.sort_values(
+        by=["_has_budget", "_preset_ref_score", "_budget_value", "_row_index"],
+        ascending=[False, False, False, True]
+    )
     cleaned = cleaned.drop_duplicates(subset=["機關名稱", "單位名稱", "標案名稱"], keep="first")
-    cleaned = cleaned.drop(columns=["_preset_ref_score"], errors="ignore")
+    cleaned = cleaned.drop(
+        columns=["_preset_ref_score", "_has_budget", "_budget_value", "_row_index"],
+        errors="ignore"
+    )
 
     if cleaned.empty:
         return pd.DataFrame(), "試算表中沒有可用案件資料。"

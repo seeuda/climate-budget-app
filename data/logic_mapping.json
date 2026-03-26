@@ -1595,18 +1595,18 @@
       "sub_categories": [
         {
           "id": "F1",
-          "label": "各專業與氣候/淨零相關計畫或策略研擬",
-          "examples": "如：與氣候變遷有關的調查、評估、資料或系統建立、淨零路徑研究、碳盤查",
+          "label": "各局處本業之氣候治理能力建構（研究/評估/系統）",
+          "examples": "如：氣候風險調查、韌性評估、治理指標設計、資料平台與決策支援系統建置、碳管理能力盤點",
           "items": [
             {
-              "label": "淨零/氣候相關調查、評估、資料或系統建立",
+              "label": "與氣候治理相關之調查、評估、資料或系統建立",
               "mitigation_codes": [
                 "能力建構-1"
               ],
               "adaptation_codes": [
                 "調適-政策"
               ],
-              "policy": "地方淨零治理",
+              "policy": "地方氣候治理能力建構",
               "alert": "",
               "central_alignment": {
                 "sector": "環境部門",
@@ -1748,10 +1748,10 @@
             {
               "label": "節能減碳推廣教育宣導計畫",
               "mitigation_codes": [
-                "淨零教育-1"
+                "能力建構-1"
               ],
               "adaptation_codes": [],
-              "policy": "第三期淨零教育部門",
+              "policy": "跨局處能力建構：氣候溝通與公眾參與",
               "alert": "",
               "central_alignment": {
                 "sector": "環境部門",
@@ -1805,12 +1805,12 @@
             {
               "label": "氣候政策研究與治理評估",
               "mitigation_codes": [
-                "淨零教育-1"
+                "能力建構-1"
               ],
               "adaptation_codes": [
                 "調適-政策"
               ],
-              "policy": "政策型計畫：淨零路徑與調適治理",
+              "policy": "政策型計畫：氣候治理能力與調適決策強化",
               "alert": "建議佐證對應之政策目標與指標",
               "central_alignment": {
                 "sector": "環境部門",
@@ -1926,12 +1926,12 @@
             {
               "label": "基層氣候能力建構與綠生活推廣（社區大學/社區規劃師）",
               "mitigation_codes": [
-                "淨零教育-1"
+                "能力建構-1"
               ],
               "adaptation_codes": [
                 "調適-政策"
               ],
-              "policy": "社區韌性與公民參與",
+              "policy": "社區韌性與公民參與能力建構",
               "alert": "",
               "default_purity": "P3_PARTIAL",
               "benefit_type": "budget",

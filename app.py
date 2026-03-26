@@ -437,6 +437,12 @@ html, body, [class*="css"] {
     color: #ffffff !important;
     border: 1px solid rgba(255,255,255,0.3) !important;
 }
+
+/* Streamlit button text is rendered in nested elements (e.g. <p>/<span>) */
+[data-testid="stSidebar"] button p,
+[data-testid="stSidebar"] button span {
+    color: #ffffff !important;
+}
 /* Section headers */
 .section-title {
     font-size: 1.05rem;
@@ -582,6 +588,13 @@ button[kind="secondary"] {
     background: #e9f3ec !important;
     color: #1a4731 !important;
     border: 1px solid #9ec5ab !important;
+}
+
+/* Keep sidebar reset button style stable (override global secondary rule) */
+[data-testid="stSidebar"] button[kind="secondary"] {
+    background: rgba(255,255,255,0.15) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
 }
 
 [data-testid="stTextInput"] input,

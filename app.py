@@ -2107,7 +2107,7 @@ if selected_sub_labels:
     bc_parts.append(sub_summary[:18])
 st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', unsafe_allow_html=True)
 
-st.markdown("📌 操作說明：https://reurl.cc/ppWKm8")
+st.markdown("📌 操作說明及各單位填寫件數統計：https://reurl.cc/ppWKm8")
 
 # ═══════════════════════════════════════════════════════════════════
 # STEP 0 — 計畫基本資訊

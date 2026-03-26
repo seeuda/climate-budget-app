@@ -2107,7 +2107,7 @@ if selected_sub_labels:
     bc_parts.append(sub_summary[:18])
 st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', unsafe_allow_html=True)
 
-st.markdown("📌 操作說明、各單位填寫件數統計、及客服聯絡資訊：https://reurl.cc/ppWKm8      📌 說明影片：https://youtu.be/KoZWqxTSo5s")
+st.markdown("📌 操作說明、各單位填寫情形、客服聯絡資訊：https://reurl.cc/ppWKm8      📌 說明影片：https://youtu.be/KoZWqxTSo5s")
 
 # ═══════════════════════════════════════════════════════════════════
 # STEP 0 — 計畫基本資訊

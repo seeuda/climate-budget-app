@@ -1662,7 +1662,9 @@
             },
             {
               "label": "氣候風險評估或脆弱度調查",
-              "mitigation_codes": [],
+              "mitigation_codes": [
+                "能力建構-1"
+              ],
               "adaptation_codes": [
                 "調適-政策"
               ],

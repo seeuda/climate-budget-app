@@ -1,10 +1,11 @@
 {
   "schema_version": {
-    "config_version": "1.2.4",
+    "config_version": "1.2.5",
     "effective_date": "2026-03-25",
     "updated_at": "2026-03-26",
     "updated_by": "氣候變遷科",
     "change_log": [
+      "v1.2.5 (2026-03-26): 修正能力建構映射一致性：F1 風險評估工項補入能力建構-1，並同步環境教育關鍵字(KW_040)代碼為能力建構-1",
       "v1.2.4 (2026-03-26): 擴充能力建構判讀範圍（F1/F2/F3/G2 code 對齊）、補強研究治理關鍵字、加入一般顧問防誤列 anti-pattern(11)，並調整排除說明為條件式敘述",
       "v1.2.3 (2026-03-26): Phase 1A patch — AP1 觸發條件精修（新增 require_context_keywords=[改善]，排除農業/灌溉/設施），app.py anti_pattern_check 支援 require_context_keywords 欄位",
       "v1.2.2 (2026-03-25): Phase 1A final — 補入 manifest 區塊（keyword_dictionary_version / logic_mapping_version / checksums / last_synced_at）；集中版控保留，個別檔案異動透過 manifest 追蹤",
@@ -999,16 +1000,16 @@
   },
   "manifest": {
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
-    "config_version": "1.2.4",
+    "config_version": "1.2.5",
     "data_version": "1.0.0",
-    "keyword_dictionary_version": "1.0.1",
-    "logic_mapping_version": "1.0.1",
-    "last_synced_at": "2026-03-26T19:19:38+08:00",
+    "keyword_dictionary_version": "1.0.2",
+    "logic_mapping_version": "1.0.2",
+    "last_synced_at": "2026-03-26T19:37:58+08:00",
     "checksums": {
       "keyword_dictionary": "2cd6ec45fb71fdb682fdecd7b201d1e3",
       "logic_mapping": "d4211d29170e70da12080201b51cc280"
     },
     "checksum_algorithm": "md5_json_normalized",
-    "checksum_updated_at": "2026-03-26T19:19:38+08:00"
+    "checksum_updated_at": "2026-03-26T19:37:58+08:00"
   }
 }

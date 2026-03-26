@@ -1,7 +1,9 @@
 """
 彰化縣氣候預算導引式判讀系統
 Climate Budget Assessment Tool for Changhua County Government
-v1.1 — Phase 1: 判讀理由面板、信心分數、UID強化、排除說明
+v1.2 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
+        resolve_header_key強化、init_state型別穩定化、
+        anti_pattern_check骨幹、manifest版本管控
 """
 
 import streamlit as st
@@ -20,7 +22,12 @@ from google.oauth2.service_account import Credentials
 PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
 PRESET_SHEET_GID = "0"
 
-DEFAULT_SYNC_HEADERS = [
+# ── Google Sheet 同步：輸出欄位定義 ───────────────────────────────────────────
+# 分兩組：計算資料（budget_summary）與解讀資料（interpretation_summary）
+# 同步至試算表時合併為單一列；未來儀表板可依此分組聚合
+
+# 計算資料欄位（直接反映金額計算結果）
+BUDGET_SUMMARY_HEADERS = [
     "填報日期",
     "案件編號",
     "標案名稱",
@@ -30,33 +37,52 @@ DEFAULT_SYNC_HEADERS = [
     "氣候預算比例%",
     "計畫類別",
     "細項分類",
-    "氣候工項",
+    "氣候工項（預算型）",    # count_in_budget_total=True 的工項
     "關鍵字信心",
     "命中關鍵字",
+    "規則版本",
+]
+
+# 解讀資料欄位（相關性標記、非預算型效益、診斷資訊）
+INTERPRETATION_SUMMARY_HEADERS = [
+    "非預算型效益",           # benefit_type=design/management 的工項說明
+    "工項相關性摘要",          # 各工項 purity label 的文字摘要
+    "anti_pattern命中",       # 觸發的 anti_pattern id 與名稱
     "減量資訊完整度",
     "工程量體縮減效益",
     "補充說明",
 ]
 
-# 欄位別名映射：試算表欄位名稱（含使用者自訂異動）→ 標準欄位 key
-# 比對邏輯：先精確比對，再依此表做「包含」模糊比對
+DEFAULT_SYNC_HEADERS = BUDGET_SUMMARY_HEADERS + INTERPRETATION_SUMMARY_HEADERS
+
+# ── HEADER_ALIAS_MAP：精準比對優先，模糊比對白名單 ─────────────────────────────
+# 設計原則（Phase 1A 強化）：
+#   1. 精確相等優先（已在 resolve_header_key 中實作）
+#   2. 只比對 alias 白名單，不做自由形式的「包含」比對
+#   3. 相似但不唯一的詞彙不列入 alias（避免誤配）
+#   4. 同一個 alias 只能對應一個標準 key（alias 不重複）
 HEADER_ALIAS_MAP = {
-    # 標準 key          : [可接受的欄位名稱關鍵字（任一符合即採用）]
-    "填報日期"          : ["填報日期", "填報", "日期", "時間"],
-    "案件編號"          : ["案件編號", "案號", "uid"],
-    "標案名稱"          : ["標案名稱", "計畫名稱", "標案"],
-    "主辦單位"          : ["主辦單位", "主辦局處", "局處", "單位名稱", "單位"],
-    "決標金額"          : ["決標金額", "預算金額", "金額"],
-    "氣候預算"          : ["氣候預算", "氣候經費"],
-    "氣候預算比例%"     : ["氣候預算比例", "氣候比例", "比例"],
+    # ── 計算資料欄位 ────────────────────────────────────────────────────────
+    "填報日期"          : ["填報日期", "填報時間", "日期時間"],
+    "案件編號"          : ["案件編號", "案號", "uid", "UID"],
+    "標案名稱"          : ["標案名稱", "計畫名稱", "案件名稱"],
+    "主辦單位"          : ["主辦單位", "主辦局處", "局處名稱", "承辦單位"],
+    "決標金額"          : ["決標金額", "預算金額", "計畫金額"],
+    "氣候預算"          : ["氣候預算", "氣候相關經費", "氣候經費"],
+    "氣候預算比例%"     : ["氣候預算比例%", "氣候預算比例", "氣候比例"],
     "計畫類別"          : ["計畫類別", "判讀主類別", "主類別"],
-    "細項分類"          : ["細項分類", "判讀子類別", "子類別", "細項"],
-    "氣候工項"          : ["氣候工項", "工項", "工項清單"],
-    "關鍵字信心"         : ["關鍵字信心", "判讀信心", "信心", "信心分數", "confidence"],
-    "減量資訊完整度"      : ["減量資訊完整度", "減量完整度", "工程減量完整度", "reduction_completeness"],
-    "命中關鍵字"        : ["命中關鍵字", "關鍵字", "觸發關鍵字", "keywords"],
-    "工程量體縮減效益"  : ["工程量體縮減效益", "量體縮減", "量體效益", "縮減效益"],
-    "補充說明"          : ["補充說明", "備註", "note", "說明"],
+    "細項分類"          : ["細項分類", "判讀子類別", "子類別"],
+    "氣候工項（預算型）": ["氣候工項（預算型）", "氣候工項", "工項清單", "預算型工項"],
+    "關鍵字信心"        : ["關鍵字信心", "判讀信心", "信心等級"],
+    "命中關鍵字"        : ["命中關鍵字", "觸發關鍵字", "命中詞彙"],
+    "規則版本"          : ["規則版本", "config_version", "data_version"],
+    # ── 解讀資料欄位 ────────────────────────────────────────────────────────
+    "非預算型效益"      : ["非預算型效益", "設計型效益", "管理型效益", "效益補充"],
+    "工項相關性摘要"    : ["工項相關性摘要", "純度摘要", "相關性標記"],
+    "anti_pattern命中" : ["anti_pattern命中", "誤判提示", "反例命中"],
+    "減量資訊完整度"    : ["減量資訊完整度", "減量完整度", "工程減量完整度"],
+    "工程量體縮減效益"  : ["工程量體縮減效益", "量體縮減效益", "縮減效益"],
+    "補充說明"          : ["補充說明", "備註說明", "承辦人備註"],
 }
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -85,6 +111,43 @@ KWDICT = load_json("data/keyword_dictionary.json", _file_hash=_file_hash("data/k
 
 PARAMS = CONFIG["system_parameters"]
 UI     = CONFIG["ui_text"]
+
+# ── Phase 1A：從 config.json 讀取擴充結構 ─────────────────────────────────────
+
+# purity_codes 查表：P1_HIGH_PURITY → {label, desc, color}
+# UI 顯示一律走此查表，不在程式裡硬寫中文字串
+PURITY_CODES: dict = CONFIG.get("purity_codes", {})
+
+def purity_label(code: str) -> str:
+    """code → 中文顯示標籤，找不到時回傳 code 本身。"""
+    return PURITY_CODES.get(code, {}).get("label", code)
+
+def purity_color(code: str) -> str:
+    """code → 顯示顏色 hex，找不到時回傳灰色。"""
+    return PURITY_CODES.get(code, {}).get("color", "#888888")
+
+# anti_patterns：id → 完整 dict，方便 O(1) 查找
+ANTI_PATTERNS: dict[int, dict] = {
+    ap["id"]: ap for ap in CONFIG.get("anti_patterns", [])
+}
+
+# severity → UI 樣式對應（Phase 1B anti_pattern_check UI 使用）
+SEVERITY_STYLE: dict[str, dict] = {
+    "info":    {"bg": "#f0f8ff", "border": "#4a90d9", "icon": "💡"},
+    "caution": {"bg": "#fffbf0", "border": "#f0a500", "icon": "⚠️"},
+    "warning": {"bg": "#fff0f0", "border": "#e74c3c", "icon": "🚨"},
+}
+
+# department_presets 查表
+DEPT_PRESETS: dict = CONFIG.get("department_presets", {})
+
+# config / data 版本（匯出 JSON 時附上，供日後回溯）
+_sv = CONFIG.get("schema_version", {})
+_mf = CONFIG.get("manifest", {})
+CONFIG_VERSION      = _sv.get("config_version", "unknown")
+DATA_VERSION        = _sv.get("data_version", "unknown")
+KD_VERSION          = _mf.get("keyword_dictionary_version", "unknown")
+LM_VERSION          = _mf.get("logic_mapping_version", "unknown")
 
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -369,16 +432,10 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] h3 {
     color: #a8d5a8 !important;
 }
-[data-testid="stSidebar"] button,
-[data-testid="stSidebar"] .stButton button,
-[data-testid="stSidebar"] div[data-testid="stButton"] button {
+[data-testid="stSidebar"] button {
     background: rgba(255,255,255,0.15) !important;
     color: #ffffff !important;
     border: 1px solid rgba(255,255,255,0.3) !important;
-}
-[data-testid="stSidebar"] button p,
-[data-testid="stSidebar"] .stButton button p {
-    color: #ffffff !important;
 }
 /* Section headers */
 .section-title {
@@ -592,6 +649,113 @@ def detect_keywords(text):
             })
             seen.add(synthetic_keyword)
     return matches
+
+
+def anti_pattern_check(case_name: str, selected_items: list[dict]) -> list[dict]:
+    """
+    Phase 1A 骨幹：根據標案名稱與已選工項，檢查是否命中反例提示規則。
+
+    讀取 CONFIG["anti_patterns"]，回傳命中的規則清單。
+    Phase 1B 會在 Step 2 / Step 3 呼叫此函式，並將結果寫入
+    st.session_state["anti_pattern_hits"]。
+
+    回傳格式：list[dict]，每筆包含：
+      {id, name, severity, action_type, warning_text, trigger_matched, exclude_matched}
+
+    觸發邏輯（依 JSON 定義）：
+      trigger_keywords        : any/all（由 require_all_triggers 決定）
+      require_context_keywords: 若存在，需同時包含至少一個上下文詞彙
+      require_any_context     : 同上（舊欄位名，向下相容）
+      exclude_keywords        : 出現則不觸發
+
+    AP10 特殊說明：trigger=[工程/施工], exclude=[勞安/高溫/...], require_all=True
+                  此組合已足夠，不需額外程式分支。
+    """
+    hits: list[dict] = []
+    text = case_name.strip()
+
+    for ap in CONFIG.get("anti_patterns", []):
+        ap_id       = ap["id"]
+        triggers    = ap.get("trigger_keywords", [])
+        excludes    = ap.get("exclude_keywords", [])
+        require_all = ap.get("require_all_triggers", False)
+        # 支援兩種上下文欄位名稱（向下相容）
+        require_ctx = ap.get("require_context_keywords",
+                             ap.get("require_any_context", []))
+
+        # ── 觸發條件 ──────────────────────────────────────────────────
+        if require_all:
+            trigger_matched = all(t in text for t in triggers)
+        else:
+            trigger_matched = any(t in text for t in triggers)
+
+        if not trigger_matched:
+            continue
+
+        # ── 上下文條件（若設定）──────────────────────────────────────
+        if require_ctx and not any(c in text for c in require_ctx):
+            continue
+
+        # ── 排除條件 ──────────────────────────────────────────────────
+        if any(e in text for e in excludes):
+            continue
+
+        hits.append({
+            "id":            ap_id,
+            "name":          ap.get("name", ""),
+            "severity":      ap.get("severity", "caution"),
+            "action_type":   ap.get("action_type", "remind"),
+            "warning_text":  ap.get("warning_text", ""),
+            "default_purity": ap.get("default_purity", "P3_PARTIAL"),
+            "trigger_matched_keywords": [t for t in triggers if t in text],
+        })
+
+    return hits
+
+
+def anti_pattern_check_items(item_budgets: list[dict]) -> list[dict]:
+    """
+    工項層級的反例提示檢查（補充 anti_pattern_check 的 case_name 層級）。
+
+    讀取每個工項的 anti_pattern_ref，回傳命中的 anti_pattern 規則。
+    Phase 1B 在 Step 3 工項選擇完成後呼叫。
+    """
+    hit_ids: set[int] = set()
+    for ib in item_budgets:
+        for ap_id in ib.get("anti_pattern_ref", []):
+            hit_ids.add(ap_id)
+
+    hits: list[dict] = []
+    for ap_id in sorted(hit_ids):
+        ap = ANTI_PATTERNS.get(ap_id)
+        if ap:
+            hits.append({
+                "id":           ap_id,
+                "name":         ap.get("name", ""),
+                "severity":     ap.get("severity", "caution"),
+                "action_type":  ap.get("action_type", "remind"),
+                "warning_text": ap.get("warning_text", ""),
+                "default_purity": ap.get("default_purity", "P3_PARTIAL"),
+                "source":       "item_ref",   # 區分來源：case_name vs item
+            })
+    return hits
+
+
+def merge_anti_pattern_hits(
+    case_hits: list[dict],
+    item_hits: list[dict],
+) -> list[dict]:
+    """
+    合併 case_name 層級與工項層級的反例命中，去除重複（以 id 去重）。
+    優先保留 case_name 層級（包含 trigger_matched_keywords 資訊）。
+    """
+    seen: set[int] = set()
+    merged: list[dict] = []
+    for h in case_hits + item_hits:
+        if h["id"] not in seen:
+            seen.add(h["id"])
+            merged.append(h)
+    return merged
 
 
 def compute_confidence(kw_matches, manual_override, budget, selected_items):
@@ -1018,31 +1182,165 @@ def generate_uid(case_name=""):
 
 
 def generate_export_json(state):
-    """Generate the export JSON object."""
-    selected_categories = state.get("selected_categories", [])
-    selected_sub_categories = state.get("selected_sub_categories", [])
-    item_budgets = state.get("item_budgets", [])
-    kw_matches = state.get("kw_matches", [])
-    manual_override = state.get("manual_override", False)
-    budget = state.get("budget", 0)
+    """
+    生成匯出 JSON（Phase 1A 結構升級）。
 
-    # Compute confidence
+    明確分成兩大區塊：
+      budget_summary         — 計算資料（金額、占比、列入計算的工項）
+      interpretation_summary — 解讀資料（相關性標記、非預算型效益、anti_pattern命中）
+
+    金額計算只看 count_in_budget_total=True 的工項；
+    解讀資料不影響任何數字，僅供摘要與人工判讀使用。
+    """
+    selected_categories     = state.get("selected_categories", [])
+    selected_sub_categories = state.get("selected_sub_categories", [])
+    item_budgets            = state.get("item_budgets", [])
+    kw_matches              = state.get("kw_matches", [])
+    manual_override         = state.get("manual_override", False)
+    budget                  = state.get("budget", 0)
+
     confidence = compute_confidence(kw_matches, manual_override, budget, item_budgets)
-    kw_labels  = [kw["keyword"] for kw in kw_matches]
+
+    # 分離預算型 vs 非預算型工項
+    # count_in_budget_total 在 Phase 1B Step 3 UI 寫入 item_budgets；
+    # 此前預設 True（向下相容舊資料）
+    budget_items     = [ib for ib in item_budgets if ib.get("count_in_budget_total", True)]
+    non_budget_items = [ib for ib in item_budgets if not ib.get("count_in_budget_total", True)]
+
+    # 氣候預算總額（只加 budget 型）
+    climate_total = sum(i.get("amount", 0) for i in budget_items)
+    climate_ratio = round(climate_total / budget * 100, 1) if budget else 0.0
+
+    # 工項相關性摘要文字
+    item_relevance_parts = []
+    for ib in budget_items:
+        purity_code = ib.get("purity", "")
+        p_label = purity_label(purity_code) if purity_code else ""
+        label = ib.get("label", "")
+        if label:
+            item_relevance_parts.append(
+                f"{label}（{p_label}）" if p_label else label
+            )
+    item_relevance_text = "、".join(item_relevance_parts)
+
+    # 非預算型效益說明文字
+    non_budget_parts = []
+    for ib in non_budget_items:
+        btype = ib.get("benefit_type", "")
+        label = ib.get("label", "")
+        note  = ib.get("note", "")
+        type_label = {"design": "設計型", "management": "管理型"}.get(btype, btype)
+        entry = f"【{type_label}】{label}"
+        if note:
+            entry += f"：{note}"
+        non_budget_parts.append(entry)
+    non_budget_text = "；".join(non_budget_parts)
+
+    # anti_pattern 命中記錄（Phase 1B 由 anti_pattern_check() 寫入 state）
+    ap_hits = state.get("anti_pattern_hits", [])
+    ap_hits_text = "、".join(
+        f"AP{h['id']}:{h.get('name', '')}" for h in ap_hits
+    ) if ap_hits else ""
 
     result = {
+        # ── 專案基本資訊 ──────────────────────────────────────────────────
         "project_metadata": {
-            "uid": generate_uid(state.get("case_name", "")),
-            "name": state.get("case_name", ""),
-            "dept": state.get("dept", ""),
-            "total_budget": budget,
+            "uid":               generate_uid(state.get("case_name", "")),
+            "name":              state.get("case_name", ""),
+            "dept":              state.get("dept", ""),
+            "total_budget":      budget,
             "is_manual_override": manual_override,
-            "assessment_date": datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M"),
+            "assessment_date":   datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M"),
+            "rule_versions": {
+                "config_version": CONFIG_VERSION,
+                "data_version":   DATA_VERSION,
+                "kd_version":     KD_VERSION,
+                "lm_version":     LM_VERSION,
+            },
         },
+
+        # ── 計算資料（budget_summary）──────────────────────────────────────
+        "budget_summary": {
+            "climate_budget_total": climate_total,
+            "climate_budget_ratio": climate_ratio,
+            "alert_level":          get_alert_level(budget)["label"],
+            "counted_items": [
+                {
+                    "label":        ib.get("label", ""),
+                    "amount":       ib.get("amount", 0),
+                    "ratio":        ib.get("ratio", 0.0),
+                    "item_id":      ib.get("item_id", ""),
+                    "is_zero_cost": ib.get("is_zero_cost", False),
+                    "is_smart_use": ib.get("is_smart_use", False),
+                }
+                for ib in budget_items
+            ],
+            "categories":          selected_categories,
+            "category_labels":     format_category_labels(selected_categories),
+            "sub_categories":      selected_sub_categories,
+            "sub_category_labels": format_sub_category_labels(selected_sub_categories),
+        },
+
+        # ── 解讀資料（interpretation_summary）─────────────────────────────
+        "interpretation_summary": {
+            "item_relevance_text":     item_relevance_text,
+            "item_relevance_detail": [
+                {
+                    "label":        ib.get("label", ""),
+                    "item_id":      ib.get("item_id", ""),
+                    "purity_code":  ib.get("purity", ""),
+                    "purity_label": purity_label(ib.get("purity", "")),
+                }
+                for ib in budget_items
+            ],
+            "non_budget_benefits":      non_budget_text,
+            "non_budget_items_detail": [
+                {
+                    "label":        ib.get("label", ""),
+                    "item_id":      ib.get("item_id", ""),
+                    "benefit_type": ib.get("benefit_type", ""),
+                    "note":         ib.get("note", ""),
+                }
+                for ib in non_budget_items
+            ],
+            "anti_pattern_hits":       ap_hits,
+            "anti_pattern_hits_text":  ap_hits_text,
+            "has_low_relevance_items": any(
+                ib.get("purity") in ("P4_LOW", "P5_MANAGEMENT") for ib in budget_items
+            ),
+        },
+
+        # ── 判讀品質 ──────────────────────────────────────────────────────
+        "confidence": {
+            "level":   confidence["level"],
+            "label":   confidence["label"],
+            "desc":    confidence["desc"],
+            "reasons": confidence["reasons"],
+        },
+        "matched_keywords": [kw["keyword"] for kw in kw_matches],
+        "matched_trigger_ids": [
+            kw.get("trigger_id", "") for kw in kw_matches if kw.get("trigger_id")
+        ],
+
+        # ── 量體縮減 ──────────────────────────────────────────────────────
+        "physical_reductions": state.get("physical_reductions", {}),
+        "reduction_completeness": (lambda rc: {
+            "level":        rc["level"],
+            "label":        rc["label"],
+            "filled_count": rc["filled_count"],
+            "desc":         rc["desc"],
+        } if rc else None)(
+            compute_reduction_completeness(
+                item_budgets, state.get("physical_reductions", {})
+            )
+        ),
+
+        # ── 舊版相容欄位（Phase 2 重構前保留）────────────────────────────
+        "climate_budget_total": climate_total,
         "climate_assessment": {
-            "categories": selected_categories,
-            "category_labels": format_category_labels(selected_categories),
-            "sub_categories": selected_sub_categories,
+            "categories":          selected_categories,
+            "category_labels":     format_category_labels(selected_categories),
+            "sub_categories":      selected_sub_categories,
             "sub_category_labels": format_sub_category_labels(selected_sub_categories),
             "selected_items": [
                 {**ib, "is_zero_cost": ib.get("is_zero_cost", False)}
@@ -1050,28 +1348,13 @@ def generate_export_json(state):
             ],
             "alert_level": get_alert_level(budget)["label"],
         },
-        "climate_budget_total": sum(
-            i.get("amount", 0) for i in item_budgets
-        ),
         "impact_level": get_alert_level(budget)["level"],
-        "confidence": {
-            "level":   confidence["level"],
-            "label":   confidence["label"],
-            "desc":    confidence["desc"],
-            "reasons": confidence["reasons"],
-        },
-        "reduction_completeness": (lambda rc: {
-            "level":        rc["level"],
-            "label":        rc["label"],
-            "filled_count": rc["filled_count"],
-            "desc":         rc["desc"],
-        } if rc else None)(compute_reduction_completeness(item_budgets, state.get("physical_reductions", {}))),
-        "matched_keywords": kw_labels,
-        "physical_reductions": state.get("physical_reductions", {}),
+
+        # ── 評估 metadata ─────────────────────────────────────────────────
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
-            "user_note": state.get("user_note", ""),
-            "system_version": "1.1",
+            "user_note":     state.get("user_note", ""),
+            "system_version": "1.2",
         },
     }
     return result
@@ -1114,10 +1397,45 @@ def get_google_sheet_target():
     }
 
 
-def get_department_options():
-    """Get department list from config."""
+def get_department_options() -> list[str]:
+    """回傳局處清單（供 Step 0 下拉選單使用）。"""
     configured_departments = CONFIG.get("departments", [])
     return configured_departments if isinstance(configured_departments, list) else []
+
+
+def get_dept_preset(dept_name: str) -> dict:
+    """
+    查詢局處預設設定。
+
+    回傳 department_presets[dept_name]，找不到時回傳空 dict。
+    主要欄位：
+      default_categories     : list[str]  主推薦類別（依 category_priority_order 排序）
+      category_priority_order: list[str]  完整優先序
+      default_hint_mode      : str        提示模式
+      dept_hint              : str        UI 提示文字
+      common_anti_pattern_ids: list[int]  此局處常見的 anti_pattern
+    """
+    return DEPT_PRESETS.get(dept_name, {})
+
+
+def apply_dept_preset(dept_name: str) -> None:
+    """
+    Phase 1B 骨幹：用戶選完局處後呼叫，將預設類別與提示文字寫入 session_state。
+
+    Phase 1A 已預留 state key（dept_suggested_categories / dept_hint），
+    Phase 1B Step 0 UI 完成後正式啟用此函式。
+    """
+    preset = get_dept_preset(dept_name)
+    if not preset:
+        st.session_state["dept_suggested_categories"] = []
+        st.session_state["dept_hint"] = ""
+        return
+
+    # 依 category_priority_order 排序推薦類別
+    priority_order = preset.get("category_priority_order",
+                                preset.get("default_categories", []))
+    st.session_state["dept_suggested_categories"] = priority_order
+    st.session_state["dept_hint"] = preset.get("dept_hint", "")
 
 
 def is_sheet_sync_ready():
@@ -1156,41 +1474,100 @@ def get_google_sheet_client():
         return None, f"service account 驗證失敗：{e}"
 
 
-def resolve_header_key(col_name):
+def resolve_header_key(col_name: str) -> str | None:
     """
-    模糊比對試算表欄位名稱 → 標準資料 key。
-    比對順序：1) 精確比對標準 key  2) 依 HEADER_ALIAS_MAP 做關鍵字包含比對
-    回傳標準 key 字串；若無法比對則回傳 None（該欄填空白）。
+    試算表欄位名稱 → 標準資料 key。
+
+    比對順序（Phase 1A 強化版）：
+      1. 精確相等：col_name == 標準 key
+      2. alias 白名單精確比對：col_name == 某個 alias（完全相等）
+      3. alias 白名單包含比對：alias in col_name（alias 是 col_name 的子字串）
+         — 僅在步驟 1/2 都失敗時才嘗試，且同一 col_name 只能命中一個 key
+         — 若多個 key 的 alias 都能匹配，視為不唯一，回傳 None 並記 log
+      4. 找不到 → 回傳 None（該欄填空白）
+
+    與舊版差異：
+      - 舊版同時做「alias in col」和「col in alias」雙向包含，容易誤配
+      - 新版只做單向（alias in col），且步驟 2 精確比對先行
+      - 不唯一時明確拒絕（不猜），讓 unmatched_log 記錄供日後維護
     """
     col_stripped = col_name.strip()
-    # 精確比對
+    if not col_stripped:
+        return None
+
+    # 步驟 1：精確相等
     if col_stripped in HEADER_ALIAS_MAP:
         return col_stripped
-    # 模糊比對：遍歷每個標準 key 的別名清單
+
+    # 步驟 2：alias 白名單精確比對
+    for std_key, aliases in HEADER_ALIAS_MAP.items():
+        if col_stripped in aliases:
+            return std_key
+
+    # 步驟 3：alias 白名單包含比對（單向，不唯一時拒絕）
+    candidates = []
     for std_key, aliases in HEADER_ALIAS_MAP.items():
         for alias in aliases:
-            if alias in col_stripped or col_stripped in alias:
-                return std_key
+            if alias in col_stripped:
+                candidates.append(std_key)
+                break  # 同一 std_key 只算一次
+
+    if len(candidates) == 1:
+        return candidates[0]
+    elif len(candidates) > 1:
+        # 不唯一：記錄但不配對
+        import logging
+        logging.warning(
+            f"[resolve_header_key] 欄位「{col_stripped}」模糊比對到多個 key: "
+            f"{candidates}，略過（填空白）"
+        )
+        return None
+
     return None
 
 
 def build_sync_row_dict(payload):
     """
-    從 export JSON payload 組出所有可能欄位的資料字典（以標準 key 為 key）。
+    從 export JSON payload 組出試算表列資料（以標準 header key 為 key）。
+
+    Phase 1A 更新：
+      - 從 budget_summary / interpretation_summary 讀取資料
+      - 新增規則版本、工項相關性摘要、非預算型效益、anti_pattern命中欄位
+      - 舊版相容：若 budget_summary 不存在，fallback 至舊結構
     """
-    metadata   = payload.get("project_metadata", {})
-    assessment = payload.get("climate_assessment", {})
-    ameta      = payload.get("assessment_metadata", {})
-    phys       = payload.get("physical_reductions", {})
-    climate_total  = payload.get("climate_budget_total", 0)
-    total_budget   = metadata.get("total_budget", 0)
-    climate_ratio  = round(climate_total / total_budget * 100, 1) if total_budget else 0
+    metadata  = payload.get("project_metadata", {})
+    ameta     = payload.get("assessment_metadata", {})
+    phys      = payload.get("physical_reductions", {})
+    conf      = payload.get("confidence", {})
 
-    # 氣候工項
-    items = assessment.get("selected_items", [])
-    items_text = "、".join(i.get("label", "") for i in items if i.get("label"))
+    # 優先從新結構讀取
+    bs = payload.get("budget_summary", {})
+    is_  = payload.get("interpretation_summary", {})
 
-    # 量體縮減摘要（若有填入）
+    # budget_summary fallback（向下相容舊格式）
+    climate_total = bs.get("climate_budget_total") \
+        if bs else payload.get("climate_budget_total", 0)
+    total_budget  = metadata.get("total_budget", 0)
+    climate_ratio = bs.get("climate_budget_ratio") \
+        if bs else (round(climate_total / total_budget * 100, 1) if total_budget else 0)
+
+    # 工項文字
+    if bs:
+        items_text = "、".join(
+            i.get("label", "") for i in bs.get("counted_items", []) if i.get("label")
+        )
+        cat_labels = bs.get("category_labels", "")
+        sub_labels = bs.get("sub_category_labels", "")
+    else:
+        old_assessment = payload.get("climate_assessment", {})
+        items_text = "、".join(
+            i.get("label", "") for i in old_assessment.get("selected_items", [])
+            if i.get("label")
+        )
+        cat_labels = old_assessment.get("category_labels", "")
+        sub_labels = old_assessment.get("sub_category_labels", "")
+
+    # 量體縮減摘要
     phys_parts = []
     if phys.get("soil_reduction_ton", 0):
         phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
@@ -1202,26 +1579,36 @@ def build_sync_row_dict(payload):
         phys_parts.append(phys["other_benefit_note"])
     phys_text = "；".join(phys_parts)
 
-    # 備註 = user_note + 量體縮減摘要
-    note_parts = [s for s in [ameta.get("user_note", ""), phys_text] if s]
-    note_text = "｜".join(note_parts)
+    # 規則版本字串
+    rv = metadata.get("rule_versions", {})
+    rule_ver_text = (
+        f"config={rv.get('config_version','?')} "
+        f"kd={rv.get('kd_version','?')} "
+        f"lm={rv.get('lm_version','?')}"
+    ) if rv else ""
 
     return {
-        "填報日期"         : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
-        "案件編號"         : metadata.get("uid", ""),
-        "標案名稱"         : metadata.get("name", ""),
-        "主辦單位"         : metadata.get("dept", ""),
-        "決標金額"         : total_budget,
-        "氣候預算"         : climate_total,
-        "氣候預算比例%"    : climate_ratio,
-        "計畫類別"         : assessment.get("category_labels", ""),
-        "細項分類"         : assessment.get("sub_category_labels", ""),
-        "氣候工項"         : items_text,
-        "關鍵字信心"       : payload.get("confidence", {}).get("label", ""),
-        "命中關鍵字"       : "、".join(payload.get("matched_keywords", [])),
-        "減量資訊完整度"   : (payload.get("reduction_completeness") or {}).get("label", ""),
-        "工程量體縮減效益" : phys_text,
-        "補充說明"         : ameta.get("user_note", ""),
+        # ── 計算資料 ──────────────────────────────────────────────────
+        "填報日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
+        "案件編號"          : metadata.get("uid", ""),
+        "標案名稱"          : metadata.get("name", ""),
+        "主辦單位"          : metadata.get("dept", ""),
+        "決標金額"          : total_budget,
+        "氣候預算"          : climate_total,
+        "氣候預算比例%"     : climate_ratio,
+        "計畫類別"          : cat_labels,
+        "細項分類"          : sub_labels,
+        "氣候工項（預算型）": items_text,
+        "關鍵字信心"        : conf.get("label", ""),
+        "命中關鍵字"        : "、".join(payload.get("matched_keywords", [])),
+        "規則版本"          : rule_ver_text,
+        # ── 解讀資料 ──────────────────────────────────────────────────
+        "工項相關性摘要"    : is_.get("item_relevance_text", "") if is_ else "",
+        "非預算型效益"      : is_.get("non_budget_benefits", "") if is_ else "",
+        "anti_pattern命中"  : is_.get("anti_pattern_hits_text", "") if is_ else "",
+        "減量資訊完整度"    : (payload.get("reduction_completeness") or {}).get("label", ""),
+        "工程量體縮減效益"  : phys_text,
+        "補充說明"          : ameta.get("user_note", ""),
     }
 
 
@@ -1416,31 +1803,69 @@ def sync_to_google_sheet(payload):
 # ── Session state init ────────────────────────────────────────────────────────
 
 def init_state():
-    defaults = {
-        "step": 0,
-        "case_name": "",
-        "dept": "",
-        "agency_name": "",
-        "unit_name": "",
-        "dept_other": "",
-        "budget": 0,
-        "use_manual_case_input": False,
-        "manual_override": False,
-        "kw_matches": [],
-        "selected_categories": [],
-        "selected_sub_categories": [],
-        "selected_items": [],
-        "item_budgets": [],
+    """
+    初始化 session state。
+
+    型別規範（Phase 1A 強化）：
+      str   : case_name, dept, agency_name, unit_name, dept_other,
+              engineering_guideline_type, user_note,
+              sync_message, sync_signature, selection_warning,
+              dept_hint,                 # Phase 1B：局處提示文字
+              public_summary_text,       # Phase 1B：公文摘要
+      int   : budget, step
+      bool  : use_manual_case_input, manual_override, sync_done,
+              negative_filter_override
+      list  : kw_matches,               # list[dict]  每個 kw trigger dict
+              selected_categories,      # list[str]   category id
+              selected_sub_categories,  # list[str]   sub id
+              selected_items,           # list[str]   item label
+              item_budgets,             # list[dict]  {label, amount, ratio, ...}
+              green_spending_category,  # list[str]
+              qualitative_factors,      # list[str]
+              anti_pattern_hits,        # list[dict]  Phase 1B anti_pattern_check 寫入
+                                        #   每筆: {id, name, severity, action_type, warning_text}
+              dept_suggested_categories, # list[str]  Phase 1B 局處預設推薦類別
+      dict  : physical_reductions,      # {soil_reduction_ton, waste_reduction_ton, ...}
+    """
+    defaults: dict = {
+        # ── 流程控制 ──────────────────────────────────────────────────
+        "step":                     0,
+        # ── 案件基本資訊 ──────────────────────────────────────────────
+        "case_name":                "",
+        "dept":                     "",
+        "agency_name":              "",
+        "unit_name":                "",
+        "dept_other":               "",
+        "budget":                   0,
+        "use_manual_case_input":    False,
+        # ── 判讀狀態 ──────────────────────────────────────────────────
+        "manual_override":          False,
+        "kw_matches":               [],      # list[dict]
+        "selected_categories":      [],      # list[str]
+        "selected_sub_categories":  [],      # list[str]
+        "selected_items":           [],      # list[str]
+        "item_budgets":             [],      # list[dict]
         "engineering_guideline_type": "",
-        "green_spending_category": [],
-        "qualitative_factors": [],
-        "sync_done": False,
-        "sync_message": "",
-        "sync_signature": "",
+        "green_spending_category":  [],      # list[str]
+        "qualitative_factors":      [],      # list[str]
+        "physical_reductions":      {},      # dict
+        "user_note":                "",
+        "selection_warning":        "",
         "negative_filter_override": False,
-        "selection_warning": "",
-        "user_note": "",
-        "physical_reductions": {},
+        # ── 同步狀態 ──────────────────────────────────────────────────
+        "sync_done":                False,
+        "sync_message":             "",
+        "sync_signature":           "",
+        # ── Phase 1A 新增：anti_pattern 命中記錄 ──────────────────────
+        # list[dict]；每筆由 anti_pattern_check() 寫入
+        # 格式：{id:int, name:str, severity:str, action_type:str, warning_text:str}
+        "anti_pattern_hits":        [],      # list[dict]
+        # ── Phase 1B 預留：局處預設 ───────────────────────────────────
+        # 用戶選完局處後，由 apply_dept_preset() 寫入
+        "dept_suggested_categories": [],     # list[str]
+        "dept_hint":                 "",     # str：局處提示文字
+        # ── Phase 1B 預留：公文摘要 ───────────────────────────────────
+        "public_summary_text":       "",     # str：三層公文摘要組裝結果
     }
     for k, v in defaults.items():
         if k not in st.session_state:

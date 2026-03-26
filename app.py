@@ -1196,6 +1196,30 @@ def is_zero_cost_item(label: str) -> bool:
     """向下相容：純零成本 OR 聰明使用型，皆屬廣義「減量工項」。"""
     return is_pure_zero_cost(label) or is_smart_use_item(label)
 
+HEAT_SAFETY_KEYWORDS = [
+    "工程", "施工", "改善", "新建", "修復", "整修",
+    "道路", "排水", "管線", "河川", "水環境",
+]
+HEAT_SAFETY_EXCLUDE_KEYWORDS = ["委託", "規劃", "研究", "監測系統"]
+ENGINEERING_MAIN_CATEGORY_IDS = {"A", "B", "C", "D", "E"}
+
+def should_trigger_heat_safety_prompt(project_name, category_ids, department):
+    """
+    判斷是否觸發高溫作業調適提醒（最小可用版）。
+    規則：
+      1) 主類別含工程類（A/B/C/D/E）即觸發
+      2) 或標案名稱含工程關鍵字即觸發
+    """
+    project_text = str(project_name or "")
+    if any(kw in project_text for kw in HEAT_SAFETY_EXCLUDE_KEYWORDS):
+        return False
+
+    cat_ids = set(category_ids or [])
+    if cat_ids & ENGINEERING_MAIN_CATEGORY_IDS:
+        return True
+
+    return any(kw in project_text for kw in HEAT_SAFETY_KEYWORDS)
+
 # ── 工項 → 量體縮減欄位觸發對應表 ──────────────────────────────────────────
 # key: 工項 label（部分比對）, value: 觸發哪些量體縮減欄位
 # 欄位: soil_reduction_ton（減少土方購置, 公噸）, waste_reduction_ton（減少廢棄物外運, 公噸）
@@ -1256,6 +1280,9 @@ def generate_export_json(state):
     kw_matches              = state.get("kw_matches", [])
     manual_override         = state.get("manual_override", False)
     budget                  = state.get("budget", 0)
+    heat_safety_prompt_triggered = state.get("heat_safety_prompt_triggered", False)
+    heat_safety_response = state.get("heat_safety_response", "")
+    heat_safety_note = state.get("heat_safety_note", "")
 
     confidence = compute_confidence(kw_matches, manual_override, budget, item_budgets)
 
@@ -1412,6 +1439,11 @@ def generate_export_json(state):
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "user_note":     state.get("user_note", ""),
+            "management_adaptation_prompt": {
+                "triggered": heat_safety_prompt_triggered,
+                "response": heat_safety_response,
+                "note": heat_safety_note,
+            },
             "preset_reference": state.get("preset_reference", {}),
             "system_version": "1.2",
         },
@@ -1970,6 +2002,9 @@ def init_state():
         "qualitative_factors":      [],      # list[str]
         "physical_reductions":      {},      # dict
         "user_note":                "",
+        "heat_safety_prompt_triggered": False,
+        "heat_safety_response":     "",
+        "heat_safety_note":         "",
         "selection_warning":        "",
         "negative_filter_override": False,
         # ── 同步狀態 ──────────────────────────────────────────────────
@@ -2891,6 +2926,53 @@ elif st.session_state.step == 3:
 
     st.session_state.item_budgets = updated_items
 
+    heat_prompt_triggered = should_trigger_heat_safety_prompt(
+        st.session_state.case_name,
+        st.session_state.selected_categories,
+        st.session_state.dept,
+    )
+    st.session_state.heat_safety_prompt_triggered = heat_prompt_triggered
+
+    if heat_prompt_triggered:
+        st.markdown("---")
+        st.markdown(
+            '<div style="background:#fff8e8;border-left:4px solid #f39c12;'
+            'border-radius:0 8px 8px 0;padding:0.8rem 1rem;margin:0.4rem 0 0.8rem 0;">'
+            '<b>🌡️ 高溫作業調適提醒</b><br>'
+            '<span style="font-size:0.86rem;color:#5f4a00;">'
+            '本案可能涉及戶外施工或高溫作業環境，建議檢視施工管理調適措施。'
+            '</span><br>'
+            '<span style="font-size:0.78rem;color:#7d5a00;">'
+            '此提醒用於補充判讀施工過程之氣候風險，不影響氣候預算總額計算。'
+            '</span></div>',
+            unsafe_allow_html=True,
+        )
+        heat_response = st.radio(
+            "請選擇本案回應狀態：",
+            options=["已納入", "部分納入", "尚未納入", "不適用"],
+            index=["已納入", "部分納入", "尚未納入", "不適用"].index(
+                st.session_state.get("heat_safety_response")
+            ) if st.session_state.get("heat_safety_response") in ["已納入", "部分納入", "尚未納入", "不適用"] else 2,
+            horizontal=True,
+            key="heat_safety_response_radio",
+        )
+        st.session_state.heat_safety_response = heat_response
+
+        if heat_response in ["已納入", "部分納入"]:
+            heat_note = st.text_area(
+                "補充說明（選填）",
+                value=st.session_state.get("heat_safety_note", ""),
+                placeholder="例：已規劃夏季高溫時段調整工序、補水休息點與遮蔭設施。",
+                height=80,
+                key="heat_safety_note_input",
+            )
+            st.session_state.heat_safety_note = heat_note.strip()
+        else:
+            st.session_state.heat_safety_note = ""
+    else:
+        st.session_state.heat_safety_response = ""
+        st.session_state.heat_safety_note = ""
+
     # ── 量體縮減及其他效益欄位（依已選工項動態顯示，零成本工項一律觸發）──
     reduction_fields = get_physical_reduction_fields(updated_items)
     has_zero_cost = any(ib.get("is_zero_cost", False) for ib in updated_items)
@@ -3076,6 +3158,14 @@ elif st.session_state.step == 4:
             for line in phys_lines:
                 st.markdown(f"- {line}")
 
+        heat_resp = state.get("heat_safety_response", "")
+        heat_note = state.get("heat_safety_note", "")
+        if heat_resp and heat_resp != "不適用":
+            heat_msg = f"本案另具施工管理型調適考量：已回應高溫作業調適提醒（回應狀態：{heat_resp}，不列入氣候預算總額）。"
+            if heat_note:
+                heat_msg += f" {heat_note}"
+            st.markdown(f"**🌡️ 成果摘要第三層補充：** {heat_msg}")
+
         # 補充說明
         if state.get("user_note", ""):
             st.markdown(f"**📝 補充說明：** {state.user_note}")
@@ -3210,6 +3300,9 @@ elif st.session_state.step == 4:
         "engineering_guideline_type": state.engineering_guideline_type,
         "physical_reductions": state.get("physical_reductions", {}),
         "user_note": state.get("user_note", ""),
+        "heat_safety_prompt_triggered": state.get("heat_safety_prompt_triggered", False),
+        "heat_safety_response": state.get("heat_safety_response", ""),
+        "heat_safety_note": state.get("heat_safety_note", ""),
         "preset_reference": state.get("preset_reference", {}),
     }
     export_data = generate_export_json(export_payload)

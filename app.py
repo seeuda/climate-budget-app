@@ -3547,7 +3547,7 @@ elif st.session_state.step == 4:
 st.markdown("---")
 st.markdown(
     '<p style="text-align:center;color:#888;font-size:0.78rem;">'
-    '彰化縣氣候預算導引式判讀系統 v1.2 · Phase 1 更新：判讀理由面板 · 信心分數 · UID 強化 ｜ 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引'
+    '彰化縣氣候預算導引式判讀系統 v1.2 · Phase 1 更新：判讀理由面板 · 信心分數 · UID 強化 ｜ 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引、國家氣候變遷調適行動計畫'
     '</p>',
     unsafe_allow_html=True
 )

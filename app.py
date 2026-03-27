@@ -2033,17 +2033,104 @@ def init_state():
 init_state()
 
 
-def go_to_step(target_step: int, *, unlock: bool = False):
-    """導向指定步驟；可選擇同步更新可跳轉上限。"""
+def prepare_step3_budget_state():
+    """同步 Step2 工項勾選結果到 Step3 預算拆解資料。"""
+    selected_categories = st.session_state.selected_categories
+    selected_sub_categories = st.session_state.selected_sub_categories
+    selected_items = list(st.session_state.selected_items)
+    valid_item_labels = get_available_item_labels(selected_categories, selected_sub_categories)
+
+    selected_items, valid_item_budgets, removed_labels = prune_invalid_selections(
+        selected_items,
+        st.session_state.item_budgets,
+        valid_item_labels,
+    )
+    st.session_state.selected_items = selected_items
+
+    if removed_labels:
+        st.session_state.selection_warning = "已移除不再適用的工項：" + "、".join(removed_labels)
+
+    existing = {ib["label"]: ib for ib in valid_item_budgets}
+    st.session_state.item_budgets = [
+        existing.get(label, {"label": label, "ratio": None, "amount": 0})
+        for label in selected_items
+    ]
+
+
+def validate_forward_transition(start_step: int, target_step: int):
+    """快速跳頁前檢核：沿用序列導引的關卡邏輯。"""
+    if target_step <= start_step:
+        return True, ""
+
+    for step_idx in range(start_step, target_step):
+        if step_idx == 0:
+            case_name = (st.session_state.case_name or "").strip()
+            dept = (st.session_state.dept or "").strip()
+            budget_val = st.session_state.budget or 0
+            manual_override = bool(st.session_state.manual_override)
+            exclusion_hits = detect_text_keywords(case_name, KWDICT.get("exclusion_keywords", []))
+            negative_ok = (not exclusion_hits) or bool(st.session_state.negative_filter_override)
+            if not (
+                case_name
+                and dept not in ("（請選擇）", "")
+                and budget_val > 0
+                and (budget_val >= PARAMS["min_threshold"] or manual_override)
+                and negative_ok
+            ):
+                return False, "請先完成步驟一必要欄位與進入下一步條件。"
+
+        elif step_idx == 1:
+            has_sub_for_each_cat = all(
+                any(
+                    sid == f"{cid}_NONE" or (
+                        (result := get_sub_by_id_global(sid)) and result[0] and result[0]["id"] == cid
+                    )
+                    for sid in st.session_state.selected_sub_categories
+                )
+                for cid in st.session_state.selected_categories
+            )
+            can_next = bool(st.session_state.selected_categories) and has_sub_for_each_cat
+            if not can_next:
+                return False, "請先完成步驟二：每個類別至少選一個細項或不確定項目。"
+
+        elif step_idx == 2:
+            prepare_step3_budget_state()
+
+        elif step_idx == 3:
+            total_budget = st.session_state.budget or 0
+            item_budgets = st.session_state.item_budgets
+            total_allocated = sum(ib.get("amount", 0) or 0 for ib in item_budgets)
+            over_budget = total_allocated > total_budget
+            all_set = (not item_budgets) or all(
+                ib.get("amount", 0) > 0
+                or ib.get("is_zero_cost", False)
+                or ib.get("is_smart_use", False)
+                for ib in item_budgets
+            )
+            if not (all_set and not over_budget):
+                return False, "請先完成步驟四預算檢核（不得超支且各工項金額需有效）。"
+
+    return True, ""
+
+
+def go_to_step(target_step: int, *, unlock: bool = False, enforce_transition: bool = False):
+    """導向指定步驟；可選擇同步更新可跳轉上限並檢核跨步驟條件。"""
     max_step = st.session_state.max_unlocked_step
     if unlock:
         max_step = max(max_step, target_step)
     st.session_state.max_unlocked_step = max_step
 
+    if enforce_transition:
+        ok, msg = validate_forward_transition(st.session_state.step, target_step)
+        if not ok:
+            st.warning(msg)
+            return False
+
     if st.session_state.step != target_step:
         st.session_state.step = target_step
         st.session_state.scroll_to_top = True
         st.rerun()
+    return True
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -2115,7 +2202,7 @@ for i, col in enumerate(step_nav_cols):
             disabled=(not is_unlocked) or is_current,
             use_container_width=True,
         ):
-            go_to_step(i)
+            go_to_step(i, enforce_transition=True)
 
 if st.session_state.get("scroll_to_top", False):
     components.html(
@@ -2831,22 +2918,7 @@ elif st.session_state.step == 2:
             go_to_step(1)
     with col_next:
         if st.button("下一步：填寫工項預算 →", type="primary", use_container_width=True):
-            selected_items, valid_item_budgets, removed_labels = prune_invalid_selections(
-                selected_items,
-                st.session_state.item_budgets,
-                valid_item_labels,
-            )
-            st.session_state.selected_items = selected_items
-
-            if removed_labels:
-                st.session_state.selection_warning = "已移除不再適用的工項：" + "、".join(removed_labels)
-
-            # Init item_budgets
-            existing = {ib["label"]: ib for ib in valid_item_budgets}
-            st.session_state.item_budgets = [
-                existing.get(label, {"label": label, "ratio": None, "amount": 0})
-                for label in selected_items
-            ]
+            prepare_step3_budget_state()
             go_to_step(3, unlock=True)
 
 # ═══════════════════════════════════════════════════════════════════

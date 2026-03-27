@@ -687,9 +687,22 @@ def detect_keywords(text):
     matches = []
     seen = set()
     for kw in KWDICT["keyword_triggers"]:
-        if kw["keyword"] in text and kw["keyword"] not in seen:
-            matches.append(kw)
-            seen.add(kw["keyword"])
+        keyword = kw.get("keyword", "")
+        if not keyword or keyword in seen:
+            continue
+        synonyms = kw.get("synonyms", [])
+        candidates = [keyword] + [s for s in synonyms if s]
+        matched_term = next((c for c in candidates if c in text), "")
+        if not matched_term:
+            continue
+        negative_context = kw.get("negative_context", [])
+        if any(ctx in text for ctx in negative_context):
+            continue
+        hit = dict(kw)
+        hit["matched_term"] = matched_term
+        hit.setdefault("match_type", "strong_trigger")
+        matches.append(hit)
+        seen.add(keyword)
 
     for rule in KWDICT.get("keyword_logic", []):
         triggers = rule.get("triggers", [])
@@ -709,6 +722,19 @@ def detect_keywords(text):
             })
             seen.add(synthetic_keyword)
     return matches
+
+def split_keyword_matches(kw_matches):
+    """Split matches into strong/concept/logic buckets for layered guidance."""
+    strong, concept, logic = [], [], []
+    for kw in kw_matches:
+        if kw.get("_match_type") == "logic":
+            logic.append(kw)
+            continue
+        if kw.get("match_type", "strong_trigger") == "concept_trigger":
+            concept.append(kw)
+        else:
+            strong.append(kw)
+    return strong, concept, logic
 
 
 def anti_pattern_check(case_name: str, selected_items: list[dict]) -> list[dict]:
@@ -826,8 +852,7 @@ def compute_confidence(kw_matches, manual_override, budget, selected_items):
     forced_review_threshold = CONFIG.get("weighting_parameters", {}).get(
         "high_budget_forced_review_threshold", 50000000
     )
-    strong_matches = [kw for kw in kw_matches if kw.get("_match_type") != "logic"]
-    logic_matches  = [kw for kw in kw_matches if kw.get("_match_type") == "logic"]
+    strong_matches, concept_matches, logic_matches = split_keyword_matches(kw_matches)
 
     reasons = []
 
@@ -844,15 +869,24 @@ def compute_confidence(kw_matches, manual_override, budget, selected_items):
         level = "high"
         kw_list = "、".join(f"「{kw['keyword']}」" for kw in strong_matches[:4])
         reasons.append(f"命中 {len(strong_matches)} 個強觸發關鍵字：{kw_list}")
+        if concept_matches:
+            reasons.append(f"另命中 {len(concept_matches)} 個概念提示詞（需後續確認）")
         if logic_matches:
             reasons.append(f"另命中 {len(logic_matches)} 個組合條件規則")
     elif len(strong_matches) == 1:
         level = "medium"
         reasons.append(f"命中 1 個關鍵字：「{strong_matches[0]['keyword']}」，建議人工確認工項是否完整")
+        if concept_matches:
+            reasons.append(f"另命中 {len(concept_matches)} 個概念提示詞（相關但未確定）")
     elif logic_matches:
         level = "medium"
         kw_list = "、".join(f"「{kw['keyword']}」" for kw in logic_matches[:3])
         reasons.append(f"命中 {len(logic_matches)} 個組合條件規則：{kw_list}")
+    elif concept_matches:
+        level = "medium"
+        kw_list = "、".join(f"「{kw['keyword']}」" for kw in concept_matches[:4])
+        reasons.append(f"命中 {len(concept_matches)} 個概念提示詞：{kw_list}")
+        reasons.append("目前僅判定為『與氣候相關』，請下一步確認減緩/調適與具體工項")
     else:
         level = "low"
         reasons.append("未命中任何關鍵字，全部依人工選擇")
@@ -972,6 +1006,9 @@ def build_explain_html(kw_matches, manual_override, budget):
                 type_badge = '<span class="explain-type-logic">組合條件</span>'
                 triggers = kw["keyword"].split("/")
                 kw_display = " ＋ ".join(f"「{t}」" for t in triggers)
+            elif kw.get("match_type", "strong_trigger") == "concept_trigger":
+                type_badge = '<span class="explain-type-manual">概念提示</span>'
+                kw_display = f"「{kw['keyword']}」"
             else:
                 type_badge = '<span class="explain-type-strong">強觸發</span>'
                 kw_display = f"「{kw['keyword']}」"
@@ -2386,12 +2423,24 @@ if st.session_state.step == 0:
         # Keyword detection live preview
         kw_matches = detect_keywords(case_name)
         if case_name and kw_matches:
+            strong_matches, concept_matches, logic_matches = split_keyword_matches(kw_matches)
             st.markdown("**🔍 偵測到的氣候關鍵字**")
             kw_html = '<div class="kw-suggestion">'
             kw_html += "<b>💡 系統自動辨識到以下關鍵字，建議對應工項：</b><br>"
-            for kw in kw_matches[:6]:
+            for kw in strong_matches[:6]:
                 note_text = f'（{kw.get("note", "")}）' if kw.get("note") else ""
                 kw_html += f'<span class="kw-tag">#{kw["keyword"]}</span> → {kw["suggested_item"]}{note_text} <code style="background:#eee;padding:1px 4px;border-radius:3px;font-size:0.7rem;">{kw["code"]}</code><br>'
+            if concept_matches:
+                concept_names = "、".join(kw["keyword"] for kw in concept_matches[:6])
+                kw_html += (
+                    f'<div style="margin-top:0.35rem;color:#6b5e00;">'
+                    f'🧭 概念提示詞：{concept_names}。系統已辨識為「氣候相關」，'
+                    f'但尚未自動綁定工項，請下一步確認減緩/調適方向。'
+                    f'</div>'
+                )
+            if logic_matches:
+                logic_names = "、".join(kw["keyword"] for kw in logic_matches[:3])
+                kw_html += f'<div style="margin-top:0.25rem;color:#1a4731;">🧩 組合條件命中：{logic_names}</div>'
             kw_html += "</div>"
             st.markdown(kw_html, unsafe_allow_html=True)
         elif case_name:
@@ -2542,7 +2591,9 @@ elif st.session_state.step == 1:
 
     # Show keyword suggestions
     if st.session_state.kw_matches:
-        suggested_cats = list({kw["category_id"] for kw in st.session_state.kw_matches})
+        strong_matches, _, logic_matches = split_keyword_matches(st.session_state.kw_matches)
+        suggestion_pool = strong_matches + logic_matches
+        suggested_cats = list({kw["category_id"] for kw in suggestion_pool if kw.get("category_id")})
         kw_names = [kw["keyword"] for kw in st.session_state.kw_matches]
         st.markdown(f'<div class="kw-suggestion">💡 根據標案名稱中的關鍵字（{"、".join(kw_names[:5])}），系統建議優先檢視以下高亮類別 ↓</div>', unsafe_allow_html=True)
     else:

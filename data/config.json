@@ -1,10 +1,13 @@
 {
   "schema_version": {
-    "config_version": "1.2.3",
+    "config_version": "1.3.2",
     "effective_date": "2026-03-25",
-    "updated_at": "2026-03-26",
+    "updated_at": "2026-03-27",
     "updated_by": "氣候變遷科",
     "change_log": [
+      "v1.3.2 (2026-03-27): 泛工程詞優化 — 將「修復」「新建」由 strong 調整為 concept_trigger，降低一般工程誤判。",
+      "v1.3.1 (2026-03-27): 調整 concept_trigger 調適詞負向語境，研究/規劃案件仍標記為概念相關，避免漏判。",
+      "v1.3.0 (2026-03-27): 關鍵字辨識升級 — 支援 concept_trigger 分層、Step1 顯示「相關但未確定」中間狀態、detect_keywords 支援 synonyms/negative_context",
       "v1.2.3 (2026-03-26): Phase 1A patch — AP1 觸發條件精修（新增 require_context_keywords=[改善]，排除農業/灌溉/設施），app.py anti_pattern_check 支援 require_context_keywords 欄位",
       "v1.2.2 (2026-03-25): Phase 1A final — 補入 manifest 區塊（keyword_dictionary_version / logic_mapping_version / checksums / last_synced_at）；集中版控保留，個別檔案異動透過 manifest 追蹤",
       "v1.1.0 (2026-03-19): Phase 1 — 新增版本管理欄位；配合 app.py v1.1 信心分數與判讀理由面板",
@@ -981,5 +984,24 @@
     },
     "checksum_algorithm": "md5_json_normalized",
     "checksum_updated_at": "2026-03-26T01:37:47+08:00"
+  },
+  "keyword_strategy": {
+    "match_types": {
+      "strong_trigger": "可直接導向具體工項之高專屬關鍵字",
+      "concept_trigger": "僅表示氣候相關概念，需後續導引確認"
+    },
+    "weight_definitions": {
+      "1.0": "高專屬強觸發詞",
+      "0.7": "中度提示詞",
+      "0.4-0.5": "高概括背景詞"
+    },
+    "concept_layer_keywords": [
+      "低碳",
+      "永續",
+      "溫室氣體",
+      "氣候變遷",
+      "調適",
+      "韌性"
+    ]
   }
 }

@@ -598,19 +598,23 @@
     {
       "keyword": "修復",
       "suggested_item": "古蹟或歷史建築修復（文資保存）",
-      "code": "住商-6",
-      "category_id": "A",
-      "sub_id": "A1",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.6,
-      "purity_hint": "P3_PARTIAL",
+      "weight": 0.5,
+      "purity_hint": "P4_LOW",
       "anti_pattern_ids": [
         4
       ],
       "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_036"
+      "negative_context": [
+        "道路",
+        "路面"
+      ],
+      "learning_tip": "命中本詞僅代表可能涉及改造工程，需確認是否具節能、低碳材料或調適設計，才可列為氣候預算。",
+      "trigger_id": "KW_036",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "災修",
@@ -743,20 +747,21 @@
     {
       "keyword": "新建",
       "suggested_item": "近零碳建築技術(nZEB)",
-      "code": "住商-1",
-      "category_id": "A",
-      "sub_id": "A1",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.6,
-      "purity_hint": "P3_PARTIAL",
+      "weight": 0.5,
+      "purity_hint": "P4_LOW",
       "anti_pattern_ids": [
         4,
         9
       ],
       "synonyms": [],
       "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_045"
+      "learning_tip": "命中本詞僅代表新建情境，需確認是否含近零碳建築、能效或調適設計。",
+      "trigger_id": "KW_045",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "宿舍",
@@ -1244,78 +1249,101 @@
     },
     {
       "keyword": "低碳",
-      "suggested_item": "低碳路面材料或再生瀝青",
-      "code": "交通-減碳",
-      "category_id": "C",
-      "sub_id": "C1",
+      "suggested_item": "低碳方向研判（請確認是否包含節能設備、低碳材料或運具電動化）",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.6,
-      "purity_hint": "P2_HIGH_RELEVANCE",
+      "weight": 0.7,
+      "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [],
-      "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_078"
+      "synonyms": [
+        "減碳"
+      ],
+      "negative_context": [
+        "宣導",
+        "活動"
+      ],
+      "learning_tip": "命中本詞代表具氣候概念關聯，仍需確認是否有具體可編列之減碳作為。",
+      "trigger_id": "KW_078",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "永續",
-      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
-      "code": "淨零教育-1",
-      "category_id": "F",
-      "sub_id": "F1",
+      "suggested_item": "永續方向研判（請確認是否具有可量化的減緩或調適措施）",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
       "weight": 0.5,
-      "purity_hint": "P3_PARTIAL",
+      "purity_hint": "P4_LOW",
       "anti_pattern_ids": [],
-      "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_079"
+      "synonyms": [
+        "ESG"
+      ],
+      "negative_context": [
+        "觀光",
+        "教育"
+      ],
+      "learning_tip": "此詞屬高概括詞，不能單獨作為氣候預算歸類依據。",
+      "trigger_id": "KW_079",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "溫室氣體",
-      "suggested_item": "空氣品質或溫室氣體監測系統",
-      "code": "環境-4",
-      "category_id": "F",
-      "sub_id": "F2",
+      "suggested_item": "盤查與減量方向研判（請確認是否有排放盤查、設備改善或管理系統）",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
       "weight": 0.7,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_080"
+      "synonyms": [
+        "GHG"
+      ],
+      "negative_context": [
+        "宣導"
+      ],
+      "learning_tip": "命中本詞通常具氣候關聯，但仍須確認是否有具體支出工項。",
+      "trigger_id": "KW_080",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "氣候變遷",
-      "suggested_item": "氣候變遷風險與韌性評估",
-      "code": "調適-評估",
-      "category_id": "F",
-      "sub_id": "F1",
+      "suggested_item": "減緩/調適方向分流（請確認本案主軸）",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.6,
-      "purity_hint": "P2_HIGH_RELEVANCE",
+      "weight": 0.7,
+      "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "氣候"
+      ],
       "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_081"
+      "learning_tip": "此詞為總括概念，建議下一步確認屬減緩、調適或研究規劃。",
+      "trigger_id": "KW_081",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "調適",
-      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
-      "code": "調適-綜合",
-      "category_id": "F",
-      "sub_id": "F1",
+      "suggested_item": "調適方向研判（請確認是否為防洪、降溫、韌性等具體作為）",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.6,
-      "purity_hint": "P2_HIGH_RELEVANCE",
+      "weight": 0.7,
+      "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "韌性"
+      ],
       "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_082"
+      "learning_tip": "命中本詞代表調適導向（含研究/規劃案），仍需確認是否有可拆分之具體調適支出。",
+      "trigger_id": "KW_082",
+      "match_type": "concept_trigger"
     }
   ],
   "exclusion_keywords": [

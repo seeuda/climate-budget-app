@@ -1,12 +1,10 @@
 {
   "schema_version": {
-    "config_version": "1.2.5",
+    "config_version": "1.2.3",
     "effective_date": "2026-03-25",
     "updated_at": "2026-03-26",
     "updated_by": "氣候變遷科",
     "change_log": [
-      "v1.2.5 (2026-03-26): 修正能力建構映射一致性：F1 風險評估工項補入能力建構-1，並同步環境教育關鍵字(KW_040)代碼為能力建構-1",
-      "v1.2.4 (2026-03-26): 擴充能力建構判讀範圍（F1/F2/F3/G2 code 對齊）、補強研究治理關鍵字、加入一般顧問防誤列 anti-pattern(11)，並調整排除說明為條件式敘述",
       "v1.2.3 (2026-03-26): Phase 1A patch — AP1 觸發條件精修（新增 require_context_keywords=[改善]，排除農業/灌溉/設施），app.py anti_pattern_check 支援 require_context_keywords 欄位",
       "v1.2.2 (2026-03-25): Phase 1A final — 補入 manifest 區塊（keyword_dictionary_version / logic_mapping_version / checksums / last_synced_at）；集中版控保留，個別檔案異動透過 manifest 追蹤",
       "v1.1.0 (2026-03-19): Phase 1 — 新增版本管理欄位；配合 app.py v1.1 信心分數與判讀理由面板",
@@ -32,7 +30,7 @@
       "一般行政庶務與後勤採購（如影印機租賃、保全、清潔、一般辦公採購）",
       "非氣候相關之資訊系統維護（如薪資、公文系統、防毒、一般頻寬）",
       "短期藝文活動與節慶宣導（如桐花祭、演唱會、一般宣傳活動）",
-      "法制、審計、人資等一般行政顧問勞務（若未具氣候目的與治理產出，原則不納入）"
+      "法制、審計、人資與顧問勞務（如法律顧問、訴願、審計、精算）"
     ],
     "manual_override_hint_text": "若標案涉及「排水清疏」或「災害修復」，即使未滿300萬元，建議仍勾選繼續評估。",
     "summary_labels": {
@@ -370,31 +368,6 @@
       "note": "觸發機制說明：此規則為 case-name 層級判斷（在 anti_pattern_check() 中實作）。當標案名稱包含「工程」或「施工」，但不含「勞安/工安/高溫/熱危害/遮蔭」時觸發。不依賴 keyword_triggers 或 item anti_pattern_ref，因為「工程/施工」過於泛用不適合列入觸發詞。Layer3 調適關鍵字中的勞安/熱危害等詞，若出現在標案名稱中，代表使用者已有意識，此規則則不觸發。",
       "severity": "info",
       "action_type": "remind"
-    },
-    {
-      "id": 11,
-      "name": "一般顧問誤列能力建構",
-      "trigger_keywords": [
-        "顧問",
-        "委託",
-        "規劃",
-        "研究"
-      ],
-      "require_all_triggers": false,
-      "exclude_keywords": [
-        "氣候",
-        "淨零",
-        "調適",
-        "韌性",
-        "碳",
-        "溫室氣體",
-        "風險"
-      ],
-      "warning_text": "⚠ 顧問/研究型案件若未具明確氣候目的（減碳、調適、韌性、碳管理）與治理產出，通常不列入能力建構預算。建議補充目標、方法與成果指標後再判讀。",
-      "default_purity": "P4_LOW",
-      "note": "放寬能力建構範圍後新增之防誤列規則，用以區分一般行政顧問與氣候治理能力建置案件。",
-      "severity": "caution",
-      "action_type": "suggest_review"
     }
   ],
   "department_presets": {
@@ -556,8 +529,7 @@
       "adaptation_layer_emphasis": "ecology_cooling",
       "dept_hint": "環保局案件以評估規劃、監測系統為主，請留意氣候監測系統的調適價值",
       "common_anti_pattern_ids": [
-        8,
-        11
+        8
       ],
       "category_priority_order": [
         "F",
@@ -665,8 +637,7 @@
       "adaptation_layer_emphasis": "general",
       "dept_hint": "行政處案件以設備汰換與規劃為主，請留意節能設備更新工項",
       "common_anti_pattern_ids": [
-        4,
-        11
+        4
       ],
       "category_priority_order": [
         "E",
@@ -686,8 +657,7 @@
       "adaptation_layer_emphasis": "general",
       "dept_hint": "綠能發展處案件以能源設施與評估規劃為主，請留意光電工程的費用拆分",
       "common_anti_pattern_ids": [
-        5,
-        11
+        5
       ],
       "category_priority_order": [
         "E",
@@ -1000,16 +970,16 @@
   },
   "manifest": {
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
-    "config_version": "1.2.5",
+    "config_version": "1.2.3",
     "data_version": "1.0.0",
-    "keyword_dictionary_version": "1.0.2",
-    "logic_mapping_version": "1.0.2",
-    "last_synced_at": "2026-03-26T19:37:58+08:00",
+    "keyword_dictionary_version": "1.0.0",
+    "logic_mapping_version": "1.0.0",
+    "last_synced_at": "2026-03-26T01:37:47+08:00",
     "checksums": {
-      "keyword_dictionary": "2cd6ec45fb71fdb682fdecd7b201d1e3",
-      "logic_mapping": "d4211d29170e70da12080201b51cc280"
+      "keyword_dictionary": "e7475ca197ef2503c822d91776248c29",
+      "logic_mapping": "03577b6ef595ea9a75b4c380fcdeb667"
     },
     "checksum_algorithm": "md5_json_normalized",
-    "checksum_updated_at": "2026-03-26T19:37:58+08:00"
+    "checksum_updated_at": "2026-03-26T01:37:47+08:00"
   }
 }

@@ -121,6 +121,21 @@ climate-budget-app-test2/
 }
 ```
 
+#### 關鍵字分層建議（v1.3 起）
+
+為降低誤判，建議將關鍵字分為兩層：
+
+- `match_type = "strong_trigger"`：可直接指向工項（如 LED、滯洪池、抽水站）
+- `match_type = "concept_trigger"`：僅表示與氣候相關，需進一步導引（如 低碳、永續、氣候變遷、調適）
+
+`concept_trigger` 建議同時設定：
+
+- `weight`：0.4~0.7
+- `negative_context`：排除容易誤判語境（如 宣導、活動）
+- `learning_tip`：提示承辦人需確認是否有具體可編列支出
+
+系統在步驟一將「概念提示詞」標示為「相關但未確定」，並保留人工確認流程，不直接推定工項。
+
 組合條件規則（需同時出現多個關鍵字）加入 `keyword_logic` 陣列：
 
 ```json

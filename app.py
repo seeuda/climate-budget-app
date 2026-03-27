@@ -157,6 +157,7 @@ KWDICT = load_json("data/keyword_dictionary.json", _file_hash=_file_hash("data/k
 
 PARAMS = CONFIG["system_parameters"]
 UI     = CONFIG["ui_text"]
+EXPANDER_HINT_TEXT = "ℹ️ 點選下方標題左側的符號（> / ▸）可展開或收合說明。"
 
 # ── Phase 1A：從 config.json 讀取擴充結構 ─────────────────────────────────────
 
@@ -2454,7 +2455,7 @@ if st.session_state.step == 0:
         manual_override = False
 
     # Exclusion guidelines
-    st.caption("ℹ️ 點選下方標題右側的箭頭（▲/▼）可展開或收合說明。")
+    st.caption(EXPANDER_HINT_TEXT)
     with st.expander("📋 以下樣態計畫建議不需納入評估（點擊展開）"):
         for guideline in UI["exclusion_guidelines"]:
             st.markdown(f"• {guideline}")
@@ -2896,7 +2897,7 @@ elif st.session_state.step == 2:
             '<div class="section-title">🔍 工程減碳指引自主檢核</div>',
             unsafe_allow_html=True,
         )
-        st.caption("依您選擇的計畫類別，列出各部會工程減碳指引的常見自主檢核項目，供填報參考。")
+        st.caption(EXPANDER_HINT_TEXT)
         for cat in checklist_cats:
             items_html = "".join(
                 f'<li style="margin:0.3rem 0;font-size:0.86rem;">{it}</li>'
@@ -3364,7 +3365,7 @@ elif st.session_state.step == 4:
     st.markdown("---")
 
     # ── 氣候行動加分提示（純展示，折疊說明，不點選不輸出）
-    st.caption("ℹ️ 點選下方標題右側的箭頭（▲/▼）可展開或收合加分提示。")
+    st.caption(EXPANDER_HINT_TEXT)
     with st.expander("💡 氣候行動加分提示（展開閱讀）", expanded=False):
         st.markdown(
             "以下是各部會工程減碳指引與氣候政策中，**難以工程金額量化但具重要氣候效益**的行動。"

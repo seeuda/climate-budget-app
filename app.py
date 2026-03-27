@@ -7,6 +7,7 @@ v1.2 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import pandas as pd
 from datetime import datetime
@@ -1982,6 +1983,8 @@ def init_state():
     defaults: dict = {
         # ── 流程控制 ──────────────────────────────────────────────────
         "step":                     0,
+        "max_unlocked_step":        0,
+        "scroll_to_top":            False,
         # ── 案件基本資訊 ──────────────────────────────────────────────
         "case_name":                "",
         "dept":                     "",
@@ -2028,6 +2031,19 @@ def init_state():
             st.session_state[k] = v
 
 init_state()
+
+
+def go_to_step(target_step: int, *, unlock: bool = False):
+    """導向指定步驟；可選擇同步更新可跳轉上限。"""
+    max_step = st.session_state.max_unlocked_step
+    if unlock:
+        max_step = max(max_step, target_step)
+    st.session_state.max_unlocked_step = max_step
+
+    if st.session_state.step != target_step:
+        st.session_state.step = target_step
+        st.session_state.scroll_to_top = True
+        st.rerun()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -2084,6 +2100,34 @@ for i, s in enumerate(steps):
     step_html += f'<div class="{cls}">{s}</div>'
 step_html += "</div>"
 st.markdown(step_html, unsafe_allow_html=True)
+
+# 快速跳頁（僅可跳至已完成/已解鎖步驟）
+st.caption("🔁 快速跳頁：可在已填寫過的步驟間直接切換，未解鎖步驟不可提前前往。")
+step_nav_cols = st.columns(len(steps))
+for i, col in enumerate(step_nav_cols):
+    is_unlocked = i <= st.session_state.max_unlocked_step
+    is_current = i == st.session_state.step
+    btn_label = f"{steps[i]} {'（目前）' if is_current else ''}"
+    with col:
+        if st.button(
+            btn_label,
+            key=f"jump_step_{i}",
+            disabled=(not is_unlocked) or is_current,
+            use_container_width=True,
+        ):
+            go_to_step(i)
+
+if st.session_state.get("scroll_to_top", False):
+    components.html(
+        """
+        <script>
+        window.parent.scrollTo({top: 0, behavior: "instant"});
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+    st.session_state.scroll_to_top = False
 
 # Breadcrumb
 bc_parts = ["彰化縣氣候預算系統"]
@@ -2323,6 +2367,7 @@ if st.session_state.step == 0:
         manual_override = False
 
     # Exclusion guidelines
+    st.caption("ℹ️ 點選下方標題右側的箭頭（▲/▼）可展開或收合說明。")
     with st.expander("📋 以下樣態計畫建議不需納入評估（點擊展開）"):
         for guideline in UI["exclusion_guidelines"]:
             st.markdown(f"• {guideline}")
@@ -2372,8 +2417,7 @@ if st.session_state.step == 0:
         st.session_state.manual_override = manual_override
         st.session_state.kw_matches = kw_matches
         st.session_state.negative_filter_override = st.session_state.negative_filter_override
-        st.session_state.step = 1
-        st.rerun()
+        go_to_step(1, unlock=True)
 
     if not can_proceed and (case_name or budget_val):
         missing = []
@@ -2585,8 +2629,7 @@ elif st.session_state.step == 1:
     col_back, col_next = st.columns([1, 3])
     with col_back:
         if st.button("← 返回", use_container_width=True):
-            st.session_state.step = 0
-            st.rerun()
+            go_to_step(0)
     with col_next:
         # 必須至少選一個細項（含逃生出口 _NONE）才能繼續
         has_sub_for_each_cat = all(
@@ -2602,8 +2645,7 @@ elif st.session_state.step == 1:
         if not can_next and st.session_state.selected_categories:
             st.caption("⚠️ 每個計畫類別都需至少選擇一個細項，或點選「不確定適合項目」後才能繼續。")
         if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
-            st.session_state.step = 2
-            st.rerun()
+            go_to_step(2, unlock=True)
 
 # ═══════════════════════════════════════════════════════════════════
 # STEP 2 — 工項勾選
@@ -2786,8 +2828,7 @@ elif st.session_state.step == 2:
     col_back, col_next = st.columns([1, 3])
     with col_back:
         if st.button("← 返回", use_container_width=True):
-            st.session_state.step = 1
-            st.rerun()
+            go_to_step(1)
     with col_next:
         if st.button("下一步：填寫工項預算 →", type="primary", use_container_width=True):
             selected_items, valid_item_budgets, removed_labels = prune_invalid_selections(
@@ -2806,8 +2847,7 @@ elif st.session_state.step == 2:
                 existing.get(label, {"label": label, "ratio": None, "amount": 0})
                 for label in selected_items
             ]
-            st.session_state.step = 3
-            st.rerun()
+            go_to_step(3, unlock=True)
 
 # ═══════════════════════════════════════════════════════════════════
 # STEP 3 — 預算拆解
@@ -3073,13 +3113,11 @@ elif st.session_state.step == 3:
     col_back, col_next = st.columns([1, 3])
     with col_back:
         if st.button("← 返回", use_container_width=True):
-            st.session_state.step = 2
-            st.rerun()
+            go_to_step(2)
     with col_next:
         can_next = all_set and not over_budget
         if st.button("下一步：確認並匯出報告 →", disabled=not can_next, type="primary", use_container_width=True):
-            st.session_state.step = 4
-            st.rerun()
+            go_to_step(4, unlock=True)
         if not can_next:
             if over_budget:
                 st.caption("🚫 工項金額加總超出標案總預算，請調整。")
@@ -3254,6 +3292,7 @@ elif st.session_state.step == 4:
     st.markdown("---")
 
     # ── 氣候行動加分提示（純展示，折疊說明，不點選不輸出）
+    st.caption("ℹ️ 點選下方標題右側的箭頭（▲/▼）可展開或收合加分提示。")
     with st.expander("💡 氣候行動加分提示（展開閱讀）", expanded=False):
         st.markdown(
             "以下是各部會工程減碳指引與氣候政策中，**難以工程金額量化但具重要氣候效益**的行動。"
@@ -3424,8 +3463,7 @@ elif st.session_state.step == 4:
     col_b, col_r = st.columns([1, 3])
     with col_b:
         if st.button("← 返回修改", use_container_width=True):
-            st.session_state.step = 3
-            st.rerun()
+            go_to_step(3)
     with col_r:
         if st.button("🔄 評估新案件", use_container_width=True, type="primary"):
             for k in list(st.session_state.keys()):

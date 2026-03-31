@@ -399,7 +399,7 @@
       "trigger_id": "KW_022"
     },
     {
-      "keyword": "自行車",
+      "keyword": "自行車道",
       "suggested_item": "建置友善行人空間或自行車道",
       "code": "運輸-1",
       "category_id": "C",
@@ -408,9 +408,7 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [
-        "腳踏車"
-      ],
+      "synonyms": [],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_023"
@@ -1346,6 +1344,29 @@
       "learning_tip": "命中本詞代表調適導向（含研究/規劃案），仍需確認是否有可拆分之具體調適支出。",
       "trigger_id": "KW_082",
       "match_type": "concept_trigger"
+    },
+    {
+      "keyword": "購置腳踏車",
+      "suggested_item": "補助民眾購置自行車或電動自行車",
+      "code": "運輸-1",
+      "category_id": "C",
+      "sub_id": "C4",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "購置自行車",
+        "補助腳踏車",
+        "補助自行車"
+      ],
+      "negative_context": [
+        "自行車道",
+        "步道",
+        "車道建置"
+      ],
+      "learning_tip": "命中「腳踏車」多為補助購置情境，建議對應 C4 獎補助工項而非自行車道工程。",
+      "trigger_id": "KW_083"
     }
   ],
   "exclusion_keywords": [

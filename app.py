@@ -2336,7 +2336,7 @@ if st.session_state.step == 0:
                 case_options = ["（請選擇）"] + list(dict.fromkeys(case_pool["標案名稱"].tolist())) if not case_pool.empty else ["（請選擇）"]  # 維持試算表原始順序
                 selected_case = case_name if case_name in case_options else "（請選擇）"
                 selected_case = st.selectbox(
-                    "📌 標案名稱",
+                    "📌 標案或業務名稱",
                     options=case_options,
                     index=case_options.index(selected_case),
                     disabled=unit == "（請選擇）",

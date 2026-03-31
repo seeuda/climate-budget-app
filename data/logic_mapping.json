@@ -4,7 +4,7 @@
       "id": "A",
       "label": "興建／新建／改建／修復工程",
       "icon": "🏗️",
-      "description": "包含建築物新建、增建、改建及古蹟修復",
+      "description": "包含建築物新建、增建、改建及古蹟修復；亦適用補助村里或社區進行建物節能改善之獎補助業務",
       "sub_categories": [
         {
           "id": "A1",
@@ -441,7 +441,7 @@
       "id": "B",
       "label": "排水／水利／抽水站／污水工程",
       "icon": "💧",
-      "description": "包含防洪排水、滯洪設施、污水處理等水利工程",
+      "description": "包含防洪排水、滯洪設施、污水處理等水利工程；亦適用補助農業/畜牧業沼氣回收或廢水處理改善之獎補助業務",
       "sub_categories": [
         {
           "id": "B1",
@@ -610,7 +610,7 @@
         {
           "id": "B2",
           "label": "污水與廢水處理",
-          "examples": "如：污水下水道、用戶接管、廢水處理廠",
+          "examples": "如：污水廠節能、畜牧糞尿沼氣、農業廢水；亦適用補助農民/業者進行廢棄物資源化之獎補助業務",
           "items": [
             {
               "label": "污水下水道建置與用戶接管",
@@ -734,6 +734,45 @@
               "item_id": "ITEM_B2_07",
               "count_in_budget_total": true,
               "display_section": "budget_items"
+            },
+            {
+              "label": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+              "mitigation_codes": [
+                "農業-1",
+                "能源-再生"
+              ],
+              "adaptation_codes": [],
+              "policy": "農業部門減碳：畜牧糞尿資源化與再生能源推廣",
+              "alert": "本工項為對農民/業者的獎補助，應確認補助對象符合資格且設備達到減碳效益",
+              "default_purity": "P1_HIGH_PURITY",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額可全額計入氣候相關支出",
+              "item_id": "ITEM_B2_08",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_farmer",
+              "note": "適用情境：縣府補助畜牧農場建置沼氣回收設備、沼氣發電機組或廢水處理減排設施"
+            },
+            {
+              "label": "補助農民進行農業節水、節能或低碳農法改善（獎補助型）",
+              "mitigation_codes": [
+                "農業-2"
+              ],
+              "adaptation_codes": [
+                "調適-農業"
+              ],
+              "policy": "農業部門調適與減碳：農業用水效率與低碳耕作",
+              "alert": "應說明改善前後的水電用量或排碳差異，作為效益佐證",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "",
+              "item_id": "ITEM_B2_09",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_farmer",
+              "note": "適用情境：補助農民改用滴灌/智慧灌溉、轉作低碳作物、採用有機農法等"
             }
           ],
           "engineering_checklist": [
@@ -825,12 +864,12 @@
       "id": "C",
       "label": "交通改善／綠色運輸／智慧運輸",
       "icon": "🚌",
-      "description": "包含道路交通設施、大眾運輸、電動化等",
+      "description": "包含道路交通設施、大眾運輸、電動化等；亦適用補助民眾或鄉鎮購置低碳運具（自行車、電動機車等）之獎補助業務",
       "sub_categories": [
         {
           "id": "C1",
           "label": "人本交通與步行環境",
-          "examples": "如：人行空間改善、自行車道、無障礙設施",
+          "examples": "如：人行空間改善、自行車道、無障礙設施、補助民眾購置自行車或電動機車",
           "items": [
             {
               "label": "建置友善行人空間或自行車道",
@@ -902,6 +941,42 @@
               "item_id": "ITEM_C1_04",
               "count_in_budget_total": true,
               "display_section": "budget_items"
+            },
+            {
+              "label": "補助民眾或鄉鎮購置自行車（獎補助型）",
+              "mitigation_codes": [
+                "運輸-1"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門目標：完備步行/自行車環境；促進低碳運具普及",
+              "alert": "本工項為獎補助業務，非工程採購；氣候效益來自促進低碳通勤行為改變",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額即為氣候相關支出，可全額計入",
+              "item_id": "ITEM_C1_05",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_public",
+              "note": "適用情境：政府補助鄉鎮公所、村里或民眾購置自行車、腳踏車，以提升低碳交通普及率"
+            },
+            {
+              "label": "補助民眾購置電動機車或低碳運具（獎補助型）",
+              "mitigation_codes": [
+                "運輸-2"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：運具電動化；電動機車補助推廣",
+              "alert": "本工項為獎補助業務；確認補助對象資格與低碳效益說明",
+              "default_purity": "P1_HIGH_PURITY",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額即為氣候相關支出，可全額計入",
+              "item_id": "ITEM_C1_06",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_public",
+              "note": "適用情境：補助民眾購置電動機車、電動自行車等低碳運具"
             }
           ],
           "engineering_checklist": [
@@ -1001,6 +1076,26 @@
               "item_id": "ITEM_C2_04",
               "count_in_budget_total": true,
               "display_section": "budget_items"
+            },
+            {
+              "label": "補助偏鄉或社區低碳接駁服務（獎補助型）",
+              "mitigation_codes": [
+                "運輸-3"
+              ],
+              "adaptation_codes": [
+                "調適-社會"
+              ],
+              "policy": "共享運輸推廣；偏鄉交通平權",
+              "alert": "本工項為服務補助，非設備採購；應說明服務涵蓋範圍與低碳效益",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "",
+              "item_id": "ITEM_C2_05",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_service",
+              "note": "適用情境：補助偏鄉社區巡迴巴士、共乘平台等低碳接駁業務"
             }
           ],
           "engineering_checklist": [
@@ -1075,7 +1170,7 @@
       "id": "D",
       "label": "公園／綠美化／生態環境",
       "icon": "🌿",
-      "description": "包含公園綠化、植樹造林、濕地棲地保育",
+      "description": "包含公園綠化、植樹造林、濕地棲地保育；亦適用補助農村、社區或私有地主進行植樹固碳、生態復育之獎補助業務",
       "sub_categories": [
         {
           "id": "D1",
@@ -1348,12 +1443,12 @@
       "id": "E",
       "label": "裝修／設備汰換／場館改善",
       "icon": "🔧",
-      "description": "包含室內裝修、設備更新、既有建物節能改善",
+      "description": "包含室內裝修、設備更新、既有建物節能改善；亦適用補助社區、村里辦公室、小型場所進行節電或能源改善之獎補助業務",
       "sub_categories": [
         {
           "id": "E1",
           "label": "節能設備汰換與能源管理",
-          "examples": "如：LED燈具、高效空調、太陽能板",
+          "examples": "如：LED汰換、高效空調、太陽能；亦適用補助村里辦公室、社區活動中心或小型場所節電改善之獎補助業務",
           "items": [
             {
               "label": "LED燈具全面汰換",
@@ -1445,6 +1540,44 @@
               "item_id": "ITEM_E1_04",
               "count_in_budget_total": true,
               "display_section": "budget_items"
+            },
+            {
+              "label": "補助村里辦公室或社區活動中心節電設備改善（獎補助型）",
+              "mitigation_codes": [
+                "住商-1",
+                "住商-3"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期住商部門：既有建物節能改善；基層單位節電推廣",
+              "alert": "本工項為對村里的獎補助，應確認設備改善範圍與預期省電量",
+              "default_purity": "P1_HIGH_PURITY",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額可全額計入氣候相關支出",
+              "item_id": "ITEM_E1_05",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_community",
+              "note": "適用情境：縣府補助各村里辦公室更換LED、加裝太陽能板、更新高效空調等節電措施"
+            },
+            {
+              "label": "補助社區、學校或小型場所安裝太陽光電（獎補助型）",
+              "mitigation_codes": [
+                "住商-2",
+                "能源-再生"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期能源部門：再生能源裝置量擴大；屋頂型太陽能推廣",
+              "alert": "確認補助對象用電歸屬與躉售/自用比例說明",
+              "default_purity": "P1_HIGH_PURITY",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額可全額計入氣候相關支出",
+              "item_id": "ITEM_E1_06",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_community",
+              "note": "適用情境：補助社區活動中心、廟宇、學校屋頂安裝太陽光電系統"
             }
           ],
           "engineering_checklist": [
@@ -1875,12 +2008,12 @@
       "id": "G",
       "label": "公正轉型與社會韌性",
       "icon": "🤝",
-      "description": "聚焦脆弱族群氣候防護、平權與社區韌性能力建構",
+      "description": "聚焦脆弱族群氣候防護、平權與社區韌性能力建構；亦涵蓋補助基層鄉鎮推動低碳服務及小型社區調適行動之獎補助業務",
       "sub_categories": [
         {
           "id": "G1",
           "label": "弱勢族群低碳交通與防災據點",
-          "examples": "如：電動復康巴士、身障中心、長照關懷中心",
+          "examples": "如：電動復康巴士、身障中心、長照關懷中心、補助鄉鎮購置服務用低碳運具",
           "items": [
             {
               "label": "弱勢族群低碳交通平權（如電動復康巴士）",
@@ -1915,6 +2048,26 @@
               "item_id": "ITEM_G1_02",
               "count_in_budget_total": true,
               "display_section": "budget_items"
+            },
+            {
+              "label": "補助鄉鎮公所或村里購置低碳服務用車輛（含自行車、電動車）",
+              "mitigation_codes": [
+                "運輸-2"
+              ],
+              "adaptation_codes": [
+                "調適-社會"
+              ],
+              "policy": "交通平權與公正轉型；運具電動化補助",
+              "alert": "本工項為對鄉鎮公所的獎補助，應確認用途為公共服務而非個人使用",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額可全額計入氣候相關支出",
+              "item_id": "ITEM_G1_03",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_township",
+              "note": "適用情境：縣府補助各鄉鎮公所購置自行車或電動機車，用於鄉長為民服務、社區巡迴等公共服務"
             }
           ]
         },
@@ -1940,6 +2093,72 @@
               "item_id": "ITEM_G2_01",
               "count_in_budget_total": true,
               "display_section": "budget_items"
+            }
+          ]
+        },
+        {
+          "id": "G3",
+          "label": "社區與農村小型氣候調適行動補助",
+          "examples": "如：補助村里防熱島措施、農村小型防洪調適、社區韌性改善",
+          "items": [
+            {
+              "label": "補助村里或社區進行小型調適措施（遮陽、透水、降溫等）（獎補助型）",
+              "mitigation_codes": [],
+              "adaptation_codes": [
+                "調適-城市",
+                "調適-社會"
+              ],
+              "policy": "縣市氣候調適：都市熱島與韌性社區；社區防災調適能力建構",
+              "alert": "應說明補助措施的調適效益（如降溫幅度、滯水量等），避免流於一般環境美化",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額可全額計入氣候相關支出",
+              "item_id": "ITEM_G3_01",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_community",
+              "note": "適用情境：補助村里辦理遮陽棚架、透水鋪面、屋頂隔熱、社區雨水回收等小型調適工程"
+            },
+            {
+              "label": "補助農民進行農業氣候調適（防旱、防洪、轉作）（獎補助型）",
+              "mitigation_codes": [],
+              "adaptation_codes": [
+                "調適-農業",
+                "調適-水"
+              ],
+              "policy": "農業部門調適：農業生產韌性強化；極端氣候農業衝擊因應",
+              "alert": "確認補助措施與氣候風險（旱澇、高溫）的對應關係",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "",
+              "item_id": "ITEM_G3_02",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_farmer",
+              "note": "適用情境：補助農民建置防旱設施、改種耐旱耐熱品種、轉作因應極端氣候之農業調適措施"
+            },
+            {
+              "label": "補助社區或民間團體推動氣候韌性行動計畫（獎補助型）",
+              "mitigation_codes": [
+                "淨零教育-1"
+              ],
+              "adaptation_codes": [
+                "調適-社會",
+                "調適-政策"
+              ],
+              "policy": "社區韌性與公民參與；地方氣候行動能力建構",
+              "alert": "確認計畫內容有具體氣候行動目標，非一般社區活動",
+              "default_purity": "P3_PARTIAL",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "",
+              "item_id": "ITEM_G3_03",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_community",
+              "note": "適用情境：補助社區規劃師、環保團體、村里辦理氣候減碳或調適計畫、講習或示範行動"
             }
           ]
         }

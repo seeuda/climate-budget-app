@@ -2336,7 +2336,7 @@ if st.session_state.step == 0:
                 case_options = ["（請選擇）"] + list(dict.fromkeys(case_pool["標案名稱"].tolist())) if not case_pool.empty else ["（請選擇）"]  # 維持試算表原始順序
                 selected_case = case_name if case_name in case_options else "（請選擇）"
                 selected_case = st.selectbox(
-                    "📌 標案或業務名稱",
+                    "📌 標案名稱",
                     options=case_options,
                     index=case_options.index(selected_case),
                     disabled=unit == "（請選擇）",
@@ -2400,7 +2400,7 @@ if st.session_state.step == 0:
             selected_dept = unit if unit != "（請選擇）" else "（請選擇）"
             if auto_selected is not None:
                 st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
-            st.text_input("📌 標案名稱", value=case_name, disabled=True)
+            st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
             st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
             budget_input = st.text_input(
                 "💰 決標金額（元）",

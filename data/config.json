@@ -16,7 +16,7 @@
       "v1.2.3 (2026-03-26): Phase 1A patch — AP1 觸發條件精修（新增 require_context_keywords=[改善]，排除農業/灌溉/設施），app.py anti_pattern_check 支援 require_context_keywords 欄位",
       "v1.2.2 (2026-03-25): Phase 1A final — 補入 manifest 區塊（keyword_dictionary_version / logic_mapping_version / checksums / last_synced_at）；集中版控保留，個別檔案異動透過 manifest 追蹤",
       "v1.1.0 (2026-03-19): Phase 1 — 新增版本管理欄位；配合 app.py v1.1 信心分數與判讀理由面板",
-      "v1.0.0 (2025-12-01): 初版上線"
+      "v1.0.0 (2026-03-11): 初版上線"
     ],
     "data_version": "1.0.0"
   },

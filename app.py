@@ -2403,7 +2403,7 @@ if st.session_state.step == 0:
             st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
             st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
             budget_input = st.text_input(
-                "💰 決標金額（元）",
+                "💰 決標金額或預計金額（元）",
                 value=str(int(st.session_state.budget)) if st.session_state.budget else "",
                 disabled=True,
                 help="此欄位由雲端試算表自動帶入"

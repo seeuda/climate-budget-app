@@ -1,10 +1,11 @@
 {
   "schema_version": {
-    "config_version": "1.3.5",
+    "config_version": "1.3.6",
     "effective_date": "2026-03-25",
     "updated_at": "2026-03-31",
     "updated_by": "氣候變遷科",
     "change_log": [
+      "v1.3.6 (2026-03-31): 新增生質能/廢棄物再利用概念詞與保守 logic 規則，避免過早綁定工項。",
       "v1.3.5 (2026-03-31): 保守補強生質能概念詞（concept_trigger），僅提示人工確認，不直接綁定 strong 工項。",
       "v1.3.4 (2026-03-31): 去重畜牧糞尿重疊關鍵字，改以同義詞併入 canonical trigger，降低重複命中造成的信心膨脹。",
       "v1.3.3 (2026-03-31): 補強畜牧糞尿資源化辨識 — 新增B2強觸發關鍵字、組合規則與概念提示詞。",
@@ -978,15 +979,15 @@
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
     "config_version": "1.2.3",
     "data_version": "1.0.0",
-    "keyword_dictionary_version": "1.0.3",
+    "keyword_dictionary_version": "1.0.5",
     "logic_mapping_version": "1.0.0",
-    "last_synced_at": "2026-03-31T17:08:46+08:00",
+    "last_synced_at": "2026-03-31T17:13:40+08:00",
     "checksums": {
-      "keyword_dictionary": "63ccdc8ce494d4be5bc57eb1de703468",
+      "keyword_dictionary": "915cb9ce65e1ef5485cbc12568b85c85",
       "logic_mapping": "836c7ba5adbfa0a3f293c1251a5937fe"
     },
     "checksum_algorithm": "md5_json_normalized",
-    "checksum_updated_at": "2026-03-31T17:08:46+08:00"
+    "checksum_updated_at": "2026-03-31T17:13:40+08:00"
   },
   "keyword_strategy": {
     "match_types": {

@@ -1475,43 +1475,25 @@
     },
     {
       "keyword": "資源化",
-      "suggested_item": "廢水污泥再利用或資源化",
+      "suggested_item": "",
       "code": "concept",
       "category_id": "",
       "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.5,
+      "weight": 0.6,
       "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [],
       "synonyms": [
-        "再生利用"
+        "再利用",
+        "循環利用"
       ],
       "negative_context": [
         "宣導",
         "活動"
       ],
-      "learning_tip": "命中本詞代表可能涉及循環與減碳，請確認是否有可量化的資源化處理或減排作為。",
+      "learning_tip": "命中本詞代表可能涉及循環經濟或減廢措施，需確認是否有具體工程或設備投入。",
       "match_type": "concept_trigger",
       "trigger_id": "KW_093"
-    },
-    {
-      "keyword": "再利用",
-      "suggested_item": "廢水污泥再利用或資源化",
-      "code": "concept",
-      "category_id": "",
-      "sub_id": "",
-      "_match_type": "exact",
-      "weight": 0.5,
-      "purity_hint": "P4_LOW",
-      "anti_pattern_ids": [],
-      "synonyms": [],
-      "negative_context": [
-        "宣導",
-        "活動"
-      ],
-      "learning_tip": "命中本詞僅作概念提示，需確認是否為畜牧廢水或污泥等具體資源化工程。",
-      "match_type": "concept_trigger",
-      "trigger_id": "KW_094"
     },
     {
       "keyword": "生質能",
@@ -1520,8 +1502,8 @@
       "category_id": "",
       "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.5,
-      "purity_hint": "P3_PARTIAL",
+      "weight": 0.7,
+      "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
       "synonyms": [
         "生質能源",
@@ -1531,9 +1513,30 @@
         "宣導",
         "活動"
       ],
-      "learning_tip": "請確認是否涉及資源循環、生質能利用、沼氣或發電相關具體措施",
+      "learning_tip": "請確認是否涉及廢棄物資源化、生質能利用或能源轉換等具體作為。",
       "match_type": "concept_trigger",
       "trigger_id": "KW_095"
+    },
+    {
+      "keyword": "廢棄物再利用",
+      "suggested_item": "",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "exact",
+      "weight": 0.7,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "廢棄物資源化"
+      ],
+      "negative_context": [
+        "宣導",
+        "活動"
+      ],
+      "learning_tip": "請確認是否涉及能量回收、再利用或減少最終處置之具體措施。",
+      "match_type": "concept_trigger",
+      "trigger_id": "KW_096"
     }
   ],
   "exclusion_keywords": [
@@ -1658,6 +1661,81 @@
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
       "trigger_id": "KWL_07"
+    },
+    {
+      "triggers": [
+        "生質",
+        "能源"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "生質能相關語意組合，請人工確認是否具體氣候作為",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_08"
+    },
+    {
+      "triggers": [
+        "資源化",
+        "設施"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "資源化設施語意組合，請確認是否有工程或設備投入",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_09"
+    },
+    {
+      "triggers": [
+        "廢棄物",
+        "再利用"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "廢棄物再利用語意組合，請確認是否為具體減廢/能源回收措施",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_10"
+    },
+    {
+      "triggers": [
+        "廚餘",
+        "處理"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "廚餘處理語意組合，請確認是否涉及能源化或資源循環設施",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_11"
+    },
+    {
+      "triggers": [
+        "有機廢棄物",
+        "利用"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "有機廢棄物利用語意組合，請確認是否有具體氣候效益",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_12"
     }
   ]
 }

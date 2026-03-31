@@ -2286,9 +2286,9 @@ if st.session_state.step == 0:
 
     case_df, case_error = load_registered_cases()
     use_manual_case_input = st.checkbox(
-        "自行輸入計畫資訊",
+        "自行輸入計畫資訊、或非採購案類型的業務資訊",
         value=st.session_state.use_manual_case_input,
-        help="如非屬預載計畫，勾選後可改為手動填寫標案名稱、主辦局處與決標金額。"
+        help="如非屬預載計畫，勾選後可改為手動填寫標案名稱、主辦局處與決標金額；亦可填寫獎補助業務等非採購案資訊(例如補助購買自行車/電動機車/減緩或調適措施)。"
     )
 
     if st.session_state.use_manual_case_input != use_manual_case_input:

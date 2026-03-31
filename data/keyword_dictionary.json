@@ -488,14 +488,22 @@
       "category_id": "F",
       "sub_id": "F2",
       "_match_type": "exact",
-      "weight": 0.8,
+      "weight": 0.7,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [
         8
       ],
       "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
+      "negative_context": [
+        "資安",
+        "公文",
+        "人事",
+        "監視器",
+        "薪資",
+        "財務",
+        "防毒"
+      ],
+      "learning_tip": "監測案件請確認是否涉及氣象、水位、淹水預警、溫室氣體或氣候風險參數。",
       "trigger_id": "KW_028"
     },
     {
@@ -575,18 +583,24 @@
     },
     {
       "keyword": "資源回收",
-      "suggested_item": "節能減碳推廣教育宣導計畫",
-      "code": "環境-5",
-      "category_id": "F",
-      "sub_id": "F2",
+      "suggested_item": "",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.6,
-      "purity_hint": "P3_PARTIAL",
+      "weight": 0.4,
+      "purity_hint": "P4_LOW",
       "anti_pattern_ids": [],
       "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_034"
+      "negative_context": [
+        "宣導",
+        "活動",
+        "教育",
+        "訓練"
+      ],
+      "learning_tip": "命中本詞僅代表循環概念，請確認是否有具體資源化設施、減廢工程或可量化減碳作為。",
+      "trigger_id": "KW_034",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "古蹟",
@@ -790,20 +804,26 @@
     },
     {
       "keyword": "住宅",
-      "suggested_item": "近零碳建築技術(nZEB)",
-      "code": "住商-1",
-      "category_id": "A",
-      "sub_id": "A1",
+      "suggested_item": "",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.6,
+      "weight": 0.5,
       "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [
         4
       ],
       "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_047"
+      "negative_context": [
+        "低收入戶",
+        "社會救助",
+        "修繕",
+        "設施改善"
+      ],
+      "learning_tip": "住宅相關案件需確認是否包含建築能效、節能設備或低碳建材等具體措施。",
+      "trigger_id": "KW_047",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "資收",
@@ -972,18 +992,25 @@
     },
     {
       "keyword": "委託營運",
-      "suggested_item": "場館室內裝修（通用節能檢核）",
-      "code": "住商-4",
-      "category_id": "E",
-      "sub_id": "E2",
+      "suggested_item": "",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.6,
+      "weight": 0.5,
       "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [],
       "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
-      "trigger_id": "KW_059"
+      "negative_context": [
+        "管理案",
+        "人力",
+        "清潔",
+        "保全",
+        "一般維運"
+      ],
+      "learning_tip": "委託營運需確認契約是否納入節能減碳或氣候韌性KPI，方可列為氣候相關。",
+      "trigger_id": "KW_059",
+      "match_type": "concept_trigger"
     },
     {
       "keyword": "推進",
@@ -1283,17 +1310,19 @@
       "category_id": "",
       "sub_id": "",
       "_match_type": "exact",
-      "weight": 0.5,
+      "weight": 0.4,
       "purity_hint": "P4_LOW",
       "anti_pattern_ids": [],
       "synonyms": [
         "ESG"
       ],
       "negative_context": [
+        "論壇",
         "觀光",
-        "教育"
+        "教育",
+        "課程"
       ],
-      "learning_tip": "此詞屬高概括詞，不能單獨作為氣候預算歸類依據。",
+      "learning_tip": "永續屬高概括詞，需搭配具體減緩/調適工程或設備投資，避免僅以宣導活動列入。",
       "trigger_id": "KW_079",
       "match_type": "concept_trigger"
     },
@@ -1421,6 +1450,122 @@
       "negative_context": [],
       "learning_tip": "電動自行車補助屬低碳運具普及，對應 C4 獎補助工項。",
       "trigger_id": "KW_085"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "糞尿資源化",
+        "畜牧糞尿資源化"
+      ],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "畜牧糞尿",
+      "suggested_item": "畜牧糞尿氨氮回收與沼氣發電",
+      "code": "環境-5",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_086"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "沼液",
+        "沼渣"
+      ],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "沼液沼渣",
+      "suggested_item": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+      "code": "農業-1",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_091"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "養豬場廢水",
+      "suggested_item": "畜牧糞尿氨氮回收與沼氣發電",
+      "code": "環境-5",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_092"
+    },
+    {
+      "keyword": "資源化",
+      "suggested_item": "",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "再利用",
+        "循環利用"
+      ],
+      "negative_context": [
+        "宣導",
+        "活動"
+      ],
+      "learning_tip": "命中本詞代表可能涉及循環經濟或減廢措施，需確認是否有具體工程或設備投入。",
+      "match_type": "concept_trigger",
+      "trigger_id": "KW_093"
+    },
+    {
+      "keyword": "生質能",
+      "suggested_item": "",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "exact",
+      "weight": 0.7,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "生質能源",
+        "生質料源"
+      ],
+      "negative_context": [
+        "宣導",
+        "活動"
+      ],
+      "learning_tip": "請確認是否涉及廢棄物資源化、生質能利用或能源轉換等具體作為。",
+      "match_type": "concept_trigger",
+      "trigger_id": "KW_095"
+    },
+    {
+      "keyword": "廢棄物再利用",
+      "suggested_item": "",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "exact",
+      "weight": 0.7,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "廢棄物資源化"
+      ],
+      "negative_context": [
+        "宣導",
+        "活動"
+      ],
+      "learning_tip": "請確認是否涉及能量回收、再利用或減少最終處置之具體措施。",
+      "match_type": "concept_trigger",
+      "trigger_id": "KW_096"
     }
   ],
   "exclusion_keywords": [
@@ -1500,6 +1645,126 @@
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
       "trigger_id": "KWL_04"
+    },
+    {
+      "triggers": [
+        "畜牧",
+        "糞尿"
+      ],
+      "suggested_item": "畜牧糞尿氨氮回收與沼氣發電",
+      "category_id": "B",
+      "sub_id": "B2",
+      "_match_type": "logic",
+      "note": "需同時出現：畜牧＋糞尿",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_05"
+    },
+    {
+      "triggers": [
+        "沼液",
+        "沼渣"
+      ],
+      "suggested_item": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+      "category_id": "B",
+      "sub_id": "B2",
+      "_match_type": "logic",
+      "note": "需同時出現：沼液＋沼渣",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_06"
+    },
+    {
+      "triggers": [
+        "養豬場",
+        "資源化"
+      ],
+      "suggested_item": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+      "category_id": "B",
+      "sub_id": "B2",
+      "_match_type": "logic",
+      "note": "需同時出現：養豬場＋資源化",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_07"
+    },
+    {
+      "triggers": [
+        "生質",
+        "能源"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "生質能相關語意組合，請人工確認是否具體氣候作為",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_08"
+    },
+    {
+      "triggers": [
+        "資源化",
+        "設施"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "資源化設施語意組合，請確認是否有工程或設備投入",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_09"
+    },
+    {
+      "triggers": [
+        "廢棄物",
+        "再利用"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "廢棄物再利用語意組合，請確認是否為具體減廢/能源回收措施",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_10"
+    },
+    {
+      "triggers": [
+        "廚餘",
+        "處理"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "廚餘處理語意組合，請確認是否涉及能源化或資源循環設施",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_11"
+    },
+    {
+      "triggers": [
+        "有機廢棄物",
+        "利用"
+      ],
+      "suggested_item": "",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "logic",
+      "note": "有機廢棄物利用語意組合，請確認是否有具體氣候效益",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_12"
     }
   ]
 }

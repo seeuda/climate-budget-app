@@ -869,7 +869,7 @@
         {
           "id": "C1",
           "label": "人本交通與步行環境",
-          "examples": "如：人行空間改善、自行車道、無障礙設施、補助民眾購置自行車或電動機車",
+          "examples": "如：人行空間改善、自行車道、無障礙設施",
           "items": [
             {
               "label": "建置友善行人空間或自行車道",
@@ -941,42 +941,6 @@
               "item_id": "ITEM_C1_04",
               "count_in_budget_total": true,
               "display_section": "budget_items"
-            },
-            {
-              "label": "補助民眾或鄉鎮購置自行車（獎補助型）",
-              "mitigation_codes": [
-                "運輸-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門目標：完備步行/自行車環境；促進低碳運具普及",
-              "alert": "本工項為獎補助業務，非工程採購；氣候效益來自促進低碳通勤行為改變",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額即為氣候相關支出，可全額計入",
-              "item_id": "ITEM_C1_05",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_public",
-              "note": "適用情境：政府補助鄉鎮公所、村里或民眾購置自行車、腳踏車，以提升低碳交通普及率"
-            },
-            {
-              "label": "補助民眾購置電動機車或低碳運具（獎補助型）",
-              "mitigation_codes": [
-                "運輸-2"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門：運具電動化；電動機車補助推廣",
-              "alert": "本工項為獎補助業務；確認補助對象資格與低碳效益說明",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額即為氣候相關支出，可全額計入",
-              "item_id": "ITEM_C1_06",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_public",
-              "note": "適用情境：補助民眾購置電動機車、電動自行車等低碳運具"
             }
           ],
           "engineering_checklist": [
@@ -1076,26 +1040,6 @@
               "item_id": "ITEM_C2_04",
               "count_in_budget_total": true,
               "display_section": "budget_items"
-            },
-            {
-              "label": "補助偏鄉或社區低碳接駁服務（獎補助型）",
-              "mitigation_codes": [
-                "運輸-3"
-              ],
-              "adaptation_codes": [
-                "調適-社會"
-              ],
-              "policy": "共享運輸推廣；偏鄉交通平權",
-              "alert": "本工項為服務補助，非設備採購；應說明服務涵蓋範圍與低碳效益",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C2_05",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_service",
-              "note": "適用情境：補助偏鄉社區巡迴巴士、共乘平台等低碳接駁業務"
             }
           ],
           "engineering_checklist": [
@@ -1163,6 +1107,89 @@
           ],
           "enabled": false,
           "disabled_reason": "彰化縣目前無軌道／鐵道工程業務，暫時關閉；已對應中央工程減碳指引，日後開放時移除此欄位即可"
+        },
+        {
+          "id": "C4",
+          "label": "獎補助促進低碳交通行動",
+          "examples": "如：補助民眾購置自行車、電動機車；補助鄉鎮購置服務用低碳車輛；補助偏鄉低碳接駁服務",
+          "items": [
+            {
+              "label": "補助民眾或鄉鎮購置自行車（獎補助型）",
+              "mitigation_codes": [
+                "運輸-1"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門目標：完備步行/自行車環境；促進低碳運具普及",
+              "alert": "本工項為獎補助業務，非工程採購；氣候效益來自促進低碳通勤行為改變",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額可全額計入氣候相關支出",
+              "item_id": "ITEM_C4_01",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_public",
+              "note": "適用情境：政府補助鄉鎮公所、村里或民眾購置自行車、腳踏車，以提升低碳交通普及率"
+            },
+            {
+              "label": "補助民眾購置電動機車或低碳運具（獎補助型）",
+              "mitigation_codes": [
+                "運輸-2"
+              ],
+              "adaptation_codes": [],
+              "policy": "第三期運輸部門：運具電動化；電動機車補助推廣",
+              "alert": "本工項為獎補助業務；確認補助對象資格與低碳效益說明",
+              "default_purity": "P1_HIGH_PURITY",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額可全額計入氣候相關支出",
+              "item_id": "ITEM_C4_02",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_public",
+              "note": "適用情境：補助民眾購置電動機車、電動自行車等低碳運具"
+            },
+            {
+              "label": "補助鄉鎮公所或村里購置低碳服務用車輛（含自行車、電動車）（獎補助型）",
+              "mitigation_codes": [
+                "運輸-2"
+              ],
+              "adaptation_codes": [
+                "調適-社會"
+              ],
+              "policy": "交通平權與公正轉型；運具電動化補助",
+              "alert": "本工項為對鄉鎮公所的獎補助，應確認用途為公共服務而非個人使用",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "補助金額可全額計入氣候相關支出",
+              "item_id": "ITEM_C4_03",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_township",
+              "note": "適用情境：縣府補助各鄉鎮公所購置自行車或電動機車，用於鄉長為民服務、社區巡迴等公共服務"
+            },
+            {
+              "label": "補助偏鄉或社區低碳接駁服務（獎補助型）",
+              "mitigation_codes": [
+                "運輸-3"
+              ],
+              "adaptation_codes": [
+                "調適-社會"
+              ],
+              "policy": "共享運輸推廣；偏鄉交通平權",
+              "alert": "本工項為服務補助，非設備採購；應說明服務涵蓋範圍與低碳效益",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [],
+              "budget_hint": "",
+              "item_id": "ITEM_C4_04",
+              "count_in_budget_total": true,
+              "display_section": "budget_items",
+              "subsidy_type": "grant_to_service",
+              "note": "適用情境：補助偏鄉社區巡迴巴士、共乘平台等低碳接駁業務"
+            }
+          ]
         }
       ]
     },
@@ -2008,7 +2035,7 @@
       "id": "G",
       "label": "公正轉型與社會韌性",
       "icon": "🤝",
-      "description": "聚焦脆弱族群氣候防護、平權與社區韌性能力建構；亦涵蓋補助基層鄉鎮推動低碳服務及小型社區調適行動之獎補助業務",
+      "description": "包含道路交通設施、大眾運輸、電動化等；亦適用補助民眾或鄉鎮購置低碳運具、推動低碳交通服務之獎補助業務",
       "sub_categories": [
         {
           "id": "G1",
@@ -2048,26 +2075,6 @@
               "item_id": "ITEM_G1_02",
               "count_in_budget_total": true,
               "display_section": "budget_items"
-            },
-            {
-              "label": "補助鄉鎮公所或村里購置低碳服務用車輛（含自行車、電動車）",
-              "mitigation_codes": [
-                "運輸-2"
-              ],
-              "adaptation_codes": [
-                "調適-社會"
-              ],
-              "policy": "交通平權與公正轉型；運具電動化補助",
-              "alert": "本工項為對鄉鎮公所的獎補助，應確認用途為公共服務而非個人使用",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額可全額計入氣候相關支出",
-              "item_id": "ITEM_G1_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_township",
-              "note": "適用情境：縣府補助各鄉鎮公所購置自行車或電動機車，用於鄉長為民服務、社區巡迴等公共服務"
             }
           ]
         },

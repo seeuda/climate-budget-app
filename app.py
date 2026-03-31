@@ -2362,7 +2362,7 @@ if st.session_state.step == 0:
         if use_manual_case_input:
             st.session_state.preset_reference = {}
             case_name = st.text_input(
-                "📌 標案名稱",
+                "📌 標案或業務名稱",
                 value=st.session_state.case_name,
                 placeholder="例：彰化縣○○公園綠美化工程",
                 help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
@@ -2391,10 +2391,10 @@ if st.session_state.step == 0:
                 ).strip()
 
             budget_input = st.text_input(
-                "💰 決標金額（元）",
+                "💰 決標金額或預計金額（元）",
                 value=str(int(st.session_state.budget)) if st.session_state.budget else "",
                 placeholder="例：15000000",
-                help="請輸入決標金額（純數字，不含逗號）"
+                help="請輸入決標金額或預計金額（純數字，不含逗號）"
             )
         else:
             selected_dept = unit if unit != "（請選擇）" else "（請選擇）"

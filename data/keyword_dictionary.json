@@ -408,7 +408,9 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "腳踏車"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_023"

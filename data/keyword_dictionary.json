@@ -1512,6 +1512,28 @@
       "learning_tip": "命中本詞僅作概念提示，需確認是否為畜牧廢水或污泥等具體資源化工程。",
       "match_type": "concept_trigger",
       "trigger_id": "KW_094"
+    },
+    {
+      "keyword": "生質能",
+      "suggested_item": "",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "exact",
+      "weight": 0.5,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "生質能源",
+        "生質料源"
+      ],
+      "negative_context": [
+        "宣導",
+        "活動"
+      ],
+      "learning_tip": "請確認是否涉及資源循環、生質能利用、沼氣或發電相關具體措施",
+      "match_type": "concept_trigger",
+      "trigger_id": "KW_095"
     }
   ],
   "exclusion_keywords": [

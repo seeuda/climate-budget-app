@@ -3,7 +3,7 @@
     "config_version": "1.3.7",
     "effective_date": "2026-03-25",
     "updated_at": "2026-03-31",
-    "updated_by": "氣候變遷科",
+    "updated_by": "氣候變遷因應科",
     "change_log": [
       "v1.3.7 (2026-03-31): 舊規則清理包第一階段—下修資源回收/住宅/委託營運為概念詞，並收斂永續與監測誤判語境。",
       "v1.3.6 (2026-03-31): 新增生質能/廢棄物再利用概念詞與保守 logic 規則，避免過早綁定工項。",
@@ -16,7 +16,7 @@
       "v1.2.3 (2026-03-26): Phase 1A patch — AP1 觸發條件精修（新增 require_context_keywords=[改善]，排除農業/灌溉/設施），app.py anti_pattern_check 支援 require_context_keywords 欄位",
       "v1.2.2 (2026-03-25): Phase 1A final — 補入 manifest 區塊（keyword_dictionary_version / logic_mapping_version / checksums / last_synced_at）；集中版控保留，個別檔案異動透過 manifest 追蹤",
       "v1.1.0 (2026-03-19): Phase 1 — 新增版本管理欄位；配合 app.py v1.1 信心分數與判讀理由面板",
-      "v1.0.0 (2026-03-11): 初版上線"
+      "v1.0.0 (2026-03-11): 啟動專案開發"
     ],
     "data_version": "1.0.0"
   },

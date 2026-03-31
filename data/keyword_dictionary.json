@@ -92,8 +92,16 @@
       "weight": 1.0,
       "purity_hint": "P1_HIGH_PURITY",
       "anti_pattern_ids": [],
-      "synonyms": [],
-      "negative_context": [],
+      "synonyms": [
+        "電動公車",
+        "電動巴士",
+        "電動公務車"
+      ],
+      "negative_context": [
+        "機車",
+        "摩托車",
+        "輕型"
+      ],
       "learning_tip": "",
       "trigger_id": "KW_003"
     },
@@ -1367,6 +1375,52 @@
       ],
       "learning_tip": "命中「腳踏車」多為補助購置情境，建議對應 C4 獎補助工項而非自行車道工程。",
       "trigger_id": "KW_083"
+    },
+    {
+      "keyword": "電動機車",
+      "suggested_item": "補助民眾購置電動機車",
+      "code": "運輸-2",
+      "category_id": "C",
+      "sub_id": "C4",
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "電動摩托車",
+        "電動輕型機車",
+        "電動重機",
+        "購置機車",
+        "補助機車",
+        "補助電動車"
+      ],
+      "negative_context": [
+        "公車",
+        "巴士",
+        "公務車"
+      ],
+      "learning_tip": "命中「電動機車」多為補助民眾購置情境，對應 C4 獎補助工項。",
+      "trigger_id": "KW_084"
+    },
+    {
+      "keyword": "電動自行車",
+      "suggested_item": "補助民眾購置自行車或電動自行車",
+      "code": "運輸-1",
+      "category_id": "C",
+      "sub_id": "C4",
+      "_match_type": "exact",
+      "weight": 0.9,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "電輔車",
+        "電動腳踏車",
+        "購置電動自行車",
+        "補助電動自行車"
+      ],
+      "negative_context": [],
+      "learning_tip": "電動自行車補助屬低碳運具普及，對應 C4 獎補助工項。",
+      "trigger_id": "KW_085"
     }
   ],
   "exclusion_keywords": [

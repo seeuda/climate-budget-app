@@ -1578,6 +1578,47 @@ def is_sheet_sync_ready():
     return has_service_account and has_sheet_id
 
 
+@st.cache_data(ttl=900)
+def fetch_update_log():
+    """從試算表「系統日誌」工作表讀取優化日誌，回傳 list of dict。
+    欄位：處理日期、意見回饋者、優化內容
+    失敗時靜默回傳空清單，不影響主功能。
+    """
+    try:
+        client, err = get_google_sheet_client()
+        if err or client is None:
+            return []
+        sheet_id = (
+            st.secrets.get("google_sheet_id")
+            or CONFIG.get("integrations", {}).get("google_sheet_id", "")
+        )
+        if not sheet_id:
+            return []
+        wb = client.open_by_key(sheet_id)
+        try:
+            ws = wb.worksheet("系統日誌")
+        except Exception:
+            return []
+        rows = ws.get_all_records()
+        logs = []
+        for row in rows:
+            date_val  = str(row.get("處理日期", "")).strip()
+            feedback  = str(row.get("意見回饋者", "")).strip()
+            content   = str(row.get("優化內容", "")).strip()
+            if not date_val or not content:
+                continue
+            # 感謝標註：非空、非 "-"
+            thanks = ""
+            if feedback and feedback != "-":
+                thanks = f"（感謝 {feedback} 回饋意見）"
+            logs.append({"date": date_val, "content": content, "thanks": thanks})
+        # 最新在前（依原始順序反轉，試算表由上至下為舊→新）
+        logs.reverse()
+        return logs
+    except Exception:
+        return []
+
+
 def get_google_sheet_client():
     """Create Google Sheets client from Streamlit secrets service account."""
     service_account_info = st.secrets.get("gcp_service_account")
@@ -2188,13 +2229,27 @@ with st.sidebar:
 6. 確認並匯出評估報告
     """)
     st.markdown("---")
-    st.markdown("**預算警示門檻**")
-    st.markdown("""
-- 🟢 300萬–1000萬：氣候預算潛力：基層守護
-- 🟡 1000萬–2000萬：氣候預算潛力：效能升級
-- 🔴 2000萬–1億：氣候預算潛力：部門轉型
-- 🟣 1億以上：氣候預算潛力：城市重塑
-    """)
+    # ── 系統更新日誌 ──────────────────────────────────
+    with st.expander("📋 系統更新紀錄", expanded=False):
+        logs = fetch_update_log()
+        if not logs:
+            st.caption("（暫無紀錄或無法連線）")
+        else:
+            if "log_show_count" not in st.session_state:
+                st.session_state.log_show_count = 4
+            show_n = st.session_state.log_show_count
+            for entry in logs[:show_n]:
+                line = f"**{entry['date']}**　{entry['content']}"
+                if entry["thanks"]:
+                    line += f"  \n<span style='color:#888;font-size:0.82em'>{entry['thanks']}</span>"
+                st.markdown(line, unsafe_allow_html=True)
+                st.markdown("<hr style='margin:4px 0;border-color:#e0e0e0'>", unsafe_allow_html=True)
+            if show_n < len(logs):
+                remaining = len(logs) - show_n
+                btn_label = f"查看更多（還有 {remaining} 筆）"
+                if st.button(btn_label, key="log_load_more", use_container_width=True):
+                    st.session_state.log_show_count += 4
+                    st.rerun()
     st.markdown("---")
     st.markdown("📌 問題回報(Line)：https://line.me/ti/g/twX_HfMGBd")
     if st.button("🔄 重新開始", use_container_width=True):

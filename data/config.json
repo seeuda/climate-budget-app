@@ -1,10 +1,11 @@
 {
   "schema_version": {
-    "config_version": "1.3.2",
+    "config_version": "1.3.3",
     "effective_date": "2026-03-25",
-    "updated_at": "2026-03-27",
+    "updated_at": "2026-03-31",
     "updated_by": "氣候變遷科",
     "change_log": [
+      "v1.3.3 (2026-03-31): 補強畜牧糞尿資源化辨識 — 新增B2強觸發關鍵字、組合規則與概念提示詞。",
       "v1.3.2 (2026-03-27): 泛工程詞優化 — 將「修復」「新建」由 strong 調整為 concept_trigger，降低一般工程誤判。",
       "v1.3.1 (2026-03-27): 調整 concept_trigger 調適詞負向語境，研究/規劃案件仍標記為概念相關，避免漏判。",
       "v1.3.0 (2026-03-27): 關鍵字辨識升級 — 支援 concept_trigger 分層、Step1 顯示「相關但未確定」中間狀態、detect_keywords 支援 synonyms/negative_context",
@@ -975,15 +976,15 @@
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
     "config_version": "1.2.3",
     "data_version": "1.0.0",
-    "keyword_dictionary_version": "1.0.0",
+    "keyword_dictionary_version": "1.0.1",
     "logic_mapping_version": "1.0.0",
-    "last_synced_at": "2026-03-26T01:37:47+08:00",
+    "last_synced_at": "2026-03-31T16:26:51+08:00",
     "checksums": {
-      "keyword_dictionary": "e7475ca197ef2503c822d91776248c29",
-      "logic_mapping": "03577b6ef595ea9a75b4c380fcdeb667"
+      "keyword_dictionary": "1a254e42366fcb9f72af5b652d08f980",
+      "logic_mapping": "836c7ba5adbfa0a3f293c1251a5937fe"
     },
     "checksum_algorithm": "md5_json_normalized",
-    "checksum_updated_at": "2026-03-26T01:37:47+08:00"
+    "checksum_updated_at": "2026-03-31T16:26:51+08:00"
   },
   "keyword_strategy": {
     "match_types": {

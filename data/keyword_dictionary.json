@@ -1421,6 +1421,151 @@
       "negative_context": [],
       "learning_tip": "電動自行車補助屬低碳運具普及，對應 C4 獎補助工項。",
       "trigger_id": "KW_085"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "畜牧糞尿",
+      "suggested_item": "畜牧糞尿氨氮回收與沼氣發電",
+      "code": "環境-5",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_086"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "糞尿資源化",
+      "suggested_item": "畜牧糞尿氨氮回收與沼氣發電",
+      "code": "環境-5",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_087"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "畜牧糞尿資源化",
+      "suggested_item": "畜牧糞尿氨氮回收與沼氣發電",
+      "code": "環境-5",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_088"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "沼液",
+      "suggested_item": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+      "code": "農業-1",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_089"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "沼渣",
+      "suggested_item": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+      "code": "農業-1",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_090"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "沼液沼渣",
+      "suggested_item": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+      "code": "農業-1",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_091"
+    },
+    {
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "keyword": "養豬場廢水",
+      "suggested_item": "畜牧糞尿氨氮回收與沼氣發電",
+      "code": "環境-5",
+      "category_id": "B",
+      "sub_id": "B2",
+      "trigger_id": "KW_092"
+    },
+    {
+      "keyword": "資源化",
+      "suggested_item": "廢水污泥再利用或資源化",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "exact",
+      "weight": 0.5,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "再生利用"
+      ],
+      "negative_context": [
+        "宣導",
+        "活動"
+      ],
+      "learning_tip": "命中本詞代表可能涉及循環與減碳，請確認是否有可量化的資源化處理或減排作為。",
+      "match_type": "concept_trigger",
+      "trigger_id": "KW_093"
+    },
+    {
+      "keyword": "再利用",
+      "suggested_item": "廢水污泥再利用或資源化",
+      "code": "concept",
+      "category_id": "",
+      "sub_id": "",
+      "_match_type": "exact",
+      "weight": 0.5,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [
+        "宣導",
+        "活動"
+      ],
+      "learning_tip": "命中本詞僅作概念提示，需確認是否為畜牧廢水或污泥等具體資源化工程。",
+      "match_type": "concept_trigger",
+      "trigger_id": "KW_094"
     }
   ],
   "exclusion_keywords": [
@@ -1500,6 +1645,51 @@
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
       "trigger_id": "KWL_04"
+    },
+    {
+      "triggers": [
+        "畜牧",
+        "糞尿"
+      ],
+      "suggested_item": "畜牧糞尿氨氮回收與沼氣發電",
+      "category_id": "B",
+      "sub_id": "B2",
+      "_match_type": "logic",
+      "note": "需同時出現：畜牧＋糞尿",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_05"
+    },
+    {
+      "triggers": [
+        "沼液",
+        "沼渣"
+      ],
+      "suggested_item": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+      "category_id": "B",
+      "sub_id": "B2",
+      "_match_type": "logic",
+      "note": "需同時出現：沼液＋沼渣",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_06"
+    },
+    {
+      "triggers": [
+        "養豬場",
+        "資源化"
+      ],
+      "suggested_item": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
+      "category_id": "B",
+      "sub_id": "B2",
+      "_match_type": "logic",
+      "note": "需同時出現：養豬場＋資源化",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_07"
     }
   ]
 }

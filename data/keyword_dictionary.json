@@ -1606,7 +1606,7 @@
       ],
       "negative_context": [],
       "learning_tip": "水綠廊道常結合降溫、滯洪與生態功能，屬高品質調適案件。",
-      "trigger_id": "KW_049"
+      "trigger_id": "KW_097"
     },
     {
       "keyword": "熱島",
@@ -1624,7 +1624,7 @@
       ],
       "negative_context": [],
       "learning_tip": "",
-      "trigger_id": "KW_050"
+      "trigger_id": "KW_098"
     },
     {
       "keyword": "出流管制",
@@ -1641,7 +1641,7 @@
       ],
       "negative_context": [],
       "learning_tip": "",
-      "trigger_id": "KW_051"
+      "trigger_id": "KW_099"
     },
     {
       "keyword": "水環境",
@@ -1659,7 +1659,7 @@
       ],
       "negative_context": [],
       "learning_tip": "水環境工程常結合生態護岸與防洪調適，屬高品質水利調適案件。",
-      "trigger_id": "KW_052"
+      "trigger_id": "KW_100"
     },
     {
       "keyword": "海堤生態化",
@@ -1678,7 +1678,7 @@
       ],
       "negative_context": [],
       "learning_tip": "海岸生態化工程通常具備減災與維護生物多樣性雙重價值，屬高純度調適案件。",
-      "trigger_id": "KW_053"
+      "trigger_id": "KW_101"
     },
     {
       "keyword": "熱危害",
@@ -1697,7 +1697,7 @@
       ],
       "negative_context": [],
       "learning_tip": "高溫健康調適屬於社會韌性領域，通常涉及脆弱族群（高齡、戶外工作者）的調適作為。",
-      "trigger_id": "KW_054"
+      "trigger_id": "KW_102"
     },
     {
       "keyword": "電網韌性",
@@ -1714,7 +1714,7 @@
       ],
       "negative_context": [],
       "learning_tip": "關鍵基礎設施（能源、通訊）的耐災強化是調適行動方案中的關鍵指標。",
-      "trigger_id": "KW_055"
+      "trigger_id": "KW_103"
     },
     {
       "keyword": "低碳工業",
@@ -1731,7 +1731,7 @@
       ],
       "negative_context": [],
       "learning_tip": "工業部門減緩重點在於動力傳送、製程優化與系統節能。",
-      "trigger_id": "KW_056"
+      "trigger_id": "KW_104"
     },
     {
       "keyword": "廢棄物能源化",
@@ -1748,7 +1748,7 @@
       ],
       "negative_context": [],
       "learning_tip": "廢棄物能源化(WTE)是資源循環與能源轉型的重疊領域，屬高純度減緩案件。",
-      "trigger_id": "KW_057"
+      "trigger_id": "KW_105"
     },
     {
       "keyword": "灌溉",
@@ -1772,7 +1772,7 @@
         "教育"
       ],
       "learning_tip": "農業灌溉節水是因應乾旱氣候的重要調適手段。請確認本案是否具備智慧化管理或節水設施投入，而非單純維護既有水路。",
-      "trigger_id": "KW_058"
+      "trigger_id": "KW_106"
     },
     {
       "keyword": "邊坡",
@@ -1794,7 +1794,7 @@
       ],
       "negative_context": [],
       "learning_tip": "邊坡治理與野溪治理類似，需區分 NBS 生態工法（如植生護坡、石籠）與水泥噴漿等灰色工法。後者不具備調適效益，且可能增加下游洪峰。",
-      "trigger_id": "KW_059"
+      "trigger_id": "KW_107"
     },
     {
       "keyword": "遮蔭",
@@ -1814,7 +1814,7 @@
       ],
       "negative_context": [],
       "learning_tip": "都市高溫調適除熱島管理外，行人層級的遮蔭設施是提升脆弱族群熱舒適的重要公共投資，對應調適行動方案中的健康領域。",
-      "trigger_id": "KW_060"
+      "trigger_id": "KW_108"
     }
   ],
   "exclusion_keywords": [

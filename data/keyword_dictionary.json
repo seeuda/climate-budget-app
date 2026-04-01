@@ -331,7 +331,7 @@
       "anti_pattern_ids": [],
       "synonyms": [],
       "negative_context": [],
-      "learning_tip": "",
+      "learning_tip": "環境部認定標準：非以造林為目的之一般景觀植栽（如路燈、公園邊緣綠化）不計入碳匯。建議本案優先確認是否具備降溫或城市生態廊道價值。",
       "trigger_id": "KW_017"
     },
     {
@@ -346,7 +346,7 @@
       "anti_pattern_ids": [],
       "synonyms": [],
       "negative_context": [],
-      "learning_tip": "",
+      "learning_tip": "環境部認定標準：須符合規模限制與特定方法學（如森林經營）方可計入碳匯。請檢點本案是否為特定造林計畫而非例行綠美化。",
       "trigger_id": "KW_018"
     },
     {
@@ -656,8 +656,13 @@
         2
       ],
       "synonyms": [],
-      "negative_context": [],
-      "learning_tip": "",
+      "negative_context": [
+        "道路",
+        "路基",
+        "路面",
+        "路基工"
+      ],
+      "learning_tip": "災修案件大量為道路或検查工程，不具備調適意義。請確認全案是否具備防洪或氣候韌性角度再訄定為氣候預算。",
       "trigger_id": "KW_037"
     },
     {
@@ -731,16 +736,18 @@
       "category_id": "B",
       "sub_id": "B1",
       "_match_type": "exact",
-      "weight": 0.8,
-      "purity_hint": "P2_HIGH_RELEVANCE",
-      "anti_pattern_ids": [],
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        7
+      ],
       "synonyms": [
         "堤岸",
         "岸邊",
         "濱水"
       ],
       "negative_context": [],
-      "learning_tip": "",
+      "learning_tip": "水泥護岸不代表具備調適效益，請確認是否為生態工法（NBS）。若為全面水泥硬封，則可能與韌性調適目標相衝突。",
       "trigger_id": "KW_042"
     },
     {
@@ -911,17 +918,17 @@
     },
     {
       "keyword": "SRF",
-      "suggested_item": "節能減碳推廣教育宣導計畫",
+      "suggested_item": "固體再生燃料(SRF)設施或廢棄物能源化工程",
       "code": "環境-5",
-      "category_id": "F",
-      "sub_id": "F2",
+      "category_id": "B",
+      "sub_id": "B2",
       "_match_type": "exact",
-      "weight": 0.6,
-      "purity_hint": "P3_PARTIAL",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
       "synonyms": [],
       "negative_context": [],
-      "learning_tip": "",
+      "learning_tip": "SRF（固體再生燃料）是廢棄物分選與能源化的重要指標，屬減緩韌域，請確認本案是否具備具體設施投入。",
       "trigger_id": "KW_053"
     },
     {
@@ -1158,17 +1165,23 @@
     },
     {
       "keyword": "野溪",
-      "suggested_item": "野溪復育、崩塌地處理結合植生碳匯營造",
-      "code": "農業-5",
-      "category_id": "D",
-      "sub_id": "D3",
+      "suggested_item": "韌性野溪治理與棲地復育（優先評估 NBS 自然解方與土方平衡）",
+      "code": "調適-水",
+      "category_id": "B",
+      "sub_id": "B1",
       "_match_type": "exact",
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
-      "anti_pattern_ids": [],
-      "synonyms": [],
+      "anti_pattern_ids": [
+        2,
+        7
+      ],
+      "synonyms": [
+        "野溪整治",
+        "崩塌地處理"
+      ],
       "negative_context": [],
-      "learning_tip": "",
+      "learning_tip": "注意：本案不應隨意掛載「植生碳匯」，應優先評估其防災推移與承洪韌性，並檢核是否採用生態工法（NBS）。若為水泥工法，則不具備調適效益。減碳效益應來源於工程量體縮減或土方平衡。",
       "trigger_id": "KW_069"
     },
     {
@@ -1647,6 +1660,161 @@
       "negative_context": [],
       "learning_tip": "水環境工程常結合生態護岸與防洪調適，屬高品質水利調適案件。",
       "trigger_id": "KW_052"
+    },
+    {
+      "keyword": "海堤生態化",
+      "suggested_item": "海岸生態防護與海堤生態化工程(Coastal GI)",
+      "code": "調適-海岸",
+      "category_id": "B",
+      "sub_id": "B1",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [
+        7
+      ],
+      "synonyms": [
+        "海岸防護NBS",
+        "海岸帶管理"
+      ],
+      "negative_context": [],
+      "learning_tip": "海岸生態化工程通常具備減災與維護生物多樣性雙重價值，屬高純度調適案件。",
+      "trigger_id": "KW_053"
+    },
+    {
+      "keyword": "熱危害",
+      "suggested_item": "高溫健康防護與脆弱族群氣候照顧計畫",
+      "code": "調適-健康",
+      "category_id": "G",
+      "sub_id": "G3",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [
+        10
+      ],
+      "synonyms": [
+        "高溫防護",
+        "熱中暑預警"
+      ],
+      "negative_context": [],
+      "learning_tip": "高溫健康調適屬於社會韌性領域，通常涉及脆弱族群（高齡、戶外工作者）的調適作為。",
+      "trigger_id": "KW_054"
+    },
+    {
+      "keyword": "電網韌性",
+      "suggested_item": "關鍵基礎設施氣候韌性提升（供電穩健化）",
+      "code": "調適-設施",
+      "category_id": "B",
+      "sub_id": "B3",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "變電站提升",
+        "電網強韌"
+      ],
+      "negative_context": [],
+      "learning_tip": "關鍵基礎設施（能源、通訊）的耐災強化是調適行動方案中的關鍵指標。",
+      "trigger_id": "KW_055"
+    },
+    {
+      "keyword": "低碳工業",
+      "suggested_item": "中小企業低碳轉型與製程減碳輔導計畫",
+      "code": "工業-1",
+      "category_id": "E",
+      "sub_id": "E2",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "製程減碳",
+        "設備能效提升"
+      ],
+      "negative_context": [],
+      "learning_tip": "工業部門減緩重點在於動力傳送、製程優化與系統節能。",
+      "trigger_id": "KW_056"
+    },
+    {
+      "keyword": "廢棄物能源化",
+      "suggested_item": "廢棄物分選、能源化與資源循環設施",
+      "code": "環境-5",
+      "category_id": "B",
+      "sub_id": "B2",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "廢棄物發電",
+        "SRF設施"
+      ],
+      "negative_context": [],
+      "learning_tip": "廢棄物能源化(WTE)是資源循環與能源轉型的重疊領域，屬高純度減緩案件。",
+      "trigger_id": "KW_057"
+    },
+    {
+      "keyword": "灌溉",
+      "suggested_item": "智慧灌溉節水系統或農業管路改善（農業調適）",
+      "code": "農業-3",
+      "category_id": "D",
+      "sub_id": "D3",
+      "_match_type": "exact",
+      "weight": 0.7,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "滴灌",
+        "噴灌",
+        "節水灌溉",
+        "農業用水"
+      ],
+      "negative_context": [
+        "宣導",
+        "補助申請",
+        "教育"
+      ],
+      "learning_tip": "農業灌溉節水是因應乾旱氣候的重要調適手段。請確認本案是否具備智慧化管理或節水設施投入，而非單純維護既有水路。",
+      "trigger_id": "KW_058"
+    },
+    {
+      "keyword": "邊坡",
+      "suggested_item": "邊坡穩定與坡地生態防災工程（優先評估 NBS 工法）",
+      "code": "調適-水",
+      "category_id": "B",
+      "sub_id": "B1",
+      "_match_type": "exact",
+      "weight": 0.6,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        7
+      ],
+      "synonyms": [
+        "坡地",
+        "坡腳",
+        "坡面",
+        "山坡地"
+      ],
+      "negative_context": [],
+      "learning_tip": "邊坡治理與野溪治理類似，需區分 NBS 生態工法（如植生護坡、石籠）與水泥噴漿等灰色工法。後者不具備調適效益，且可能增加下游洪峰。",
+      "trigger_id": "KW_059"
+    },
+    {
+      "keyword": "遮蔭",
+      "suggested_item": "行人遮蔭設施或騎樓連通（高溫健康調適）",
+      "code": "調適-健康",
+      "category_id": "G",
+      "sub_id": "G3",
+      "_match_type": "exact",
+      "weight": 0.7,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "騎樓",
+        "涼亭",
+        "遮陽棚",
+        "行人庇護"
+      ],
+      "negative_context": [],
+      "learning_tip": "都市高溫調適除熱島管理外，行人層級的遮蔭設施是提升脆弱族群熱舒適的重要公共投資，對應調適行動方案中的健康領域。",
+      "trigger_id": "KW_060"
     }
   ],
   "exclusion_keywords": [

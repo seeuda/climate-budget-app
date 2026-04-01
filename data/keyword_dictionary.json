@@ -130,7 +130,12 @@
       "weight": 1.0,
       "purity_hint": "P1_HIGH_PURITY",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "蓄洪池",
+        "滯洪",
+        "滯洪設施",
+        "蓄洪"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_005"
@@ -729,7 +734,11 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "堤岸",
+        "岸邊",
+        "濱水"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_042"
@@ -1566,6 +1575,78 @@
       "learning_tip": "請確認是否涉及能量回收、再利用或減少最終處置之具體措施。",
       "match_type": "concept_trigger",
       "trigger_id": "KW_096"
+    },
+    {
+      "keyword": "廊道",
+      "suggested_item": "水綠廊道或生態廊道建置",
+      "code": "農業-7",
+      "category_id": "D",
+      "sub_id": "D1",
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "水綠廊道",
+        "景觀廊道",
+        "廊帶"
+      ],
+      "negative_context": [],
+      "learning_tip": "水綠廊道常結合降溫、滯洪與生態功能，屬高品質調適案件。",
+      "trigger_id": "KW_049"
+    },
+    {
+      "keyword": "熱島",
+      "suggested_item": "都市熱島效應緩解（降溫工法）",
+      "code": "住商-2",
+      "category_id": "A",
+      "sub_id": "A2",
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "熱島效應",
+        "都市降溫"
+      ],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_050"
+    },
+    {
+      "keyword": "出流管制",
+      "suggested_item": "基地出流管制與透水韌性提升",
+      "code": "調適-水",
+      "category_id": "B",
+      "sub_id": "B1",
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "逕流分擔"
+      ],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_051"
+    },
+    {
+      "keyword": "水環境",
+      "suggested_item": "水環境改善、生態護岸或水質處理",
+      "code": "調適-水",
+      "category_id": "B",
+      "sub_id": "B1",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "水環境改善",
+        "水質淨化"
+      ],
+      "negative_context": [],
+      "learning_tip": "水環境工程常結合生態護岸與防洪調適，屬高品質水利調適案件。",
+      "trigger_id": "KW_052"
     }
   ],
   "exclusion_keywords": [

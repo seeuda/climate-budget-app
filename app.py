@@ -709,7 +709,6 @@ def detect_keywords(text):
         if not triggers:
             continue
         synthetic_keyword = "/".join(triggers)
-        # Multi-trigger logic rules should match only when all triggers appear.
         if all(t in text for t in triggers) and synthetic_keyword not in seen:
             matches.append({
                 "keyword": synthetic_keyword,
@@ -718,9 +717,28 @@ def detect_keywords(text):
                 "category_id": rule.get("category_id", ""),
                 "sub_id": rule.get("sub_id", ""),
                 "note": rule.get("note", ""),
-                "_match_type": "logic",  # 標記為邏輯組合規則
+                "_match_type": "logic",
             })
             seen.add(synthetic_keyword)
+
+    # --- Phase 1B: 新增連動 adaptation_keyword_layers ---
+    layers = CONFIG.get("adaptation_keyword_layers", {})
+    for layer_id, layer_info in layers.items():
+        for kw_item in layer_info.get("keywords", []):
+            term = kw_item.get("term", "")
+            if term and term in text and term not in seen:
+                matches.append({
+                    "keyword": term,
+                    "suggested_item": f"[{layer_info.get('label')}] 相關工項建議",
+                    "code": "adaptation_layer",
+                    "category_id": kw_item.get("suggested_category", ""),
+                    "sub_id": kw_item.get("suggested_sub", ""),
+                    "note": f"命中 {layer_info.get('label')} 分層關鍵字: {term}",
+                    "weight": kw_item.get("weight", 0.6),
+                    "purity_hint": "P3_PARTIAL",
+                    "_match_type": "adaptation_layer",
+                })
+                seen.add(term)
     return matches
 
 def split_keyword_matches(kw_matches):

@@ -2822,47 +2822,49 @@ elif st.session_state.step == 1:
             st.session_state.selected_sub_categories,
         )
 
-    with st.expander("❓ 不確定選哪個類別？點此快速導引"):
-        st.caption("選擇最接近您案件型態的描述，系統會在下方高亮建議類別。")
-        qg_col1, qg_col2 = st.columns(2)
-        for qi, entry in enumerate(QUICK_GUIDE_ENTRIES):
-            with (qg_col1 if qi % 2 == 0 else qg_col2):
-                is_active_quick_guide = st.session_state.quick_guide_selected_key == entry["key"]
-                quick_guide_label = f"✅ {entry['label']}" if is_active_quick_guide else entry["label"]
-                if st.button(
-                    quick_guide_label,
-                    key=entry["key"],
-                    use_container_width=True,
-                    type="primary" if is_active_quick_guide else "secondary"
-                ):
-                    st.session_state.quick_guide_hint = entry["hint"]
-                    st.session_state.quick_guide_cats = refine_quick_guide_cats(
-                        entry["cats"],
-                        suggested_cats,
-                        st.session_state.selected_categories,
-                    )
-                    st.session_state.quick_guide_subs = refine_quick_guide_subs(
-                        entry.get("subs", []),
-                        st.session_state.selected_categories,
-                        st.session_state.selected_sub_categories,
-                    )
-                    st.session_state.quick_guide_selected_key = entry["key"]
-        if st.session_state.quick_guide_hint:
-            st.markdown(
-                f'<div style="background:#fff8e1;border-left:4px solid #f9a825;'
-                f'padding:0.6rem 0.9rem;border-radius:0 6px 6px 0;margin:0.6rem 0 0 0;'
-                f'font-size:0.88rem;color:#5a3e00;">'
-                f'💡 {st.session_state.quick_guide_hint}'
-                f'<br><span style="font-size:0.82rem;opacity:0.7;margin-top:0.3rem;display:block;">'
-                f'↓ 建議類別已在下方標示為「📌 快速導引建議」，請確認後自行點選。</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-            if st.button("✖ 清除導引提示", key="qg_clear", use_container_width=False):
-                st.session_state.quick_guide_hint = ""
-                st.session_state.quick_guide_cats = []
-                st.session_state.quick_guide_subs = []
-                st.session_state.quick_guide_selected_key = ""
+    with st.container(border=True):
+        st.caption("🧭 快速導引區")
+        with st.expander("❓ 不確定選哪個類別？點此快速導引"):
+            st.caption("選擇最接近您案件型態的描述，系統會在下方高亮建議類別。")
+            qg_col1, qg_col2 = st.columns(2)
+            for qi, entry in enumerate(QUICK_GUIDE_ENTRIES):
+                with (qg_col1 if qi % 2 == 0 else qg_col2):
+                    is_active_quick_guide = st.session_state.quick_guide_selected_key == entry["key"]
+                    quick_guide_label = f"✅ {entry['label']}" if is_active_quick_guide else entry["label"]
+                    if st.button(
+                        quick_guide_label,
+                        key=entry["key"],
+                        use_container_width=True,
+                        type="primary" if is_active_quick_guide else "secondary"
+                    ):
+                        st.session_state.quick_guide_hint = entry["hint"]
+                        st.session_state.quick_guide_cats = refine_quick_guide_cats(
+                            entry["cats"],
+                            suggested_cats,
+                            st.session_state.selected_categories,
+                        )
+                        st.session_state.quick_guide_subs = refine_quick_guide_subs(
+                            entry.get("subs", []),
+                            st.session_state.selected_categories,
+                            st.session_state.selected_sub_categories,
+                        )
+                        st.session_state.quick_guide_selected_key = entry["key"]
+            if st.session_state.quick_guide_hint:
+                st.markdown(
+                    f'<div style="background:#fff8e1;border-left:4px solid #f9a825;'
+                    f'padding:0.6rem 0.9rem;border-radius:0 6px 6px 0;margin:0.6rem 0 0 0;'
+                    f'font-size:0.88rem;color:#5a3e00;">'
+                    f'💡 {st.session_state.quick_guide_hint}'
+                    f'<br><span style="font-size:0.82rem;opacity:0.7;margin-top:0.3rem;display:block;">'
+                    f'↓ 建議類別已在下方標示為「📌 快速導引建議」，請確認後自行點選。</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                if st.button("✖ 清除導引提示", key="qg_clear", use_container_width=False):
+                    st.session_state.quick_guide_hint = ""
+                    st.session_state.quick_guide_cats = []
+                    st.session_state.quick_guide_subs = []
+                    st.session_state.quick_guide_selected_key = ""
     # ── 快速入口結束 ──────────────────────────────────────────────
 
     # Category cards — 2 columns

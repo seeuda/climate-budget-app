@@ -2278,6 +2278,9 @@ with st.sidebar:
             del st.session_state[k]
         st.rerun()
 
+    st.markdown("---")
+    st.markdown("[🩺 啟動檢查頁（開發人員專用）](?health_check=1)")
+
 # ── Header ────────────────────────────────────────────────────────────────────
 
 st.markdown("""
@@ -2739,7 +2742,7 @@ elif st.session_state.step == 1:
         {
             "key": "qg_advocacy",
             "label": "🎤 辦理活動、宣導、教育推廣",
-            "hint": "氣候變遷宣導、淨零教育活動、推廣課程等，通常屬於「公正轉型與社會韌性」類別（G），"
+            "hint": "對特定服務對象的宣導、教育活動、推廣課程等，如強化面對氣候變遷與淨零衝擊的能力，通常屬於「公正轉型與社會韌性」類別（G），"
                     "若同時含顧問規劃成分也可加選「評估／規劃類」（F）。",
             "cats": ["G", "F"],
             "subs": ["G2", "G3", "F1"],
@@ -2806,8 +2809,6 @@ elif st.session_state.step == 1:
         st.session_state.quick_guide_subs = []
     if "quick_guide_selected_key" not in st.session_state:
         st.session_state.quick_guide_selected_key = ""
-    if "quick_guide_expanded" not in st.session_state:
-        st.session_state.quick_guide_expanded = False
     selected_quick_guide_entry = QUICK_GUIDE_ENTRY_MAP.get(st.session_state.quick_guide_selected_key)
     if selected_quick_guide_entry:
         st.session_state.quick_guide_cats = refine_quick_guide_cats(
@@ -2821,7 +2822,7 @@ elif st.session_state.step == 1:
             st.session_state.selected_sub_categories,
         )
 
-    with st.expander("❓ 不確定選哪個類別？點此快速導引", expanded=st.session_state.quick_guide_expanded):
+    with st.expander("❓ 不確定選哪個類別？點此快速導引"):
         st.caption("選擇最接近您案件型態的描述，系統會在下方高亮建議類別。")
         qg_col1, qg_col2 = st.columns(2)
         for qi, entry in enumerate(QUICK_GUIDE_ENTRIES):
@@ -2846,7 +2847,6 @@ elif st.session_state.step == 1:
                         st.session_state.selected_sub_categories,
                     )
                     st.session_state.quick_guide_selected_key = entry["key"]
-                    st.session_state.quick_guide_expanded = True
         if st.session_state.quick_guide_hint:
             st.markdown(
                 f'<div style="background:#fff8e1;border-left:4px solid #f9a825;'
@@ -2863,7 +2863,6 @@ elif st.session_state.step == 1:
                 st.session_state.quick_guide_cats = []
                 st.session_state.quick_guide_subs = []
                 st.session_state.quick_guide_selected_key = ""
-                st.session_state.quick_guide_expanded = True
     # ── 快速入口結束 ──────────────────────────────────────────────
 
     # Category cards — 2 columns

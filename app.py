@@ -84,6 +84,7 @@ st.write("- requirements.txt:", "✅" if req_ok else "❌", req_msg)
 
 st.subheader("config.json 檢查")
 selected_config = None
+parse_errors: dict[Path, Exception] = {}
 for candidate in config_candidates:
     if not candidate.exists():
         continue
@@ -94,7 +95,8 @@ for candidate in config_candidates:
         json.loads(candidate.read_text(encoding="utf-8"))
         selected_config = candidate
         break
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        parse_errors[candidate] = exc
         continue
 
 if selected_config is not None:
@@ -102,16 +104,22 @@ if selected_config is not None:
     raw = selected_config.read_bytes()[:64]
     st.write("前 16 bytes:", " ".join(f"{b:02x}" for b in raw[:16]))
     if selected_config != config_candidates[0] and config_candidates[0].exists():
-        st.warning("根目錄 config.json 非有效 JSON，已改用 data/config.json。")
+        if config_candidates[0] in parse_errors:
+            st.warning(f"根目錄 config.json JSON 解析失敗，已改用 data/config.json：{parse_errors[config_candidates[0]]}")
+        else:
+            st.warning("根目錄 config.json 非有效 JSON，已改用 data/config.json。")
 else:
     primary = config_candidates[0]
     fallback = config_candidates[1]
     if primary.exists():
         raw = primary.read_bytes()[:64]
         st.write("根目錄 config.json 前 16 bytes:", " ".join(f"{b:02x}" for b in raw[:16]))
-        st.warning("config.json 不是 JSON 文字開頭，可能是錯置檔案（例如 pyc/binary）")
-    if fallback.exists():
-        st.error("data/config.json 存在但不可解析，請檢查 JSON 格式。")
+        if raw[:1] in (b"{", b"[") and primary in parse_errors:
+            st.error(f"config.json 是 JSON 文字開頭，但解析失敗：{parse_errors[primary]}")
+        else:
+            st.warning("config.json 不是 JSON 文字開頭，可能是錯置檔案（例如 pyc/binary）")
+    if fallback.exists() and fallback in parse_errors:
+        st.error(f"data/config.json 存在但不可解析，請檢查 JSON 格式：{parse_errors[fallback]}")
     else:
         st.warning("找不到可用的 config.json（已檢查根目錄與 data/config.json）。")
 

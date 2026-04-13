@@ -60,12 +60,12 @@ def inspect_requirements(path: Path) -> tuple[bool, str]:
 
 repo = Path(__file__).resolve().parent
 app_path = repo / "app.py"
-config_path = repo / "config.json"
+config_candidates = [repo / "config.json", repo / "data" / "config.json"]
 req_path = repo / "requirements.txt"
 
 st.subheader("檔案狀態")
 cols = st.columns(3)
-for col, p in zip(cols, [app_path, config_path, req_path]):
+for col, p in zip(cols, [app_path, config_candidates[0], req_path]):
     with col:
         st.markdown(f"**{p.name}**")
         st.code(detect_file_type(p))
@@ -83,18 +83,36 @@ st.write("- app.py:", "✅" if app_ok else "❌", app_msg)
 st.write("- requirements.txt:", "✅" if req_ok else "❌", req_msg)
 
 st.subheader("config.json 檢查")
-if config_path.exists():
-    raw = config_path.read_bytes()[:64]
+selected_config = None
+for candidate in config_candidates:
+    if not candidate.exists():
+        continue
+    raw = candidate.read_bytes()[:64]
+    if raw[:1] not in (b"{", b"["):
+        continue
+    try:
+        json.loads(candidate.read_text(encoding="utf-8"))
+        selected_config = candidate
+        break
+    except Exception:  # noqa: BLE001
+        continue
+
+if selected_config is not None:
+    st.success(f"使用設定檔：{selected_config.relative_to(repo)}（可解析為 JSON）")
+    raw = selected_config.read_bytes()[:64]
     st.write("前 16 bytes:", " ".join(f"{b:02x}" for b in raw[:16]))
-    if raw[:1] in (b"{", b"["):
-        try:
-            json.loads(config_path.read_text(encoding="utf-8"))
-            st.success("config.json 可解析為 JSON")
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"config.json 不是有效 JSON：{exc}")
-    else:
-        st.warning("config.json 不是 JSON 文字開頭，可能是錯置檔案（例如 pyc/binary）")
+    if selected_config != config_candidates[0] and config_candidates[0].exists():
+        st.warning("根目錄 config.json 非有效 JSON，已改用 data/config.json。")
 else:
-    st.warning("config.json 不存在")
+    primary = config_candidates[0]
+    fallback = config_candidates[1]
+    if primary.exists():
+        raw = primary.read_bytes()[:64]
+        st.write("根目錄 config.json 前 16 bytes:", " ".join(f"{b:02x}" for b in raw[:16]))
+        st.warning("config.json 不是 JSON 文字開頭，可能是錯置檔案（例如 pyc/binary）")
+    if fallback.exists():
+        st.error("data/config.json 存在但不可解析，請檢查 JSON 格式。")
+    else:
+        st.warning("找不到可用的 config.json（已檢查根目錄與 data/config.json）。")
 
 st.info("建議：先確保 app.py 是 Python 程式、requirements.txt 是 pip 套件清單，再重新部署。")

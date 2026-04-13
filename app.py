@@ -1,1616 +1,1009 @@
-"""
-彰化縣氣候預算導引式判讀系統
-Climate Budget Assessment Tool for Changhua County Government
-"""
-
-import streamlit as st
-import json
-import pandas as pd
-from datetime import datetime
-import io
-from urllib import request, error
-import hashlib
-import gspread
-from google.oauth2.service_account import Credentials
-
-PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
-PRESET_SHEET_GID = "0"
-
-DEFAULT_SYNC_HEADERS = [
-    "填報日期",
-    "案件編號",
-    "標案名稱",
-    "主辦局處",
-    "決標金額",
-    "氣候預算",
-    "判讀主類別",
-    "判讀子類別",
-    "風險等級",
-]
-
-# ── Page config ────────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="彰化縣氣候預算判讀系統",
-    page_icon="🌿",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# ── Load JSON data ─────────────────────────────────────────────────────────────
-@st.cache_data
-def load_json(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-CONFIG = load_json("data/config.json")
-LOGIC  = load_json("data/logic_mapping.json")
-KWDICT = load_json("data/keyword_dictionary.json")
-
-PARAMS = CONFIG["system_parameters"]
-UI     = CONFIG["ui_text"]
-
-# ── Custom CSS ─────────────────────────────────────────────────────────────────
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Serif+Display&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Noto Sans TC', sans-serif;
-}
-
-.stApp {
-    background: linear-gradient(135deg, #f0f4f0 0%, #e8f0e8 50%, #f0f4f0 100%);
-}
-
-.main-header {
-    background: linear-gradient(135deg, #1a4731 0%, #2d6a4f 50%, #1a4731 100%);
-    color: white;
-    padding: 2rem 2.5rem;
-    border-radius: 16px;
-    margin-bottom: 1.5rem;
-    position: relative;
-    overflow: hidden;
-}
-
-.main-header::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-}
-
-.main-header h1 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.8rem;
-    font-weight: 400;
-    margin: 0;
-    letter-spacing: 0.02em;
-}
-
-.main-header p {
-    font-size: 0.85rem;
-    opacity: 0.75;
-    margin: 0.3rem 0 0 0;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-/* Step indicator */
-.step-bar {
-    display: flex;
-    gap: 0;
-    margin-bottom: 1.5rem;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.step-item {
-    flex: 1;
-    padding: 0.7rem 0.5rem;
-    text-align: center;
-    font-size: 0.78rem;
-    font-weight: 500;
-    background: #d9e8d9;
-    color: #4a7c59;
-    border-right: 1px solid rgba(255,255,255,0.5);
-    transition: all 0.3s;
-}
-
-.step-item.active {
-    background: #2d6a4f;
-    color: white;
-    font-weight: 700;
-}
-
-.step-item.done {
-    background: #52b788;
-    color: white;
-}
-
-/* Cards */
-.category-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1.2rem;
-    margin-bottom: 0.75rem;
-    border: 2px solid #e8f0e8;
-    cursor: pointer;
-    transition: all 0.25s;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-.category-card:hover {
-    border-color: #2d6a4f;
-    box-shadow: 0 4px 16px rgba(45,106,79,0.15);
-    transform: translateY(-2px);
-}
-
-.category-card.selected {
-    border-color: #2d6a4f;
-    background: #f0f9f0;
-}
-
-.category-card.highlighted {
-    border-color: #f39c12;
-    background: #fffbf0;
-    box-shadow: 0 4px 16px rgba(243,156,18,0.2);
-}
-
-/* Alert boxes */
-.alert-red {
-    background: #fff5f5;
-    border-left: 4px solid #e74c3c;
-    padding: 0.8rem 1rem;
-    border-radius: 0 8px 8px 0;
-    margin: 0.5rem 0;
-    color: #c0392b;
-    font-size: 0.88rem;
-}
-
-.alert-yellow {
-    background: #fffbf0;
-    border-left: 4px solid #f39c12;
-    padding: 0.8rem 1rem;
-    border-radius: 0 8px 8px 0;
-    margin: 0.5rem 0;
-    color: #d68910;
-    font-size: 0.88rem;
-}
-
-.alert-green {
-    background: #f0fdf4;
-    border-left: 4px solid #2ecc71;
-    padding: 0.8rem 1rem;
-    border-radius: 0 8px 8px 0;
-    margin: 0.5rem 0;
-    color: #27ae60;
-    font-size: 0.88rem;
-}
-
-.alert-purple {
-    background: #fdf4ff;
-    border-left: 4px solid #8e44ad;
-    padding: 0.8rem 1rem;
-    border-radius: 0 8px 8px 0;
-    margin: 0.5rem 0;
-    color: #7d3c98;
-    font-size: 0.88rem;
-}
-
-/* Budget display */
-.budget-display {
-    background: linear-gradient(135deg, #1a4731, #2d6a4f);
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    text-align: center;
-    margin: 0.5rem 0;
-}
-
-.budget-display .amount {
-    font-size: 1.8rem;
-    font-weight: 700;
-    font-family: 'DM Serif Display', serif;
-}
-
-.budget-display .label {
-    font-size: 0.78rem;
-    opacity: 0.8;
-    letter-spacing: 0.05em;
-}
-
-.budget-remaining {
-    background: linear-gradient(135deg, #27ae60, #2ecc71);
-    color: white;
-    padding: 0.8rem 1.2rem;
-    border-radius: 10px;
-    text-align: center;
-}
-
-.budget-over {
-    background: linear-gradient(135deg, #c0392b, #e74c3c);
-    color: white;
-    padding: 0.8rem 1.2rem;
-    border-radius: 10px;
-    text-align: center;
-}
-
-/* Keyword suggestion */
-.kw-suggestion {
-    background: linear-gradient(135deg, #fff9e6, #fffbf0);
-    border: 1px solid #f0c040;
-    border-radius: 10px;
-    padding: 0.8rem 1rem;
-    margin: 0.5rem 0;
-    font-size: 0.85rem;
-}
-
-.kw-tag {
-    display: inline-block;
-    background: #f39c12;
-    color: white;
-    padding: 0.2rem 0.6rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin: 0.2rem;
-}
-
-/* Breadcrumb */
-.breadcrumb {
-    background: white;
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    color: #555;
-    margin-bottom: 1rem;
-    border: 1px solid #e0e8e0;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-
-/* Summary card */
-.summary-card {
-    background: white;
-    border-radius: 14px;
-    padding: 1.5rem;
-    border: 1px solid #e0e8e0;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.07);
-    margin-bottom: 1rem;
-}
-
-.code-badge {
-    display: inline-block;
-    background: #2d6a4f;
-    color: white;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.72rem;
-    font-family: monospace;
-    margin: 0.1rem;
-}
-
-/* Item checkbox row */
-.item-row {
-    padding: 0.5rem 0.7rem;
-    border-radius: 8px;
-    margin: 0.3rem 0;
-    border: 1px solid #eef2ee;
-    background: #fafcfa;
-    font-size: 0.88rem;
-}
-
-.item-row.selected {
-    background: #f0f9f0;
-    border-color: #52b788;
-}
-
-/* Result export section */
-.export-section {
-    background: linear-gradient(135deg, #1a4731, #2d6a4f);
-    color: white;
-    border-radius: 14px;
-    padding: 2rem;
-    margin-top: 1.5rem;
-}
-
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background: #1a4731 !important;
-}
-
-[data-testid="stSidebar"] * {
-    color: #d4e8d4 !important;
-}
-
-[data-testid="stSidebar"] .stSelectbox label,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {
-    color: #a8d5a8 !important;
-}
-
-/* Section headers */
-.section-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #1a4731;
-    padding-bottom: 0.4rem;
-    border-bottom: 2px solid #52b788;
-    margin-bottom: 1rem;
-}
-
-/* Divider */
-hr { border-color: #d4e8d4; }
-
-button[kind="primary"] {
-    background: #2d6a4f !important;
-    border: none !important;
-    color: #ffffff !important;
-}
-
-button[kind="secondary"] {
-    background: #e9f3ec !important;
-    color: #1a4731 !important;
-    border: 1px solid #9ec5ab !important;
-}
-
-[data-testid="stTextInput"] input,
-[data-testid="stSelectbox"] > div > div,
-[data-testid="stNumberInput"] input,
-[data-testid="stTextArea"] textarea {
-    background-color: #f3f9f4 !important;
-    border: 1px solid #b7d3be !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ── Helper functions ───────────────────────────────────────────────────────────
-
-def fmt_twd(n):
-    """Format number as TWD with commas."""
-    if n is None:
-        return "–"
-    return f"NT$ {int(n):,}"
-
-def get_alert_level(budget):
-    """Return alert level info dict based on budget."""
-    if budget >= PARAMS["extreme_alert_threshold"]:
-        return {"level": "extreme", "label": "⛔ 極高風險", "desc": "重大公共建設，強制淨零檢核",
-                "color": "#8e44ad", "badge": "🟣"}
-    elif budget >= PARAMS["high_alert_threshold"]:
-        return {"level": "red", "label": "🔴 高碳影響力計畫", "desc": "金額≥2000萬，強調隱含碳檢核",
-                "color": "#e74c3c", "badge": "🔴"}
-    elif budget >= PARAMS["medium_alert_threshold"]:
-        return {"level": "yellow", "label": "🟡 設施改善重點計畫", "desc": "金額1000萬–2000萬",
-                "color": "#f39c12", "badge": "🟡"}
-    else:
-        return {"level": "green", "label": "🟢 自然碳匯或一般維護", "desc": "金額300萬–1000萬",
-                "color": "#2ecc71", "badge": "🟢"}
-
-def detect_keywords(text):
-    """Return list of matching keyword triggers from case name."""
-    if not text:
-        return []
-    matches = []
-    seen = set()
-    for kw in KWDICT["keyword_triggers"]:
-        if kw["keyword"] in text and kw["keyword"] not in seen:
-            matches.append(kw)
-            seen.add(kw["keyword"])
-
-    for rule in KWDICT.get("keyword_logic", []):
-        triggers = rule.get("triggers", [])
-        if not triggers:
-            continue
-        synthetic_keyword = "/".join(triggers)
-        # Multi-trigger logic rules should match only when all triggers appear.
-        if all(t in text for t in triggers) and synthetic_keyword not in seen:
-            matches.append({
-                "keyword": synthetic_keyword,
-                "suggested_item": rule.get("suggested_item", ""),
-                "code": "logic",
-                "category_id": rule.get("category_id", ""),
-                "sub_id": rule.get("sub_id", ""),
-                "note": rule.get("note", ""),
-            })
-            seen.add(synthetic_keyword)
-    return matches
-
-def detect_text_keywords(text, keywords):
-    """Return matched keywords contained in text."""
-    if not text:
-        return []
-    return [k for k in keywords if k and k in text]
-
-
-
-def get_taxonomy_by_id(cat_id):
-    for cat in LOGIC["taxonomy"]:
-        if cat["id"] == cat_id:
-            return cat
-    return None
-
-def get_sub_by_id(cat, sub_id):
-    for sub in cat.get("sub_categories", []):
-        if sub["id"] == sub_id:
-            return sub
-    return None
-
-def get_item_by_label(sub, label):
-    for item in sub.get("items", []):
-        if item.get("label") == label:
-            return item
-    return None
-
-def inject_button_style(key, *, is_selected=False, is_suggested=False):
-    """Inject CSS so specific Streamlit buttons can visually reflect state."""
-    if is_selected:
-        bg = "#2d6a4f"
-        text = "#ffffff"
-        border = "#2d6a4f"
-        shadow = "0 4px 16px rgba(45,106,79,0.18)"
-    elif is_suggested:
-        bg = "#fffbf0"
-        text = "#8f5c00"
-        border = "#f39c12"
-        shadow = "0 4px 16px rgba(243,156,18,0.2)"
-    else:
-        bg = "#e9f3ec"
-        text = "#1a4731"
-        border = "#9ec5ab"
-        shadow = "none"
-
-    if is_selected:
-        hover_border = border
-        hover_bg = bg
-    else:
-        hover_border = "#2d6a4f" if not is_suggested else "#f39c12"
-        hover_bg = "#f0f9f0" if not is_suggested else "#fff6dd"
-
-    st.markdown(
-        f"""
-        <style>
-        .st-key-{key} button {{
-            background: {bg} !important;
-            color: {text} !important;
-            border: 1px solid {border} !important;
-            box-shadow: {shadow} !important;
-            min-height: 3rem;
-            white-space: normal;
-        }}
-        .st-key-{key} button:hover {{
-            border-color: {hover_border} !important;
-            background: {hover_bg} !important;
-            color: {text} !important;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-def generate_export_json(state):
-    """Generate the export JSON object."""
-    result = {
-        "project_metadata": {
-            "uid": f"CHC-{datetime.now().strftime('%Y%m%d%H%M')}",
-            "name": state.get("case_name", ""),
-            "dept": state.get("dept", ""),
-            "total_budget": state.get("budget", 0),
-            "is_manual_override": state.get("manual_override", False),
-            "assessment_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        },
-        "climate_assessment": {
-            "category": state.get("selected_category", ""),
-            "sub_category": state.get("selected_sub", ""),
-            "selected_items": state.get("item_budgets", []),
-            "alert_level": get_alert_level(state.get("budget", 0))["label"],
-        },
-        "climate_budget_total": sum(
-            i.get("amount", 0) for i in state.get("item_budgets", [])
-        ),
-        "impact_level": get_alert_level(state.get("budget", 0))["level"],
-        "assessment_metadata": {
-            "engineering_guideline_type": state.get("engineering_guideline_type", ""),
-            "green_spending_category": state.get("green_spending_category", []),
-            "qualitative_factors": state.get("qualitative_factors", []),
-        },
+{
+  "schema_version": {
+    "config_version": "1.3.7",
+    "effective_date": "2026-03-25",
+    "updated_at": "2026-03-31",
+    "updated_by": "氣候變遷因應科",
+    "change_log": [
+      "v1.3.7 (2026-03-31): 舊規則清理包第一階段—下修資源回收/住宅/委託營運為概念詞，並收斂永續與監測誤判語境。",
+      "v1.3.6 (2026-03-31): 新增生質能/廢棄物再利用概念詞與保守 logic 規則，避免過早綁定工項。",
+      "v1.3.5 (2026-03-31): 保守補強生質能概念詞（concept_trigger），僅提示人工確認，不直接綁定 strong 工項。",
+      "v1.3.4 (2026-03-31): 去重畜牧糞尿重疊關鍵字，改以同義詞併入 canonical trigger，降低重複命中造成的信心膨脹。",
+      "v1.3.3 (2026-03-31): 補強畜牧糞尿資源化辨識 — 新增B2強觸發關鍵字、組合規則與概念提示詞。",
+      "v1.3.2 (2026-03-27): 泛工程詞優化 — 將「修復」「新建」由 strong 調整為 concept_trigger，降低一般工程誤判。",
+      "v1.3.1 (2026-03-27): 調整 concept_trigger 調適詞負向語境，研究/規劃案件仍標記為概念相關，避免漏判。",
+      "v1.3.0 (2026-03-27): 關鍵字辨識升級 — 支援 concept_trigger 分層、Step1 顯示「相關但未確定」中間狀態、detect_keywords 支援 synonyms/negative_context",
+      "v1.2.3 (2026-03-26): Phase 1A patch — AP1 觸發條件精修（新增 require_context_keywords=[改善]，排除農業/灌溉/設施），app.py anti_pattern_check 支援 require_context_keywords 欄位",
+      "v1.2.2 (2026-03-25): Phase 1A final — 補入 manifest 區塊（keyword_dictionary_version / logic_mapping_version / checksums / last_synced_at）；集中版控保留，個別檔案異動透過 manifest 追蹤",
+      "v1.1.0 (2026-03-19): Phase 1 — 新增版本管理欄位；配合 app.py v1.1 信心分數與判讀理由面板",
+      "v1.0.0 (2026-03-11): 啟動專案開發"
+    ],
+    "data_version": "1.0.0"
+  },
+  "system_parameters": {
+    "min_threshold": 3000000,
+    "medium_alert_threshold": 10000000,
+    "high_alert_threshold": 20000000,
+    "extreme_alert_threshold": 100000000,
+    "currency": "TWD"
+  },
+  "ui_text": {
+    "app_title": "彰化縣氣候預算導引式判讀系統",
+    "app_subtitle": "Climate Budget Assessment Tool v1.1",
+    "exclusion_warning": "⚠️ 本案經費未達建議評估門檻（300萬元），建議挑選其他計畫進行評估。",
+    "manual_override_label": "本案經費未達建議評估門檻，但業務單位認為與氣候變遷高度相關，勾選後繼續評估作業。",
+    "extreme_alert_warning": "🔴 本案經費達1億元以上，屬重大公共建設，強烈建議檢核淨零與氣候韌性指標。",
+    "exclusion_guidelines": [
+      "純社會福利與個人補助（如育兒津貼、老人津貼、生活補助）",
+      "一般行政庶務與後勤採購（如影印機租賃、保全、清潔、一般辦公採購）",
+      "非氣候相關之資訊系統維護（如薪資、公文系統、防毒、一般頻寬）",
+      "短期藝文活動與節慶宣導（如桐花祭、演唱會、一般宣傳活動）",
+      "法制、審計、人資與顧問勞務（如法律顧問、訴願、審計、精算）"
+    ],
+    "manual_override_hint_text": "若標案涉及「排水清疏」或「災害修復」，即使未滿300萬元，建議仍勾選繼續評估。",
+    "summary_labels": {
+      "total": "計畫總經費",
+      "climate": "氣候變遷相關經費",
+      "ratio": "氣候預算占比"
+    },
+    "qualitative_factors": [
+      "🌱 具備自然碳匯效益（如擴大造林、增加綠地）",
+      "🗺️ 產出氣候風險圖資或關鍵數據（輔助未來調適）",
+      "💡 採用創新減碳技術示範（具推廣潛力）",
+      "📢 包含環境教育或氣候溝通工項",
+      "🤝 社會調適與公正轉型（確保脆弱族群氣候防護與平權）",
+      "🧭 土地開發氣候審核（包含氣候變遷影響評估或出流管制）",
+      "🌿 導入自然解方(NBS)或生態工法（如砌石、石籠、木排樁、草溝）",
+      "🤖 採用預鑄、模組化或自動化施工（如滑模工法、大節塊預組裝）",
+      "♻️ 施工用水取用污水廠放流水或雨水回收、現地土石方挖填平衡",
+      "🏢 申請取得低碳建築標示(LEBR)或建築能效標示(BERS)候選證書",
+      "⚡ 施工機具優先採用外部電力、太陽能或微水力發電（替代柴油發電機）"
+    ],
+    "high_alert_warning": "🔴 高碳影響力計畫：本案金額達2,000萬元以上，UI強調「隱含碳」檢核。",
+    "medium_alert_warning": "🟡 設施改善重點：本案金額達1,000萬元以上，請特別注意節能設施評估。",
+    "threshold_pass_warning": "🟢 本案符合評估門檻，請繼續完成氣候預算判讀。"
+  },
+  "alert_levels": {
+    "green": {
+      "max": 10000000,
+      "label": "藍綠燈",
+      "desc": "氣候預算潛力：基層守護",
+      "color": "#2ecc71"
+    },
+    "yellow": {
+      "min": 10000000,
+      "max": 20000000,
+      "label": "黃燈",
+      "desc": "氣候預算潛力：效能升級",
+      "color": "#f39c12"
+    },
+    "red": {
+      "min": 20000000,
+      "max": 100000000,
+      "label": "紅燈",
+      "desc": "氣候預算潛力：部門轉型",
+      "color": "#e74c3c"
+    },
+    "extreme": {
+      "min": 100000000,
+      "label": "極高風險",
+      "desc": "氣候預算潛力：城市重塑",
+      "color": "#8e44ad"
     }
-    return result
-
-
-def get_google_sheet_webhook_url():
-    """Get Google Sheet webhook URL from Streamlit secrets or config."""
-    candidate_keys = [
-        "google_sheet_webhook_url",
-        "google_sheet_webhook",
-        "google_sheet_sync_url",
-        "google_sheet_url",
-    ]
-
-    for key in candidate_keys:
-        secret_url = st.secrets.get(key)
-        if secret_url is not None:
-            normalized_secret_url = str(secret_url).strip()
-            if normalized_secret_url:
-                return normalized_secret_url
-
-    integrations = CONFIG.get("integrations", {})
-    for key in candidate_keys:
-        config_url = integrations.get(key)
-        if config_url is not None:
-            normalized_config_url = str(config_url).strip()
-            if normalized_config_url:
-                return normalized_config_url
-
-    return ""
-
-
-def get_google_sheet_target():
-    """Get default Google Sheet target settings."""
-    return {
-        "spreadsheet_id": st.secrets.get("google_sheet_id")
-        or CONFIG.get("integrations", {}).get("google_sheet_id", ""),
-        "worksheet_name": st.secrets.get("google_sheet_worksheet")
-        or CONFIG.get("integrations", {}).get("google_sheet_worksheet", "工作表1"),
+  },
+  "departments": [
+    "行政處",
+    "經濟暨綠能發展處",
+    "農業處",
+    "水利資源處",
+    "教育處",
+    "環境保護局",
+    "交通處",
+    "城市暨觀光發展處",
+    "社會處",
+    "民政處",
+    "建設處",
+    "消防局",
+    "工務處",
+    "勞工處",
+    "衛生局"
+  ],
+  "integrations": {
+    "google_sheet_webhook_url": "",
+    "google_sheet_id": "10Z_wgmfqv4h4rk4oKDsP-V4jSS9XmO6PGAy_jrpTU7Q",
+    "google_sheet_worksheet": "工作表1"
+  },
+  "optimized_parameters": {
+    "high_risk_keywords": [
+      "新建",
+      "拓寬",
+      "改建",
+      "活動中心",
+      "宿舍",
+      "住宅"
+    ],
+    "adaptation_keywords": [
+      "排水",
+      "抽水",
+      "水利",
+      "滯洪",
+      "清疏",
+      "護岸",
+      "防洪",
+      "災修"
+    ],
+    "manual_override_hints": "排水維護、災害復建工程強烈建議進入評估"
+  },
+  "green_spending_category": [
+    "綠色工法：低碳營造技術或預鑄工法",
+    "綠色材料：再生材料、低碳水泥、低碳鋼鐵",
+    "綠色能源：太陽光電、儲能系統、建築能效(BERS)提升",
+    "綠色環境：自然碳匯、植樹造林、濕地保護"
+  ],
+  "weighting_parameters": {
+    "impact_factor": {
+      "enabled_by": "low_carbon_procurement",
+      "default": 1.0,
+      "boost": 1.15
+    },
+    "social_resilience_factor": {
+      "default": 1.0,
+      "per_vulnerable_group": 0.05,
+      "max": 1.2
+    },
+    "high_budget_forced_review_threshold": 50000000
+  },
+  "anti_patterns": [
+    {
+      "id": 1,
+      "name": "道路改善誤判調適",
+      "trigger_keywords": [
+        "道路",
+        "路面"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "排水",
+        "滯洪",
+        "防洪",
+        "透水",
+        "熱島",
+        "農業",
+        "灌溉",
+        "設施"
+      ],
+      "warning_text": "⚠ 若本案僅為路面改善，未涉及排水設計或氣候韌性工項，通常不列為調適預算。請確認是否包含氣候相關設計。",
+      "default_purity": "P3_PARTIAL",
+      "note": "道路工程最常見的誤判情境，需確認是否有防洪/透水/熱島等氣候設計",
+      "severity": "caution",
+      "action_type": "suggest_review",
+      "require_context_keywords": [
+        "改善"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "排水工程非氣候設計",
+      "trigger_keywords": [
+        "排水",
+        "側溝",
+        "清淤"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "提升",
+        "強化",
+        "改善容量",
+        "滯洪",
+        "防洪",
+        "韌性"
+      ],
+      "warning_text": "⚠ 一般維護性排水未必屬氣候調適。請確認是否為因應極端降雨之排水能力提升設計，而非例行清淤維護。",
+      "default_purity": "P3_PARTIAL",
+      "note": "需區分「維護型排水」與「氣候韌性提升型排水」",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 3,
+      "name": "公園綠美化誤判",
+      "trigger_keywords": [
+        "公園",
+        "綠美化",
+        "景觀",
+        "植栽"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "降溫",
+        "碳匯",
+        "生態",
+        "NBS",
+        "透水",
+        "調適"
+      ],
+      "warning_text": "⚠ 單純景觀植栽或綠美化，未必具備氣候效益。若包含降溫設計、碳匯功能或生態調適工項，才建議納入氣候預算。",
+      "default_purity": "P4_LOW",
+      "note": "景觀工程誤判比例高，需確認是否有明確的氣候設計目的",
+      "severity": "caution",
+      "action_type": "remind"
+    },
+    {
+      "id": 4,
+      "name": "校舍整修誤判節能",
+      "trigger_keywords": [
+        "整修",
+        "改建",
+        "補強"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "節能",
+        "LED",
+        "能效",
+        "BERS",
+        "光電",
+        "太陽能"
+      ],
+      "warning_text": "⚠ 一般建物整修不一定具減碳效益。請確認是否包含節能設備更新或建築能效提升措施。",
+      "default_purity": "P4_LOW",
+      "note": "結構補強/室內整修與節能改善是兩件事，需分開評估",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 5,
+      "name": "光電工程全額誤列",
+      "trigger_keywords": [
+        "太陽能",
+        "光電"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [],
+      "warning_text": "⚠ 光電工程可能包含結構補強、基礎工程等非發電相關費用。建議區分「能源設備費」與「其他工程費」後，再計算氣候預算金額。",
+      "default_purity": "P1_HIGH_PURITY",
+      "note": "光電設備本身為高純度，但整案預算常含非氣候工程費用，需拆分",
+      "severity": "warning",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 6,
+      "name": "農業設施誤判調適",
+      "trigger_keywords": [
+        "農業",
+        "灌溉",
+        "設施改善"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "抗旱",
+        "耐熱",
+        "調適",
+        "韌性",
+        "農塘",
+        "間歇灌溉"
+      ],
+      "warning_text": "⚠ 農業設施改善不一定屬於氣候調適。請確認是否與氣候風險因應（如抗旱、極端降雨）直接相關。",
+      "default_purity": "P3_PARTIAL",
+      "note": "生產效率提升 vs 氣候韌性提升，需判斷主要目的",
+      "severity": "caution",
+      "action_type": "remind"
+    },
+    {
+      "id": 7,
+      "name": "水環境複合工程未拆分",
+      "trigger_keywords": [
+        "水環境",
+        "河川整治"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [],
+      "warning_text": "⚠ 本類案件常同時包含景觀、生態、防洪等多種功能。建議拆分具氣候效益之工項比例，而非整案列入氣候預算。",
+      "default_purity": "P3_PARTIAL",
+      "note": "複合型工程一定要拆分計算，避免非氣候部分被誤列",
+      "severity": "warning",
+      "action_type": "require_review"
+    },
+    {
+      "id": 8,
+      "name": "監測系統漏辨識",
+      "trigger_keywords": [
+        "監測",
+        "系統"
+      ],
+      "require_all_triggers": true,
+      "require_any_context": [
+        "氣象",
+        "水位",
+        "溫度",
+        "淹水",
+        "預警",
+        "氣候"
+      ],
+      "exclude_keywords": [],
+      "warning_text": "💡 若本案為氣候監測或預警系統，可能屬於調適措施（風險管理與預警）。請評估是否適合納入氣候預算。",
+      "default_purity": "P2_HIGH_RELEVANCE",
+      "note": "監測系統有可能是氣候調適的重要投資，但容易被系統漏辨識",
+      "severity": "info",
+      "action_type": "remind"
+    },
+    {
+      "id": 9,
+      "name": "交通建設誤判減碳",
+      "trigger_keywords": [
+        "新建",
+        "拓寬"
+      ],
+      "require_all_triggers": false,
+      "require_any_context": [
+        "道路",
+        "橋梁",
+        "交通"
+      ],
+      "exclude_keywords": [
+        "電動",
+        "公共運輸",
+        "低碳",
+        "自行車",
+        "人行"
+      ],
+      "warning_text": "⚠ 一般道路/橋梁新建或拓寬，不一定具備減碳效益。請確認是否包含低碳運輸或運具轉型措施。",
+      "default_purity": "P4_LOW",
+      "note": "新增道路基礎設施可能反而增加車流，需有明確的低碳設計才列入",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 10,
+      "name": "高溫勞安調適漏辨識",
+      "trigger_keywords": [
+        "工程",
+        "施工"
+      ],
+      "require_all_triggers": true,
+      "exclude_keywords": [
+        "勞安",
+        "工安",
+        "高溫",
+        "熱危害",
+        "遮蔭"
+      ],
+      "warning_text": "💡 本案若涉及戶外施工，可評估是否納入高溫作業防護措施（遮蔭設施、補充飲水、彈性工時調整）。此類措施屬於氣候健康調適，可列為管理型效益。",
+      "default_purity": "P5_MANAGEMENT",
+      "note": "觸發機制說明：此規則為 case-name 層級判斷（在 anti_pattern_check() 中實作）。當標案名稱包含「工程」或「施工」，但不含「勞安/工安/高溫/熱危害/遮蔭」時觸發。不依賴 keyword_triggers 或 item anti_pattern_ref，因為「工程/施工」過於泛用不適合列入觸發詞。Layer3 調適關鍵字中的勞安/熱危害等詞，若出現在標案名稱中，代表使用者已有意識，此規則則不觸發。",
+      "severity": "info",
+      "action_type": "remind"
     }
-
-
-def get_department_options():
-    """Get department list from config."""
-    configured_departments = CONFIG.get("departments", [])
-    return configured_departments if isinstance(configured_departments, list) else []
-
-
-def is_sheet_sync_ready():
-    """Return whether either webhook sync or direct Sheets API sync is available."""
-    if get_google_sheet_webhook_url():
-        return True
-
-    has_service_account = bool(st.secrets.get("gcp_service_account"))
-    has_sheet_id = bool(get_google_sheet_target().get("spreadsheet_id"))
-    return has_service_account and has_sheet_id
-
-
-def get_google_sheet_client():
-    """Create Google Sheets client from Streamlit secrets service account."""
-    service_account_info = st.secrets.get("gcp_service_account")
-    if not service_account_info:
-        return None, "尚未設定 gcp_service_account（service account 金鑰）"
-
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
-
-    try:
-        service_account_dict = dict(service_account_info)
-    except Exception as e:
-        return None, f"gcp_service_account 格式錯誤：{e}"
-
-    try:
-        creds = Credentials.from_service_account_info(
-            service_account_dict,
-            scopes=scopes,
-        )
-        return gspread.authorize(creds), ""
-    except Exception as e:
-        return None, f"service account 驗證失敗：{e}"
-
-
-def sync_to_google_sheet_direct(payload):
-    """Append assessment payload directly to Google Sheets by service account."""
-    client, err = get_google_sheet_client()
-    if err:
-        return False, err
-
-    target = get_google_sheet_target()
-    spreadsheet_id = target.get("spreadsheet_id")
-    worksheet_name = target.get("worksheet_name") or "工作表1"
-    if not spreadsheet_id:
-        return False, "尚未設定 google_sheet_id"
-
-    try:
-        spreadsheet = client.open_by_key(spreadsheet_id)
-        worksheet = spreadsheet.worksheet(worksheet_name)
-    except gspread.WorksheetNotFound:
-        worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=30)
-    except Exception as e:
-        return False, f"無法連線試算表：{e}"
-
-    metadata = payload.get("project_metadata", {})
-    assessment = payload.get("climate_assessment", {})
-    row_dict = {
-        "填報日期": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "案件編號": metadata.get("uid", ""),
-        "標案名稱": metadata.get("name", ""),
-        "主辦局處": metadata.get("dept", ""),
-        "決標金額": metadata.get("total_budget", 0),
-        "氣候預算": payload.get("climate_budget_total", 0),
-        "判讀主類別": assessment.get("category", ""),
-        "判讀子類別": assessment.get("sub_category", ""),
-        "風險等級": assessment.get("alert_level", ""),
+  ],
+  "department_presets": {
+    "水利資源處": {
+      "default_categories": [
+        "B"
+      ],
+      "secondary_categories": [
+        "D",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "water_flood",
+      "dept_hint": "水利資源處常見案件以防洪排水、污水下水道為主，系統已預先引導至B類工項",
+      "common_anti_pattern_ids": [
+        2,
+        7
+      ],
+      "category_priority_order": [
+        "B",
+        "D",
+        "F"
+      ],
+      "default_hint_mode": "adaptation"
+    },
+    "工務處": {
+      "default_categories": [
+        "A"
+      ],
+      "secondary_categories": [
+        "B",
+        "C"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "工務處案件以新建/改建/道路橋梁為主，請特別留意隱含碳檢核工項",
+      "common_anti_pattern_ids": [
+        1,
+        4,
+        9
+      ],
+      "category_priority_order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "建設處": {
+      "default_categories": [
+        "A"
+      ],
+      "secondary_categories": [
+        "C",
+        "E"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "建設處案件以建築新建/修繕為主，請留意建築能效與低碳材料工項",
+      "common_anti_pattern_ids": [
+        4,
+        5
+      ],
+      "category_priority_order": [
+        "A",
+        "C",
+        "E"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "農業處": {
+      "default_categories": [
+        "D"
+      ],
+      "secondary_categories": [
+        "B",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "農業處案件包含公園綠化、農村水保、NBS生態工法，請確認是否具備氣候效益",
+      "common_anti_pattern_ids": [
+        3,
+        6
+      ],
+      "category_priority_order": [
+        "D",
+        "B",
+        "F"
+      ],
+      "default_hint_mode": "adaptation"
+    },
+    "教育處": {
+      "default_categories": [
+        "E",
+        "G"
+      ],
+      "secondary_categories": [
+        "A",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "教育處案件常見節能設備汰換與場館整修，另可留意避暑/防災據點之社會韌性效益",
+      "common_anti_pattern_ids": [
+        4
+      ],
+      "category_priority_order": [
+        "E",
+        "G",
+        "A"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "社會處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "E",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "社會處案件請特別留意脆弱族群避暑防災據點（G1）及高溫健康調適（G3）工項",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F",
+        "E"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "交通處": {
+      "default_categories": [
+        "C"
+      ],
+      "secondary_categories": [
+        "A",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "交通處案件以綠色運輸為主，請確認是否為低碳運具或智慧運輸，避免一般道路工程誤列",
+      "common_anti_pattern_ids": [
+        1,
+        9
+      ],
+      "category_priority_order": [
+        "C",
+        "A",
+        "F"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "環境保護局": {
+      "default_categories": [
+        "F"
+      ],
+      "secondary_categories": [
+        "D",
+        "G"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "環保局案件以評估規劃、監測系統為主，請留意氣候監測系統的調適價值",
+      "common_anti_pattern_ids": [
+        8
+      ],
+      "category_priority_order": [
+        "F",
+        "D",
+        "G"
+      ],
+      "default_hint_mode": "monitoring"
+    },
+    "勞工處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "勞工處案件請特別留意高溫作業防護措施，此屬氣候健康調適的管理型效益",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "衛生局": {
+      "default_categories": [
+        "G",
+        "F"
+      ],
+      "secondary_categories": [],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "衛生局案件請留意極端高溫健康風險評估及脆弱族群保護措施",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "城市暨觀光發展處": {
+      "default_categories": [
+        "D",
+        "E"
+      ],
+      "secondary_categories": [
+        "A",
+        "C"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "城觀處案件包含景觀、場館、觀光設施，請確認景觀工程是否具備降溫或生態效益",
+      "common_anti_pattern_ids": [
+        3
+      ],
+      "category_priority_order": [
+        "D",
+        "E",
+        "A"
+      ],
+      "default_hint_mode": "general"
+    },
+    "消防局": {
+      "default_categories": [
+        "G",
+        "F"
+      ],
+      "secondary_categories": [
+        "A"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "消防局案件請留意防災據點與韌性評估之調適價值",
+      "common_anti_pattern_ids": [],
+      "category_priority_order": [
+        "G",
+        "F",
+        "A"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "民政處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "民政處案件請留意社區防災據點與脆弱族群服務的氣候調適效益",
+      "common_anti_pattern_ids": [],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "行政處": {
+      "default_categories": [
+        "E",
+        "F"
+      ],
+      "secondary_categories": [],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "行政處案件以設備汰換與規劃為主，請留意節能設備更新工項",
+      "common_anti_pattern_ids": [
+        4
+      ],
+      "category_priority_order": [
+        "E",
+        "F"
+      ],
+      "default_hint_mode": "general"
+    },
+    "經濟暨綠能發展處": {
+      "default_categories": [
+        "E",
+        "F"
+      ],
+      "secondary_categories": [
+        "C",
+        "D"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "綠能發展處案件以能源設施與評估規劃為主，請留意光電工程的費用拆分",
+      "common_anti_pattern_ids": [
+        5
+      ],
+      "category_priority_order": [
+        "E",
+        "F",
+        "C"
+      ],
+      "default_hint_mode": "general"
     }
-
-    expected_headers = list(DEFAULT_SYNC_HEADERS)
-    expected_set = set(expected_headers)
-
-    try:
-        first_row_values = [str(h).strip() for h in worksheet.row_values(1) if str(h).strip()]
-    except Exception:
-        first_row_values = []
-
-    has_header_overlap = len(set(first_row_values) & expected_set) >= 2
-    if has_header_overlap:
-        headers = first_row_values
-    else:
-        headers = expected_headers
-        try:
-            if first_row_values:
-                worksheet.insert_row(headers, index=1, value_input_option="USER_ENTERED")
-            else:
-                worksheet.update("A1", [headers])
-        except Exception as e:
-            return False, f"初始化試算表表頭失敗：{e}"
-
-    row = [row_dict.get(col, "") for col in headers]
-    if len(row) != len(headers):
-        return False, "資料欄位長度與試算表表頭不一致"
-
-    try:
-        worksheet.append_row(row, value_input_option="USER_ENTERED")
-    except Exception as e:
-        return False, f"寫入試算表失敗：{e}"
-
-    return True, f"已直接寫入試算表 {spreadsheet_id} / {worksheet_name}"
-
-
-@st.cache_data(ttl=600)
-def load_registered_cases():
-    """Load pre-registered case list from public Google Sheet."""
-    csv_url = (
-        f"https://docs.google.com/spreadsheets/d/{PRESET_SHEET_ID}/"
-        f"export?format=csv&gid={PRESET_SHEET_GID}"
-    )
-
-    req = request.Request(
-        csv_url,
-        headers={
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "text/csv,text/plain,*/*",
+  },
+  "adaptation_keyword_layers": {
+    "layer1_water_flood": {
+      "label": "水利防洪",
+      "description": "排水設施、防洪工程、水資源管理相關，最直接的調適類別",
+      "keywords": [
+        {
+          "term": "排水",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
         },
-    )
-    try:
-        with request.urlopen(req, timeout=10) as resp:
-            body = resp.read().decode("utf-8-sig", errors="ignore")
-    except Exception as e:
-        return pd.DataFrame(), f"無法讀取雲端試算表：{e}"
-
-    try:
-        df = pd.read_csv(io.StringIO(body)).fillna("")
-    except Exception as e:
-        return pd.DataFrame(), f"雲端試算表格式讀取失敗：{e}"
-
-    if df.empty:
-        return pd.DataFrame(), "雲端試算表沒有可用資料。"
-
-    def pick_col(candidates):
-        for col in df.columns:
-            col_name = str(col).strip()
-            if any(key in col_name for key in candidates):
-                return col
-        return None
-
-    agency_col = pick_col(["機關"])
-    unit_col = pick_col(["單位"])
-    case_col = pick_col(["標案", "計畫名稱", "標的名稱"])
-    budget_col = pick_col(["決標金額", "預算金額", "金額"])
-
-    if not agency_col or not unit_col or not case_col:
-        return pd.DataFrame(), "試算表缺少必要欄位（機關名稱、單位名稱、標案名稱）。"
-
-    renamed = df.rename(
-        columns={
-            agency_col: "機關名稱",
-            unit_col: "單位名稱",
-            case_col: "標案名稱",
+        {
+          "term": "抽水",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "水利",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "滯洪",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "清疏",
+          "weight": 0.8,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "護岸",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "防洪",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "災修",
+          "weight": 0.7,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "出流管制",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "農塘",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "透水鋪面",
+          "weight": 1.0,
+          "suggested_category": "A",
+          "suggested_sub": "A2"
         }
-    )
-    if budget_col:
-        renamed = renamed.rename(columns={budget_col: "決標金額"})
-    else:
-        renamed["決標金額"] = ""
-
-    cleaned = renamed[["機關名稱", "單位名稱", "標案名稱", "決標金額"]].copy()
-    for col in ["機關名稱", "單位名稱", "標案名稱"]:
-        cleaned[col] = cleaned[col].astype(str).str.strip()
-    cleaned = cleaned[(cleaned["機關名稱"] != "") & (cleaned["單位名稱"] != "") & (cleaned["標案名稱"] != "")]
-    cleaned = cleaned.drop_duplicates(subset=["機關名稱", "單位名稱", "標案名稱"], keep="first")
-
-    if cleaned.empty:
-        return pd.DataFrame(), "試算表中沒有可用案件資料。"
-
-    return cleaned.reset_index(drop=True), ""
-
-
-def parse_budget_from_sheet(raw_value):
-    """Safely parse budget value from sheet cell."""
-    if raw_value is None or (isinstance(raw_value, float) and pd.isna(raw_value)):
-        return 0
-
-    if isinstance(raw_value, (int, float)):
-        try:
-            return max(int(float(raw_value)), 0)
-        except (TypeError, ValueError):
-            return 0
-
-    raw_text = str(raw_value).strip().replace(",", "")
-    if not raw_text:
-        return 0
-
-    try:
-        return max(int(float(raw_text)), 0)
-    except ValueError:
-        return 0
-
-
-def sync_to_google_sheet(payload):
-    """Send assessment payload to Google Sheet webhook."""
-    webhook_url = get_google_sheet_webhook_url()
-    if not webhook_url:
-        return sync_to_google_sheet_direct(payload)
-
-    sync_payload = dict(payload)
-    sync_payload["google_sheet_target"] = get_google_sheet_target()
-
-    req = request.Request(
-        webhook_url,
-        data=json.dumps(sync_payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json; charset=utf-8"},
-        method="POST",
-    )
-
-    try:
-        with request.urlopen(req, timeout=10) as resp:
-            status_code = resp.getcode()
-            body = resp.read().decode("utf-8", errors="ignore")
-            if 200 <= status_code < 300:
-                return True, body or "同步成功"
-            return False, f"同步失敗（HTTP {status_code}）：{body}"
-    except error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="ignore")
-        return False, f"同步失敗（HTTP {e.code}）：{body}"
-    except error.URLError as e:
-        return False, f"同步失敗（連線錯誤）：{e.reason}"
-
-# ── Session state init ────────────────────────────────────────────────────────
-
-def init_state():
-    defaults = {
-        "step": 0,
-        "case_name": "",
-        "dept": "",
-        "agency_name": "",
-        "unit_name": "",
-        "dept_other": "",
-        "budget": 0,
-        "use_manual_case_input": False,
-        "manual_override": False,
-        "kw_matches": [],
-        "selected_category": None,
-        "selected_sub": None,
-        "selected_items": [],
-        "item_budgets": [],
-        "engineering_guideline_type": "",
-        "green_spending_category": [],
-        "qualitative_factors": [],
-        "sync_done": False,
-        "sync_message": "",
-        "sync_signature": "",
-        "negative_filter_override": False,
+      ]
+    },
+    "layer2_ecology_cooling": {
+      "label": "降溫與生態",
+      "description": "都市降溫、自然解方（NBS）、生態工法、植栽碳匯，Phase 1B 新增",
+      "keywords": [
+        {
+          "term": "高溫",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3"
+        },
+        {
+          "term": "遮蔭",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3"
+        },
+        {
+          "term": "熱島",
+          "weight": 0.8,
+          "suggested_category": "A",
+          "suggested_sub": "A2"
+        },
+        {
+          "term": "NBS",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "生態工法",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "砌石",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "石籠",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "木排樁",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "野溪",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "都市降溫",
+          "weight": 0.8,
+          "suggested_category": "D",
+          "suggested_sub": "D2"
+        },
+        {
+          "term": "降溫綠廊",
+          "weight": 0.9,
+          "suggested_category": "D",
+          "suggested_sub": "D1"
+        },
+        {
+          "term": "海綿城市",
+          "weight": 0.8,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "透水",
+          "weight": 0.8,
+          "suggested_category": "A",
+          "suggested_sub": "A1"
+        }
+      ]
+    },
+    "layer3_social_resilience": {
+      "label": "社會韌性與健康調適",
+      "description": "脆弱族群防護、高溫健康風險、社區防災、勞工安全，Phase 1B 新增，完全空白補入",
+      "keywords": [
+        {
+          "term": "勞安",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "工安",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "熱危害",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "熱中暑",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "高溫作業",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "防暑",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
+          ]
+        },
+        {
+          "term": "避暑",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "防災據點",
+          "weight": 1.0,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "避難",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "關懷據點",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "脆弱族群",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "社區韌性",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G2",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "氣候健康",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": []
+        }
+      ]
     }
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
-
-init_state()
-
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-
-with st.sidebar:
-    st.markdown("## 🌿 氣候預算系統")
-    st.markdown("---")
-    st.markdown("**系統說明**")
-    st.markdown("""
-此工具協助彰化縣各局處承辦人，透過直覺式流程判定計畫與氣候預算的關聯性。
-
-**評估流程：**
-1. 帶入計畫基本資訊
-2. 系統自動偵測關鍵字
-3. 選擇工程類別
-4. 勾選氣候相關工項
-5. 填寫各工項預算
-6. 匯出評估報告
-    """)
-    st.markdown("---")
-    st.markdown("**預算警示門檻**")
-    st.markdown("""
-- 🟢 300萬–1000萬：氣候預算潛力：基層守護
-- 🟡 1000萬–2000萬：氣候預算潛力：效能升級
-- 🔴 2000萬–1億：氣候預算潛力：部門轉型
-- 🟣 1億以上：氣候預算潛力：城市重塑
-    """)
-    st.markdown("---")
-    if st.button("🔄 重新開始", use_container_width=True):
-        for k in list(st.session_state.keys()):
-            del st.session_state[k]
-        st.rerun()
-
-# ── Header ────────────────────────────────────────────────────────────────────
-
-st.markdown("""
-<div class="main-header">
-    <h1>🌿 彰化縣氣候預算導引式判讀系統</h1>
-    <p>Changhua County · Climate Budget Assessment Tool · v1.0</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Step bar
-steps = ["① 計畫資訊", "② 類別選擇", "③ 工項勾選", "④ 預算拆解", "⑤ 確認匯出"]
-step_html = '<div class="step-bar">'
-for i, s in enumerate(steps):
-    cls = "active" if i == st.session_state.step else ("done" if i < st.session_state.step else "step-item")
-    if i < st.session_state.step:
-        cls = "step-item done"
-    elif i == st.session_state.step:
-        cls = "step-item active"
-    else:
-        cls = "step-item"
-    step_html += f'<div class="{cls}">{s}</div>'
-step_html += "</div>"
-st.markdown(step_html, unsafe_allow_html=True)
-
-# Breadcrumb
-bc_parts = ["彰化縣氣候預算系統"]
-if st.session_state.case_name:
-    bc_parts.append(st.session_state.case_name[:20] + ("…" if len(st.session_state.case_name) > 20 else ""))
-if st.session_state.selected_category:
-    cat = get_taxonomy_by_id(st.session_state.selected_category)
-    if cat:
-        bc_parts.append(cat["label"][:15])
-if st.session_state.selected_sub:
-    cat = get_taxonomy_by_id(st.session_state.selected_category)
-    if cat:
-        sub = get_sub_by_id(cat, st.session_state.selected_sub)
-        if sub:
-            bc_parts.append(sub["label"][:15])
-st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', unsafe_allow_html=True)
-
-# ═══════════════════════════════════════════════════════════════════
-# STEP 0 — 計畫基本資訊
-# ═══════════════════════════════════════════════════════════════════
-
-if st.session_state.step == 0:
-    st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊(依<a href="https://docs.google.com/spreadsheets/d/1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" style="color: #1a237e; text-decoration: underline;">預載清單</a>)</div>', unsafe_allow_html=True)
-
-    case_df, case_error = load_registered_cases()
-    use_manual_case_input = st.checkbox(
-        "自行輸入計畫資訊",
-        value=st.session_state.use_manual_case_input,
-        help="如非屬預載計畫，勾選後可改為手動填寫標案名稱、主辦局處與決標金額。"
-    )
-
-    if st.session_state.use_manual_case_input != use_manual_case_input:
-        st.session_state.use_manual_case_input = use_manual_case_input
-
-    case_df = pd.DataFrame()
-    case_error = ""
-    if not use_manual_case_input:
-        case_df, case_error = load_registered_cases()
-
-    col1, col2 = st.columns([3, 2])
-
-    with col1:
-        auto_selected = None
-        agency = "（請選擇）"
-        unit = "（請選擇）"
-        case_name = st.session_state.case_name
-        dept_other = st.session_state.dept_other
-
-        if not use_manual_case_input:
-            if case_error:
-                st.warning(f"⚠️ {case_error}，請改用下方手動輸入。")
-                use_manual_case_input = True
-                st.session_state.use_manual_case_input = True
-            else:
-                agency_options = ["（請選擇）"] + sorted(case_df["機關名稱"].unique().tolist())
-                default_agency = st.session_state.agency_name if st.session_state.agency_name in agency_options else "（請選擇）"
-                agency = st.selectbox(
-                    "🏛️ 機關名稱",
-                    options=agency_options,
-                    index=agency_options.index(default_agency),
-                )
-
-                unit_pool = case_df[case_df["機關名稱"] == agency] if agency != "（請選擇）" else pd.DataFrame()
-                unit_options = ["（請選擇）"] + sorted(unit_pool["單位名稱"].unique().tolist()) if not unit_pool.empty else ["（請選擇）"]
-                default_unit = st.session_state.unit_name if st.session_state.unit_name in unit_options else "（請選擇）"
-                unit = st.selectbox(
-                    "🏢 單位名稱",
-                    options=unit_options,
-                    index=unit_options.index(default_unit),
-                    disabled=agency == "（請選擇）",
-                )
-
-                case_pool = unit_pool[unit_pool["單位名稱"] == unit] if unit != "（請選擇）" else pd.DataFrame()
-                case_options = ["（請選擇）"] + sorted(case_pool["標案名稱"].unique().tolist()) if not case_pool.empty else ["（請選擇）"]
-                selected_case = case_name if case_name in case_options else "（請選擇）"
-                selected_case = st.selectbox(
-                    "📌 標案名稱",
-                    options=case_options,
-                    index=case_options.index(selected_case),
-                    disabled=unit == "（請選擇）",
-                )
-
-                if selected_case != "（請選擇）":
-                    selected_rows = case_pool[case_pool["標案名稱"] == selected_case]
-                    if not selected_rows.empty:
-                        auto_selected = selected_rows.iloc[0]
-                        case_name = str(auto_selected["標案名稱"]).strip()
-                        st.session_state.case_name = case_name
-                        st.session_state.agency_name = str(auto_selected["機關名稱"]).strip()
-                        st.session_state.unit_name = str(auto_selected["單位名稱"]).strip()
-                        st.session_state.dept = st.session_state.unit_name
-                else:
-                    case_name = ""
-                    st.session_state.case_name = ""
-                    st.session_state.budget = 0
-                    st.session_state.dept = ""
-
-        if use_manual_case_input:
-            case_name = st.text_input(
-                "📌 標案名稱",
-                value=st.session_state.case_name,
-                placeholder="例：彰化縣○○公園綠美化工程",
-                help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
-            )
-
-            departments = get_department_options()
-            dept_options = ["（請選擇）"] + departments + ["其他"]
-            dept_index = 0
-            if st.session_state.dept in departments:
-                dept_index = dept_options.index(st.session_state.dept)
-            elif st.session_state.dept and st.session_state.dept not in ("（請選擇）", ""):
-                dept_index = dept_options.index("其他")
-
-            dept = st.selectbox(
-                "🏛️ 主辦局處",
-                options=dept_options,
-                index=dept_index
-            )
-
-            dept_other = ""
-            if dept == "其他":
-                dept_other = st.text_input(
-                    "請填寫主辦局處名稱",
-                    value=st.session_state.dept_other,
-                    placeholder="例：文化局"
-                ).strip()
-
-            budget_input = st.text_input(
-                "💰 決標金額（元）",
-                value=str(int(st.session_state.budget)) if st.session_state.budget else "",
-                placeholder="例：15000000",
-                help="請輸入決標金額（純數字，不含逗號）"
-            )
-        else:
-            selected_dept = unit if unit != "（請選擇）" else "（請選擇）"
-            if auto_selected is not None:
-                st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
-            st.text_input("📌 標案名稱", value=case_name, disabled=True)
-            st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
-            budget_input = st.text_input(
-                "💰 決標金額（元）",
-                value=str(int(st.session_state.budget)) if st.session_state.budget else "",
-                disabled=True,
-                help="此欄位由雲端試算表自動帶入"
-            )
-            dept = selected_dept
-
-    with col2:
-        # Keyword detection live preview
-        kw_matches = detect_keywords(case_name)
-        if case_name and kw_matches:
-            st.markdown("**🔍 偵測到的氣候關鍵字**")
-            kw_html = '<div class="kw-suggestion">'
-            kw_html += "<b>💡 系統自動辨識到以下關鍵字，建議對應工項：</b><br>"
-            for kw in kw_matches[:6]:
-                note_text = f'（{kw.get("note", "")}）' if kw.get("note") else ""
-                kw_html += f'<span class="kw-tag">#{kw["keyword"]}</span> → {kw["suggested_item"]}{note_text} <code style="background:#eee;padding:1px 4px;border-radius:3px;font-size:0.7rem;">{kw["code"]}</code><br>'
-            kw_html += "</div>"
-            st.markdown(kw_html, unsafe_allow_html=True)
-        elif case_name:
-            st.info("📋 未偵測到特定氣候關鍵字，請繼續手動選擇工項類別。")
-
-        optimized = CONFIG.get("optimized_parameters", {})
-        high_risk_hits = detect_text_keywords(case_name, optimized.get("high_risk_keywords", []))
-        adaptation_hits = detect_text_keywords(case_name, optimized.get("adaptation_keywords", []))
-
-        if high_risk_hits:
-            st.markdown(
-                f'<div class="alert-red">⚠️ 偵測到高隱含碳關鍵字：{"、".join(high_risk_hits)}。'
-                '建議於後續步驟完整檢核低碳建材、能效與工程碳排。</div>',
-                unsafe_allow_html=True
-            )
-        if adaptation_hits:
-            st.markdown(
-                f'<div class="alert-green">💧 偵測到氣候調適關鍵字：{"、".join(adaptation_hits)}。'
-                '系統將優先引導至水利/防洪/韌性相關工項。</div>',
-                unsafe_allow_html=True
-            )
-
-        # Budget display
-        try:
-            budget_val = int(budget_input.replace(",", "").replace(" ", "")) if budget_input else 0
-        except:
-            budget_val = 0
-
-        if budget_val > 0:
-            alert = get_alert_level(budget_val)
-            st.markdown(f"""
-            <div class="budget-display">
-                <div class="label">決標金額</div>
-                <div class="amount">{fmt_twd(budget_val)}</div>
-                <div style="margin-top:0.5rem; font-size:0.85rem; opacity:0.9">{alert['badge']} {alert['label']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    # Budget validation alerts
-    if budget_val > 0:
-        if budget_val >= PARAMS["extreme_alert_threshold"]:
-            st.markdown(f'<div class="alert-purple">⛔ {UI["extreme_alert_warning"]}</div>', unsafe_allow_html=True)
-        elif budget_val >= PARAMS["high_alert_threshold"]:
-            st.markdown(f'<div class="alert-red">{UI["high_alert_warning"]}</div>', unsafe_allow_html=True)
-        elif budget_val >= PARAMS["medium_alert_threshold"]:
-            st.markdown(f'<div class="alert-yellow">{UI["medium_alert_warning"]}</div>', unsafe_allow_html=True)
-        elif budget_val >= PARAMS["min_threshold"]:
-            st.markdown(f'<div class="alert-green">{UI["threshold_pass_warning"]}</div>', unsafe_allow_html=True)
-
-    # Below threshold
-    below_threshold = budget_val > 0 and budget_val < PARAMS["min_threshold"]
-    if below_threshold:
-        st.markdown(f'<div class="alert-yellow">⚠️ {UI["exclusion_warning"]}</div>', unsafe_allow_html=True)
-        optimized = CONFIG.get("optimized_parameters", {})
-        low_budget_hits = detect_text_keywords(case_name, optimized.get("adaptation_keywords", []))
-        if low_budget_hits:
-            hint_text = UI.get("manual_override_hint_text", optimized.get("manual_override_hints", ""))
-            st.markdown(f'<div class="alert-green">📝 {hint_text}</div>', unsafe_allow_html=True)
-        manual_override = st.checkbox(UI["manual_override_label"], value=st.session_state.manual_override)
-    else:
-        manual_override = False
-
-    # Exclusion guidelines
-    with st.expander("📋 以下樣態計畫建議不需納入評估（點擊展開）"):
-        for guideline in UI["exclusion_guidelines"]:
-            st.markdown(f"• {guideline}")
-
-    # Proceed button
-    selected_dept = dept_other if dept == "其他" else dept
-
-    forced_review_threshold = CONFIG.get("weighting_parameters", {}).get(
-        "high_budget_forced_review_threshold", 50000000
-    )
-    high_budget_forced_review = (
-        budget_val >= forced_review_threshold and case_name and not kw_matches
-    )
-    exclusion_hits = detect_text_keywords(case_name, KWDICT.get("exclusion_keywords", []))
-
-    if high_budget_forced_review:
-        st.markdown(
-            f'<div class="alert-purple">🧭 本案金額超過{forced_review_threshold:,}元且未命中關鍵字，依防漂綠規則仍需強制進入下一步檢核。</div>',
-            unsafe_allow_html=True
-        )
-
-    if exclusion_hits:
-        st.markdown(
-            f'<div class="alert-red">⛔ 偵測到排除關鍵字：{"、".join(exclusion_hits)}。本案可能屬一般行政庶務，除非具備特定氣候政策目標，否則建議不納入評估。</div>',
-            unsafe_allow_html=True
-        )
-        st.session_state.negative_filter_override = st.checkbox(
-            "本案具備明確氣候政策目標，仍要進入下一步檢核",
-            value=st.session_state.negative_filter_override
-        )
-    else:
-        st.session_state.negative_filter_override = False
-
-    can_proceed = (
-        case_name.strip()
-        and selected_dept not in ("（請選擇）", "")
-        and budget_val > 0
-        and (budget_val >= PARAMS["min_threshold"] or manual_override)
-        and (not exclusion_hits or st.session_state.negative_filter_override)
-    )
-
-    if st.button("下一步：選擇計畫及工項類別 →", disabled=not can_proceed, type="primary", use_container_width=True):
-        st.session_state.case_name = case_name
-        st.session_state.dept = selected_dept
-        st.session_state.dept_other = dept_other
-        st.session_state.budget = budget_val
-        st.session_state.manual_override = manual_override
-        st.session_state.kw_matches = kw_matches
-        st.session_state.negative_filter_override = st.session_state.negative_filter_override
-        st.session_state.step = 1
-        st.rerun()
-
-    if not can_proceed and (case_name or budget_val):
-        missing = []
-        if not case_name.strip(): missing.append("標案名稱")
-        if selected_dept in ("（請選擇）", ""):
-            missing.append("主辦局處")
-        if not budget_val: missing.append("決標金額")
-        if below_threshold and not manual_override: missing.append("確認繼續評估")
-        if exclusion_hits and not st.session_state.negative_filter_override: missing.append("負向排除覆核")
-        if missing:
-            st.caption(f"⚠️ 尚需填寫：{'、'.join(missing)}")
-
-# ═══════════════════════════════════════════════════════════════════
-# STEP 1 — 工程類別選擇
-# ═══════════════════════════════════════════════════════════════════
-
-elif st.session_state.step == 1:
-    st.markdown('<div class="section-title">步驟二：選擇計畫類別（建議先選最接近者，後續可再補充）</div>', unsafe_allow_html=True)
-
-    # Show keyword suggestions
-    if st.session_state.kw_matches:
-        suggested_cats = list({kw["category_id"] for kw in st.session_state.kw_matches})
-        kw_names = [kw["keyword"] for kw in st.session_state.kw_matches]
-        st.markdown(f'<div class="kw-suggestion">💡 根據標案名稱中的關鍵字（{"、".join(kw_names[:5])}），系統建議優先檢視以下高亮類別 ↓</div>', unsafe_allow_html=True)
-    else:
-        suggested_cats = []
-
-    # Category cards — 2 columns
-    taxonomy = LOGIC["taxonomy"]
-    col1, col2 = st.columns(2)
-
-    for i, cat in enumerate(taxonomy):
-        is_suggested = cat["id"] in suggested_cats
-        is_selected = st.session_state.selected_category == cat["id"]
-
-        with (col1 if i % 2 == 0 else col2):
-            badge = "⭐ 建議類別 · " if is_suggested else ""
-            selected_mark = "✅ " if is_selected else ""
-            button_key = f"cat_{cat['id']}"
-            inject_button_style(button_key, is_selected=is_selected, is_suggested=is_suggested)
-
-            if st.button(
-                f"{selected_mark}{cat['icon']} {cat['label']}\n{badge}（{cat['description'][:20]}…）",
-                key=button_key,
-                use_container_width=True,
-                type="secondary"
-            ):
-                st.session_state.selected_category = cat["id"]
-                st.session_state.selected_sub = None
-                st.session_state.selected_items = []
-                if cat["id"] != "A":
-                    st.session_state.engineering_guideline_type = ""
-                st.rerun()
-
-    # Sub-category selection
-    if st.session_state.selected_category:
-        st.markdown("---")
-        cat = get_taxonomy_by_id(st.session_state.selected_category)
-        st.markdown(f'<div class="section-title">選擇細項分類 — {cat["icon"]} {cat["label"]}</div>', unsafe_allow_html=True)
-
-        suggested_subs = list({kw["sub_id"] for kw in st.session_state.kw_matches
-                               if kw.get("category_id") == st.session_state.selected_category})
-
-        subcol1, subcol2 = st.columns(2)
-        for j, sub in enumerate(cat.get("sub_categories", [])):
-            is_sub_suggested = sub["id"] in suggested_subs
-            is_sub_selected = st.session_state.selected_sub == sub["id"]
-            with (subcol1 if j % 2 == 0 else subcol2):
-                badge = "⭐ " if is_sub_suggested else ""
-                selected_mark = "✅ " if is_sub_selected else ""
-                button_key = f"sub_{sub['id']}"
-                inject_button_style(button_key, is_selected=is_sub_selected, is_suggested=is_sub_suggested)
-                if st.button(
-                    f"{selected_mark}{badge}{sub['label']}\n📌 {sub['examples'][:30]}",
-                    key=button_key,
-                    use_container_width=True,
-                    type="secondary"
-                ):
-                    st.session_state.selected_sub = sub["id"]
-                    st.session_state.selected_items = []
-                    st.rerun()
-
-    col_back, col_next = st.columns([1, 3])
-    with col_back:
-        if st.button("← 返回", use_container_width=True):
-            st.session_state.step = 0
-            st.rerun()
-    with col_next:
-        can_next = bool(st.session_state.selected_category)
-        if st.button("下一步：勾選氣候工項 →", disabled=not can_next, type="primary", use_container_width=True):
-            st.session_state.step = 2
-            st.rerun()
-
-# ═══════════════════════════════════════════════════════════════════
-# STEP 2 — 工項勾選
-# ═══════════════════════════════════════════════════════════════════
-
-elif st.session_state.step == 2:
-    st.markdown('<div class="section-title">步驟三：勾選氣候相關工項</div>', unsafe_allow_html=True)
-
-    cat = get_taxonomy_by_id(st.session_state.selected_category)
-    sub = get_sub_by_id(cat, st.session_state.selected_sub) if st.session_state.selected_sub else None
-
-    if sub:
-        st.markdown(f"**{cat['icon']} {cat['label']}  ›  {sub['label']}**")
-        st.caption(f"📌 {sub['examples']}")
-        item_sources = [sub]
-    else:
-        st.markdown(f"**{cat['icon']} {cat['label']}（全部細項工項）**")
-        st.caption("📌 已展開該計畫類別下所有細項，請複選適用工項。")
-        item_sources = cat.get("sub_categories", [])
-
-    # Suggested items from keywords
-    suggested_items_labels = {kw["suggested_item"] for kw in st.session_state.kw_matches}
-
-    st.markdown("**請勾選本案中包含的氣候相關工項（可複選）：**")
-
-    selected_items = list(st.session_state.selected_items)
-    rendered = set()
-    for src in item_sources:
-        if not sub:
-            st.markdown(f"**• {src['label']}**")
-        for item in src["items"]:
-            if item["label"] in rendered:
-                continue
-            rendered.add(item["label"])
-            is_suggested = item["label"] in suggested_items_labels or any(
-                kw["suggested_item"] == item["label"] for kw in st.session_state.kw_matches
-            )
-            is_checked = item["label"] in selected_items
-
-            col_chk, col_info = st.columns([1, 8])
-            with col_chk:
-                checked = st.checkbox("", value=is_checked, key=f"item_{item['label']}")
-            with col_info:
-                star = "⭐ " if is_suggested else ""
-                codes_html = " ".join([f'<span class="code-badge">{c}</span>' for c in item.get("mitigation_codes", []) + item.get("adaptation_codes", [])])
-                alert_html = f'<span style="color:#e74c3c;font-size:0.78rem;"> ⚠️ {item["alert"]}</span>' if item.get("alert") else ""
-                st.markdown(
-                    f'{star}**{item["label"]}** {codes_html}{alert_html}<br>'
-                    f'<span style="font-size:0.78rem;color:#666;">📋 {item["policy"]}</span>',
-                    unsafe_allow_html=True
-                )
-
-            if checked and item["label"] not in selected_items:
-                selected_items.append(item["label"])
-            elif not checked and item["label"] in selected_items:
-                selected_items.remove(item["label"])
-
-    st.session_state.selected_items = selected_items
-
-    if not selected_items:
-        st.caption("本步驟可先略過，下一步可直接進行預算檢視與補充。")
-
-    col_back, col_next = st.columns([1, 3])
-    with col_back:
-        if st.button("← 返回", use_container_width=True):
-            st.session_state.step = 1
-            st.rerun()
-    with col_next:
-        if st.button("下一步：填寫工項預算 →", type="primary", use_container_width=True):
-            # Init item_budgets
-            existing = {ib["label"]: ib for ib in st.session_state.item_budgets}
-            st.session_state.item_budgets = [
-                existing.get(label, {"label": label, "ratio": None, "amount": 0})
-                for label in selected_items
-            ]
-            st.session_state.step = 3
-            st.rerun()
-
-# ═══════════════════════════════════════════════════════════════════
-# STEP 3 — 預算拆解
-# ═══════════════════════════════════════════════════════════════════
-
-elif st.session_state.step == 3:
-    st.markdown('<div class="section-title">步驟四：填寫各工項氣候預算</div>', unsafe_allow_html=True)
-
-    total_budget = st.session_state.budget
-    item_budgets = st.session_state.item_budgets
-
-    # Running total
-    total_allocated = sum(ib.get("amount", 0) or 0 for ib in item_budgets)
-    remaining = total_budget - total_allocated
-    over_budget = total_allocated > total_budget
-
-    # Sticky budget monitor
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(f"""
-        <div class="budget-display">
-            <div class="label">標案總預算</div>
-            <div class="amount" style="font-size:1.4rem">{fmt_twd(total_budget)}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"""
-        <div class="budget-display" style="background:linear-gradient(135deg,#1a6090,#2980b9)">
-            <div class="label">已分配氣候預算</div>
-            <div class="amount" style="font-size:1.4rem">{fmt_twd(total_allocated)}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c3:
-        cls = "budget-over" if over_budget else "budget-remaining"
-        st.markdown(f"""
-        <div class="{cls}">
-            <div class="label">{"⚠️ 超出預算！" if over_budget else "✅ 剩餘可用預算"}</div>
-            <div class="amount" style="font-size:1.4rem">{fmt_twd(abs(remaining))}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    if over_budget:
-        st.error("🚫 各工項金額加總已超出標案總預算，請調整後再繼續。")
-
-    st.markdown("---")
-    st.markdown("**請為每個氣候工項填寫參考金額（元）：**")
-    if not item_budgets:
-        st.info("目前尚未勾選工項，可直接前往下一步完成填報。")
-
-    updated_items = []
-    for idx, ib in enumerate(item_budgets):
-        label = ib["label"]
-        st.markdown(f"**{idx+1}. {label}**")
-
-        col_amt, col_calc = st.columns([3, 2])
-
-        with col_amt:
-            saved_amount = int(ib.get("amount", 0) or 0)
-            clamped_amount = min(max(saved_amount, 0), total_budget)
-            amount = st.number_input(
-                "工項參考金額（元）",
-                min_value=0,
-                max_value=total_budget,
-                value=clamped_amount,
-                step=100000,
-                key=f"amt_{idx}"
-            )
-
-        with col_calc:
-            pct_of_total = amount / total_budget * 100 if total_budget else 0
-            st.metric("佔總預算", f"{pct_of_total:.1f}%", delta=fmt_twd(amount))
-
-        updated_items.append({
-            "label": label,
-            "ratio": round(pct_of_total, 1),
-            "amount": int(amount)
-        })
-
-        st.markdown("<hr style='margin:0.5rem 0; border-color:#e8f0e8'>", unsafe_allow_html=True)
-
-    st.session_state.item_budgets = updated_items
-
-    # Recalculate for button state
-    total_allocated = sum(ib.get("amount", 0) or 0 for ib in updated_items)
-    over_budget = total_allocated > total_budget
-    all_set = all(ib.get("amount", 0) > 0 for ib in updated_items)
-
-    col_back, col_next = st.columns([1, 3])
-    with col_back:
-        if st.button("← 返回", use_container_width=True):
-            st.session_state.step = 2
-            st.rerun()
-    with col_next:
-        can_next = all_set and not over_budget
-        if st.button("下一步：確認並匯出報告 →", disabled=not can_next, type="primary", use_container_width=True):
-            st.session_state.step = 4
-            st.rerun()
-        if not can_next:
-            if over_budget:
-                st.caption("🚫 工項金額加總超出總預算，請調整。")
-            elif not all_set:
-                st.caption("⚠️ 請為所有工項設定預算金額。")
-
-# ═══════════════════════════════════════════════════════════════════
-# STEP 4 — 確認與匯出
-# ═══════════════════════════════════════════════════════════════════
-
-elif st.session_state.step == 4:
-    st.markdown('<div class="section-title">步驟五：確認評估結果並匯出</div>', unsafe_allow_html=True)
-
-    state = st.session_state
-    alert = get_alert_level(state.budget)
-    cat = get_taxonomy_by_id(state.selected_category)
-    sub = get_sub_by_id(cat, state.selected_sub) if cat else None
-
-    climate_total = sum(ib.get("amount", 0) for ib in state.item_budgets)
-    climate_ratio = climate_total / state.budget * 100 if state.budget else 0
-
-    # Summary display
-    col_info, col_chart = st.columns([3, 2])
-
-    with col_info:
-        st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.markdown(f"""
-**📌 標案名稱：** {state.case_name}
-
-**🏛️ 主辦局處：** {state.dept}
-
-**💰 計畫總經費：** {fmt_twd(state.budget)}
-
-**{alert['badge']} 風險等級：** {alert['label']} — {alert['desc']}
-        """)
-
-        if cat and sub:
-            st.markdown(f"""
-**{cat['icon']} 標案類別：** {cat['label']}
-
-**📂 細項分類：** {sub['label']}
-            """)
-
-        st.markdown("**✅ 氣候相關工項：**")
-        for ib in state.item_budgets:
-            pct = ib['amount'] / state.budget * 100 if state.budget else 0
-            st.markdown(f"- {ib['label']}：{fmt_twd(ib['amount'])} （{pct:.1f}%）")
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col_chart:
-        st.markdown(f"""
-        <div class="budget-display" style="margin-bottom:0.5rem">
-            <div class="label">氣候變遷相關經費</div>
-            <div class="amount">{fmt_twd(climate_total)}</div>
-            <div style="font-size:0.9rem;opacity:0.85;margin-top:0.3rem">氣候預算占比 {climate_ratio:.1f}%</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Alert box
-        level = alert["level"]
-        if level == "extreme":
-            st.markdown(f'<div class="alert-purple"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-        elif level == "red":
-            st.markdown(f'<div class="alert-red"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-        elif level == "yellow":
-            st.markdown(f'<div class="alert-yellow"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="alert-green"><b>{alert["label"]}</b><br>{alert["desc"]}</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown('<div class="section-title">🧩 政策對接補充欄位</div>', unsafe_allow_html=True)
-
-    st.session_state.green_spending_category = st.multiselect(
-        "綠色預算支出分類（可複選）",
-        options=CONFIG.get("green_spending_category", []),
-        default=st.session_state.green_spending_category,
-        help="對接中央綠色經費四大面向"
-    )
-
-    qualitative_options = UI.get("qualitative_factors", [])
-    st.session_state.qualitative_factors = st.multiselect(
-        "氣候政策加分因子（可複選）",
-        options=qualitative_options,
-        default=st.session_state.qualitative_factors,
-        help="補充難以工程量化但可強化氣候效益的執行方案因子"
-    )
-
-    # Export section
-    st.markdown("---")
-    st.markdown('<div class="section-title">📤 匯出評估報告</div>', unsafe_allow_html=True)
-
-    export_payload = {
-        "case_name": state.case_name,
-        "dept": state.dept,
-        "budget": state.budget,
-        "manual_override": state.manual_override,
-        "selected_category": state.selected_category,
-        "selected_sub": state.selected_sub,
-        "item_budgets": state.item_budgets,
-        "engineering_guideline_type": state.engineering_guideline_type,
-        "green_spending_category": state.green_spending_category,
-        "qualitative_factors": state.qualitative_factors,
+  },
+  "purity_codes": {
+    "P1_HIGH_PURITY": {
+      "label": "高純度氣候工項",
+      "desc": "主要目的即為氣候行動，效益直接且明確",
+      "color": "#1a6b3c"
+    },
+    "P2_HIGH_RELEVANCE": {
+      "label": "高相關性氣候工項",
+      "desc": "氣候效益為主要組成之一，具直接關聯",
+      "color": "#2b7ab5"
+    },
+    "P3_PARTIAL": {
+      "label": "部分相關氣候工項",
+      "desc": "僅部分工項具氣候效益，其餘屬常規支出",
+      "color": "#b5762b"
+    },
+    "P4_LOW": {
+      "label": "低度相關氣候工項",
+      "desc": "間接或附帶效益，主要功能非氣候行動",
+      "color": "#888888"
+    },
+    "P5_MANAGEMENT": {
+      "label": "管理型效益",
+      "desc": "施工管理或行政層次，不列入預算金額，僅於摘要呈現",
+      "color": "#6b3b8b"
     }
-    export_data = generate_export_json(export_payload)
-
-    # Use stable user-input payload for sync gating (exclude volatile uid/timestamp)
-    export_signature = hashlib.md5(
-        json.dumps(export_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    if st.session_state.sync_signature != export_signature:
-        st.session_state.sync_done = False
-        st.session_state.sync_message = ""
-        st.session_state.sync_signature = export_signature
-
-    sheet_target = get_google_sheet_target()
-    st.markdown("**步驟 1：先同步到預設 Google 試算表**")
-    if sheet_target.get("spreadsheet_id"):
-        st.caption(
-            f"預設同步目標：`{sheet_target['spreadsheet_id']}` / 分頁 `{sheet_target['worksheet_name']}`"
-        )
-    webhook_ready = is_sheet_sync_ready()
-    if not webhook_ready:
-        st.warning("⚠️ 尚未完成 Google 試算表同步設定（需 webhook 或 gcp_service_account + google_sheet_id），目前僅可下載本地報告。")
-        st.session_state.sync_done = True
-    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready):
-        ok, msg = sync_to_google_sheet(export_data)
-        st.session_state.sync_done = ok
-        st.session_state.sync_message = msg
-
-    if st.session_state.sync_message:
-        if st.session_state.sync_done:
-            st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
-        else:
-            st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
-
-    st.markdown("**步驟 2：同步成功後可下載報告**")
-
-    json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
-
-    rows = []
-    for ib in state.item_budgets:
-        rows.append({
-            "評估日期": datetime.now().strftime("%Y-%m-%d"),
-            "標案名稱": state.case_name,
-            "主辦局處": state.dept,
-            "決標金額": state.budget,
-            "風險等級": alert["label"],
-            "氣候工項": ib["label"],
-            "工項金額": ib["amount"],
-            "工項比例(%)": round(ib["amount"] / state.budget * 100, 1) if state.budget else 0,
-            "氣候預算合計": climate_total,
-            "氣候預算比例(%)": round(climate_ratio, 1),
-        })
-
-    csv_df = pd.DataFrame(rows)
-    csv_bytes = csv_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-
-    col_j, col_c = st.columns(2)
-
-    with col_j:
-        st.markdown("**📄 JSON 格式（供系統串接）**")
-        st.download_button(
-            label="⬇️ 下載 JSON 報告",
-            data=json_str.encode("utf-8"),
-            file_name=f"climate_budget_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
-            mime="application/json",
-            use_container_width=True,
-            disabled=not st.session_state.sync_done,
-        )
-        with st.expander("預覽 JSON 內容"):
-            st.code(json_str, language="json")
-
-    with col_c:
-        st.markdown("**📊 CSV 格式（供 Excel 分析）**")
-        st.download_button(
-            label="⬇️ 下載 CSV 報告",
-            data=csv_bytes,
-            file_name=f"climate_budget_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=not st.session_state.sync_done,
-        )
-        with st.expander("預覽 CSV 內容"):
-            st.dataframe(csv_df, use_container_width=True)
-    st.markdown("---")
-    col_b, col_r = st.columns([1, 3])
-    with col_b:
-        if st.button("← 返回修改", use_container_width=True):
-            st.session_state.step = 3
-            st.rerun()
-    with col_r:
-        if st.button("🔄 評估新案件", use_container_width=True, type="primary"):
-            for k in list(st.session_state.keys()):
-                del st.session_state[k]
-            st.rerun()
-
-# ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.markdown(
-    '<p style="text-align:center;color:#888;font-size:0.78rem;">'
-    '彰化縣氣候預算導引式判讀系統 v1.0 · 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引'
-    '</p>',
-    unsafe_allow_html=True
-)
+  },
+  "weight_definitions": {
+    "1.0": "高專屬低歧義：關鍵字幾乎只對應單一氣候工項，命中即強觸發",
+    "0.8": "中專屬：關鍵字多數情境與氣候相關，但偶有例外",
+    "0.7": "中歧義：關鍵字有氣候涵義但也常出現在非氣候情境，保守觸發",
+    "0.6": "弱提示：廣泛工程用語，需搭配其他訊號才有意義",
+    "0.4": "教育型提示：主要為引導思考，不做強推薦"
+  },
+  "manifest": {
+    "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
+    "config_version": "1.2.3",
+    "data_version": "1.0.0",
+    "keyword_dictionary_version": "1.0.6",
+    "logic_mapping_version": "1.0.0",
+    "last_synced_at": "2026-03-31T17:57:14+08:00",
+    "checksums": {
+      "keyword_dictionary": "c4653cda7feb411caeb26d2f41556bc4",
+      "logic_mapping": "836c7ba5adbfa0a3f293c1251a5937fe"
+    },
+    "checksum_algorithm": "md5_json_normalized",
+    "checksum_updated_at": "2026-03-31T17:57:14+08:00"
+  },
+  "keyword_strategy": {
+    "match_types": {
+      "strong_trigger": "可直接導向具體工項之高專屬關鍵字",
+      "concept_trigger": "僅表示氣候相關概念，需後續導引確認"
+    },
+    "weight_definitions": {
+      "1.0": "高專屬強觸發詞",
+      "0.7": "中度提示詞",
+      "0.4-0.5": "高概括背景詞"
+    },
+    "concept_layer_keywords": [
+      "低碳",
+      "永續",
+      "溫室氣體",
+      "氣候變遷",
+      "調適",
+      "韌性"
+    ]
+  }
+}

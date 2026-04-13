@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 
 import streamlit as st
+from packaging.requirements import InvalidRequirement
+from packaging.requirements import Requirement
 
 st.set_page_config(page_title="Climate Budget App Health Check", layout="wide")
 st.title("彰化縣氣候預算系統｜啟動檢查頁")
@@ -27,8 +29,6 @@ def inspect_app_py(path: Path) -> tuple[bool, str]:
         return False, "`app.py` 不存在"
 
     src = path.read_text(encoding="utf-8", errors="ignore")
-    if "false" in src and "False" not in src:
-        return False, "偵測到 JSON 布林值 `false`，可能被當成 Python 執行而失敗"
 
     try:
         compile(src, str(path), "exec")
@@ -46,9 +46,14 @@ def inspect_requirements(path: Path) -> tuple[bool, str]:
     if not lines:
         return False, "`requirements.txt` 為空"
 
-    bad_markers = ['"""', "import ", "def ", "class ", "with open("]
-    if any(any(marker in line for marker in bad_markers) for line in lines[:12]):
-        return False, "內容看起來像 Python 程式，不是 pip 套件清單"
+    for idx, line in enumerate(lines, start=1):
+        if line.startswith(("-", "--")):
+            # pip options (e.g. -r constraints.txt, --extra-index-url ...)
+            continue
+        try:
+            Requirement(line)
+        except InvalidRequirement as exc:
+            return False, f"第 {idx} 行不是合法需求格式：{line}（{exc}）"
 
     return True, f"看起來是有效套件清單（共 {len(lines)} 行）"
 

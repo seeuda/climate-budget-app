@@ -2699,6 +2699,25 @@ elif st.session_state.step == 1:
     else:
         suggested_cats = []
 
+    def refine_quick_guide_cats(
+        raw_cats: list[str],
+        keyword_cats: list[str],
+        selected_cats: list[str],
+        max_count: int = 3,
+    ) -> list[str]:
+        """縮減快速導引建議，並優先推薦尚未勾選的類別。"""
+        deduped = list(dict.fromkeys(raw_cats))
+        if len(deduped) <= max_count:
+            ordered = deduped
+        else:
+            prioritized = [cat for cat in deduped if cat in keyword_cats]
+            tail = [cat for cat in deduped if cat not in prioritized]
+            ordered = (prioritized + tail)[:max_count]
+
+        unselected = [cat for cat in ordered if cat not in selected_cats]
+        already_selected = [cat for cat in ordered if cat in selected_cats]
+        return unselected + already_selected
+
     # ── 快速入口：「我不知道選哪個？」────────────────────────────────
     # 用案件語言翻譯到分類語言；點選後高亮建議類別，不自動勾選
     QUICK_GUIDE_ENTRIES = [
@@ -2753,6 +2772,7 @@ elif st.session_state.step == 1:
             "cats": ["D"],
         },
     ]
+    QUICK_GUIDE_ENTRY_MAP = {entry["key"]: entry for entry in QUICK_GUIDE_ENTRIES}
 
     # 初始化 quick_guide 的 hint session state
     if "quick_guide_hint" not in st.session_state:
@@ -2761,8 +2781,17 @@ elif st.session_state.step == 1:
         st.session_state.quick_guide_cats = []
     if "quick_guide_selected_key" not in st.session_state:
         st.session_state.quick_guide_selected_key = ""
+    if "quick_guide_expanded" not in st.session_state:
+        st.session_state.quick_guide_expanded = False
+    selected_quick_guide_entry = QUICK_GUIDE_ENTRY_MAP.get(st.session_state.quick_guide_selected_key)
+    if selected_quick_guide_entry:
+        st.session_state.quick_guide_cats = refine_quick_guide_cats(
+            selected_quick_guide_entry["cats"],
+            suggested_cats,
+            st.session_state.selected_categories,
+        )
 
-    with st.expander("❓ 不確定選哪個類別？點此快速導引", expanded=False):
+    with st.expander("❓ 不確定選哪個類別？點此快速導引", expanded=st.session_state.quick_guide_expanded):
         st.caption("選擇最接近您案件型態的描述，系統會在下方高亮建議類別。")
         qg_col1, qg_col2 = st.columns(2)
         for qi, entry in enumerate(QUICK_GUIDE_ENTRIES):
@@ -2776,9 +2805,13 @@ elif st.session_state.step == 1:
                     type="primary" if is_active_quick_guide else "secondary"
                 ):
                     st.session_state.quick_guide_hint = entry["hint"]
-                    st.session_state.quick_guide_cats = entry["cats"]
+                    st.session_state.quick_guide_cats = refine_quick_guide_cats(
+                        entry["cats"],
+                        suggested_cats,
+                        st.session_state.selected_categories,
+                    )
                     st.session_state.quick_guide_selected_key = entry["key"]
-                    st.rerun()
+                    st.session_state.quick_guide_expanded = True
         if st.session_state.quick_guide_hint:
             st.markdown(
                 f'<div style="background:#fff8e1;border-left:4px solid #f9a825;'
@@ -2794,7 +2827,7 @@ elif st.session_state.step == 1:
                 st.session_state.quick_guide_hint = ""
                 st.session_state.quick_guide_cats = []
                 st.session_state.quick_guide_selected_key = ""
-                st.rerun()
+                st.session_state.quick_guide_expanded = True
     # ── 快速入口結束 ──────────────────────────────────────────────
 
     # Category cards — 2 columns
@@ -2802,12 +2835,20 @@ elif st.session_state.step == 1:
     taxonomy_label_map = {cat["id"]: cat["label"] for cat in taxonomy}
     # 快速導引建議類別（由上方 expander 設定）
     quick_guide_cats = st.session_state.get("quick_guide_cats", [])
+    selected_quick_guide_entry = QUICK_GUIDE_ENTRY_MAP.get(st.session_state.get("quick_guide_selected_key", ""))
+    original_quick_guide_cats = selected_quick_guide_entry["cats"] if selected_quick_guide_entry else []
     if quick_guide_cats:
+        remaining_quick_guide_cats = [cat for cat in quick_guide_cats if cat not in st.session_state.selected_categories]
         readable_quick_guide_cats = "、".join([
             f"{taxonomy_label_map.get(cat_id, cat_id)}（{cat_id}）"
-            for cat_id in quick_guide_cats
+            for cat_id in remaining_quick_guide_cats
         ])
-        st.caption(f"📌 快速導引目前建議您優先勾選：{readable_quick_guide_cats}。")
+        if readable_quick_guide_cats:
+            st.caption(f"📌 快速導引目前建議您優先勾選：{readable_quick_guide_cats}。")
+        else:
+            st.caption("✅ 快速導引建議類別您都已勾選，可直接往下選細項。")
+        if len(original_quick_guide_cats) > len(quick_guide_cats):
+            st.caption("ℹ️ 為避免建議過度發散，系統已依關鍵字脈絡將快速導引收斂為最多 3 類。")
     col1, col2 = st.columns(2)
 
     for i, cat in enumerate(taxonomy):

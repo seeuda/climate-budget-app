@@ -2761,8 +2761,10 @@ elif st.session_state.step == 1:
         st.session_state.quick_guide_cats = []
     if "quick_guide_selected_key" not in st.session_state:
         st.session_state.quick_guide_selected_key = ""
+    if "quick_guide_expanded" not in st.session_state:
+        st.session_state.quick_guide_expanded = False
 
-    with st.expander("❓ 不確定選哪個類別？點此快速導引", expanded=False):
+    with st.expander("❓ 不確定選哪個類別？點此快速導引", expanded=st.session_state.quick_guide_expanded):
         st.caption("選擇最接近您案件型態的描述，系統會在下方高亮建議類別。")
         qg_col1, qg_col2 = st.columns(2)
         for qi, entry in enumerate(QUICK_GUIDE_ENTRIES):
@@ -2778,7 +2780,7 @@ elif st.session_state.step == 1:
                     st.session_state.quick_guide_hint = entry["hint"]
                     st.session_state.quick_guide_cats = entry["cats"]
                     st.session_state.quick_guide_selected_key = entry["key"]
-                    st.rerun()
+                    st.session_state.quick_guide_expanded = True
         if st.session_state.quick_guide_hint:
             st.markdown(
                 f'<div style="background:#fff8e1;border-left:4px solid #f9a825;'
@@ -2794,7 +2796,7 @@ elif st.session_state.step == 1:
                 st.session_state.quick_guide_hint = ""
                 st.session_state.quick_guide_cats = []
                 st.session_state.quick_guide_selected_key = ""
-                st.rerun()
+                st.session_state.quick_guide_expanded = True
     # ── 快速入口結束 ──────────────────────────────────────────────
 
     # Category cards — 2 columns

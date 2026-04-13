@@ -2718,6 +2718,21 @@ elif st.session_state.step == 1:
         already_selected = [cat for cat in ordered if cat in selected_cats]
         return unselected + already_selected
 
+    def refine_quick_guide_subs(
+        raw_subs: list[str],
+        selected_cats: list[str],
+        selected_subs: list[str],
+    ) -> list[str]:
+        """快速導引細項收斂：僅保留已選類別底下的細項，且優先顯示尚未勾選者。"""
+        deduped = list(dict.fromkeys(raw_subs))
+        cat_filtered = [
+            sub_id for sub_id in deduped
+            if any(sub_id.startswith(f"{cid}") for cid in selected_cats)
+        ]
+        unselected = [sub_id for sub_id in cat_filtered if sub_id not in selected_subs]
+        already_selected = [sub_id for sub_id in cat_filtered if sub_id in selected_subs]
+        return unselected + already_selected
+
     # ── 快速入口：「我不知道選哪個？」────────────────────────────────
     # 用案件語言翻譯到分類語言；點選後高亮建議類別，不自動勾選
     QUICK_GUIDE_ENTRIES = [
@@ -2727,42 +2742,49 @@ elif st.session_state.step == 1:
             "hint": "氣候變遷宣導、淨零教育活動、推廣課程等，通常屬於「公正轉型與社會韌性」類別（G），"
                     "若同時含顧問規劃成分也可加選「評估／規劃類」（F）。",
             "cats": ["G", "F"],
+            "subs": ["G2", "G3", "F1"],
         },
         {
             "key": "qg_training",
             "label": "📚 課程培訓、研習、社區能力建構",
             "hint": "氣候調適研習、社區大學推廣、規劃師培力等，屬於「公正轉型與社會韌性」類別（G）中的「基層氣候能力建構」細項。",
             "cats": ["G"],
+            "subs": ["G2"],
         },
         {
             "key": "qg_research",
             "label": "📊 委託研究、規劃設計、可行性評估、顧問",
             "hint": "氣候調適計畫、淨零路徑研究、碳盤查、政策評估等，屬於「評估／規劃／顧問類」（F）。",
             "cats": ["F"],
+            "subs": ["F1", "F3"],
         },
         {
             "key": "qg_system",
             "label": "💻 系統建置、監測平台、資料庫",
             "hint": "環境監測系統、智慧水表、空品感測、資料庫建置等，屬於「評估／規劃類」（F）中的「智慧城市與環境監測系統」或「科學監測與政策研究」細項。",
             "cats": ["F"],
+            "subs": ["F2", "F3"],
         },
         {
             "key": "qg_operation",
             "label": "🏢 委外營運、場館維運、公共設施管理",
             "hint": "場館委外、系統維運、公設管理服務等，屬於「評估／規劃類」（F）中的「委託營運管理與維運服務」細項。",
             "cats": ["F"],
+            "subs": ["F4"],
         },
         {
             "key": "qg_community",
             "label": "🏘️ 社區補助、農村培力、弱勢族群服務",
             "hint": "補助村里防熱島、農村小型防洪、社區韌性改善、身障中心改善等，屬於「公正轉型與社會韌性」（G）類別。",
             "cats": ["G"],
+            "subs": ["G3", "G1"],
         },
         {
             "key": "qg_subsidy",
             "label": "💰 補助計畫（補助民眾、社區、業者）",
             "hint": "依補助用途判斷：節能改善補助 → E；低碳運具補助 → C；建物改善補助 → A；農村生態補助 → D；社區韌性補助 → G。請搭配實際補助項目選擇對應類別。",
             "cats": ["E", "C", "A", "D", "G"],
+            "subs": ["G3"],
         },
         {
             "key": "qg_landscape",
@@ -2770,6 +2792,7 @@ elif st.session_state.step == 1:
             "hint": "若工程具備降溫（透水鋪面、遮蔭）、植栽固碳、生態復育等明確氣候目標，屬於「公園／綠美化／生態環境」（D）類別。"
                     "若純屬外觀美化而無上述目標，建議不需納入評估。",
             "cats": ["D"],
+            "subs": ["D1", "D2"],
         },
     ]
     QUICK_GUIDE_ENTRY_MAP = {entry["key"]: entry for entry in QUICK_GUIDE_ENTRIES}
@@ -2779,6 +2802,8 @@ elif st.session_state.step == 1:
         st.session_state.quick_guide_hint = ""
     if "quick_guide_cats" not in st.session_state:
         st.session_state.quick_guide_cats = []
+    if "quick_guide_subs" not in st.session_state:
+        st.session_state.quick_guide_subs = []
     if "quick_guide_selected_key" not in st.session_state:
         st.session_state.quick_guide_selected_key = ""
     if "quick_guide_expanded" not in st.session_state:
@@ -2789,6 +2814,11 @@ elif st.session_state.step == 1:
             selected_quick_guide_entry["cats"],
             suggested_cats,
             st.session_state.selected_categories,
+        )
+        st.session_state.quick_guide_subs = refine_quick_guide_subs(
+            selected_quick_guide_entry.get("subs", []),
+            st.session_state.selected_categories,
+            st.session_state.selected_sub_categories,
         )
 
     with st.expander("❓ 不確定選哪個類別？點此快速導引", expanded=st.session_state.quick_guide_expanded):
@@ -2810,6 +2840,11 @@ elif st.session_state.step == 1:
                         suggested_cats,
                         st.session_state.selected_categories,
                     )
+                    st.session_state.quick_guide_subs = refine_quick_guide_subs(
+                        entry.get("subs", []),
+                        st.session_state.selected_categories,
+                        st.session_state.selected_sub_categories,
+                    )
                     st.session_state.quick_guide_selected_key = entry["key"]
                     st.session_state.quick_guide_expanded = True
         if st.session_state.quick_guide_hint:
@@ -2826,6 +2861,7 @@ elif st.session_state.step == 1:
             if st.button("✖ 清除導引提示", key="qg_clear", use_container_width=False):
                 st.session_state.quick_guide_hint = ""
                 st.session_state.quick_guide_cats = []
+                st.session_state.quick_guide_subs = []
                 st.session_state.quick_guide_selected_key = ""
                 st.session_state.quick_guide_expanded = True
     # ── 快速入口結束 ──────────────────────────────────────────────
@@ -2905,6 +2941,15 @@ elif st.session_state.step == 1:
         })
 
         available_sub_entries = get_available_sub_entries(st.session_state.selected_categories)
+        quick_guide_subs = set(st.session_state.get("quick_guide_subs", []))
+        if quick_guide_subs:
+            sub_name_map = {entry["sub"]["id"]: entry["sub"]["label"] for entry in available_sub_entries}
+            readable_quick_guide_subs = "、".join(
+                sub_name_map[sub_id] for sub_id in st.session_state.get("quick_guide_subs", [])
+                if sub_id in sub_name_map and sub_id not in st.session_state.selected_sub_categories
+            )
+            if readable_quick_guide_subs:
+                st.caption(f"📌 快速導引建議可優先勾選細項：{readable_quick_guide_subs}。")
 
         # ── 依計畫類別分組渲染細項 + 各類末尾「不確定適合項目」逃生出口 ──
         # 先將 available_sub_entries 按類別分組
@@ -2916,7 +2961,14 @@ elif st.session_state.step == 1:
 
         for cid, group in cat_sub_groups.items():
             grp_cat = group["category"]
-            grp_subs = group["subs"]
+            grp_subs = sorted(
+                group["subs"],
+                key=lambda sub: (
+                    0 if sub["id"] in quick_guide_subs else 1,
+                    0 if sub["id"] in suggested_subs else 1,
+                    sub["label"],
+                )
+            )
             none_id = f"{cid}_NONE"
 
             # 該類別目前已選的細項（不含 _NONE）
@@ -2941,11 +2993,17 @@ elif st.session_state.step == 1:
             for j, sub in enumerate(all_items):
                 is_sub_suggested = sub["id"] in suggested_subs
                 is_sub_selected  = sub["id"] in st.session_state.selected_sub_categories
+                is_sub_quick_guide = sub["id"] in quick_guide_subs
                 # 若本類別已選「_NONE」，其他細項強制顯示為不可選（disabled 透過樣式模擬）
                 force_disabled = none_selected
 
                 with (subcol1 if j % 2 == 0 else subcol2):
-                    badge        = "⭐ " if is_sub_suggested else ""
+                    badge_parts = []
+                    if is_sub_suggested:
+                        badge_parts.append("⭐")
+                    if is_sub_quick_guide:
+                        badge_parts.append("📌")
+                    badge = (" ".join(badge_parts) + " ") if badge_parts else ""
                     selected_mark = "✅ " if is_sub_selected else ""
                     button_key   = f"sub_{sub['id']}"
                     inject_button_style(
@@ -2966,6 +3024,11 @@ elif st.session_state.step == 1:
                         else:
                             updated_sub.append(sub["id"])
                         st.session_state.selected_sub_categories = updated_sub
+                        st.session_state.quick_guide_subs = refine_quick_guide_subs(
+                            st.session_state.get("quick_guide_subs", []),
+                            st.session_state.selected_categories,
+                            updated_sub,
+                        )
                         st.rerun()
 
             # ── 逃生出口按鈕（各類別末尾，整列單獨一行）──

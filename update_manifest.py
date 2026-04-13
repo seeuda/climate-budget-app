@@ -2759,15 +2759,25 @@ elif st.session_state.step == 1:
         st.session_state.quick_guide_hint = ""
     if "quick_guide_cats" not in st.session_state:
         st.session_state.quick_guide_cats = []
+    if "quick_guide_selected_key" not in st.session_state:
+        st.session_state.quick_guide_selected_key = ""
 
     with st.expander("❓ 不確定選哪個類別？點此快速導引", expanded=False):
         st.caption("選擇最接近您案件型態的描述，系統會在下方高亮建議類別。")
         qg_col1, qg_col2 = st.columns(2)
         for qi, entry in enumerate(QUICK_GUIDE_ENTRIES):
             with (qg_col1 if qi % 2 == 0 else qg_col2):
-                if st.button(entry["label"], key=entry["key"], use_container_width=True):
+                is_active_quick_guide = st.session_state.quick_guide_selected_key == entry["key"]
+                quick_guide_label = f"✅ {entry['label']}" if is_active_quick_guide else entry["label"]
+                if st.button(
+                    quick_guide_label,
+                    key=entry["key"],
+                    use_container_width=True,
+                    type="primary" if is_active_quick_guide else "secondary"
+                ):
                     st.session_state.quick_guide_hint = entry["hint"]
                     st.session_state.quick_guide_cats = entry["cats"]
+                    st.session_state.quick_guide_selected_key = entry["key"]
                     st.rerun()
         if st.session_state.quick_guide_hint:
             st.markdown(
@@ -2783,13 +2793,21 @@ elif st.session_state.step == 1:
             if st.button("✖ 清除導引提示", key="qg_clear", use_container_width=False):
                 st.session_state.quick_guide_hint = ""
                 st.session_state.quick_guide_cats = []
+                st.session_state.quick_guide_selected_key = ""
                 st.rerun()
     # ── 快速入口結束 ──────────────────────────────────────────────
 
     # Category cards — 2 columns
     taxonomy = LOGIC["taxonomy"]
+    taxonomy_label_map = {cat["id"]: cat["label"] for cat in taxonomy}
     # 快速導引建議類別（由上方 expander 設定）
     quick_guide_cats = st.session_state.get("quick_guide_cats", [])
+    if quick_guide_cats:
+        readable_quick_guide_cats = "、".join([
+            f"{taxonomy_label_map.get(cat_id, cat_id)}（{cat_id}）"
+            for cat_id in quick_guide_cats
+        ])
+        st.caption(f"📌 快速導引目前建議您優先勾選：{readable_quick_guide_cats}。")
     col1, col2 = st.columns(2)
 
     for i, cat in enumerate(taxonomy):

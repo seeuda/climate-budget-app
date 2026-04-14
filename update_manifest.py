@@ -1521,6 +1521,7 @@ def generate_export_json(state):
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "user_note":     state.get("user_note", ""),
+            "work_item_description": state.get("work_item_description", ""),
             "management_adaptation_prompt": {
                 "triggered": heat_safety_prompt_triggered,
                 "response": heat_safety_response,
@@ -2082,7 +2083,7 @@ def init_state():
     初始化 session state。
 
     型別規範（Phase 1A 強化）：
-      str   : case_name, dept, agency_name, unit_name, dept_other,
+      str   : case_name, work_item_description, dept, agency_name, unit_name, dept_other,
               engineering_guideline_type, user_note,
               sync_message, sync_signature, selection_warning,
               dept_hint,                 # Phase 1B：局處提示文字
@@ -2109,6 +2110,7 @@ def init_state():
         "scroll_to_top":            False,
         # ── 案件基本資訊 ──────────────────────────────────────────────
         "case_name":                "",
+        "work_item_description":    "",
         "dept":                     "",
         "agency_name":              "",
         "unit_name":                "",
@@ -2131,6 +2133,8 @@ def init_state():
         "heat_safety_response":     "",
         "heat_safety_note":         "",
         "selection_warning":        "",
+        "overflow_category_note":   "",
+        "overflow_note_injected":   False,
         "negative_filter_override": False,
         # ── 同步狀態 ──────────────────────────────────────────────────
         "sync_done":                False,
@@ -2274,6 +2278,11 @@ with st.sidebar:
 5. 填寫各工項預算
 6. 確認並匯出評估報告
     """)
+    st.info(
+        "🧭 填寫策略提醒：前半段（步驟二、三）先勾選「看似相關/可能相關」項目即可，"
+        "即使先勾選較寬鬆也沒關係；最終金額以步驟四由您自行填寫為準，"
+        "不會因前段誤判直接造成重大金額錯誤。送出前的步驟五也提供「自由補充說明（選填）」可再註記。"
+    )
     st.markdown("---")
     # ── 系統更新日誌 ──────────────────────────────────
     with st.expander("📋 系統更新紀錄", expanded=False):
@@ -2410,6 +2419,7 @@ if st.session_state.step == 0:
         agency = "（請選擇）"
         unit = "（請選擇）"
         case_name = st.session_state.case_name
+        work_item_description = st.session_state.work_item_description
         dept_other = st.session_state.dept_other
 
         if not use_manual_case_input:
@@ -2459,6 +2469,8 @@ if st.session_state.step == 0:
                 else:
                     case_name = ""
                     st.session_state.case_name = ""
+                    work_item_description = ""
+                    st.session_state.work_item_description = ""
                     st.session_state.budget = 0
                     st.session_state.dept = ""
                     st.session_state.preset_reference = {}
@@ -2471,6 +2483,12 @@ if st.session_state.step == 0:
                 placeholder="例：彰化縣○○公園綠美化工程",
                 help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
             )
+            work_item_description = st.text_area(
+                "📝 計畫補充敘述（選填，僅供關鍵字補充辨識）",
+                value=st.session_state.work_item_description,
+                placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
+                help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
+            ).strip()
 
             departments = get_department_options()
             dept_options = ["（請選擇）"] + departments + ["其他"]
@@ -2505,6 +2523,12 @@ if st.session_state.step == 0:
             if auto_selected is not None:
                 st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
             st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
+            work_item_description = st.text_area(
+                "📝 計畫補充敘述（選填，僅供關鍵字補充辨識）",
+                value=st.session_state.work_item_description,
+                placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
+                help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
+            ).strip()
             st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
             budget_input = st.text_input(
                 "💰 決標金額或預計金額（元）",
@@ -2522,11 +2546,13 @@ if st.session_state.step == 0:
             if preset_preview:
                 st.markdown("**🧩 預載清單補充參考（送出時將同步保存）**")
                 st.markdown("\n".join(preset_preview))
+        st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
 
     with col2:
         # Keyword detection live preview
-        kw_matches = detect_keywords(case_name)
-        if case_name and kw_matches:
+        keyword_source_text = " ".join([case_name.strip(), work_item_description.strip()]).strip()
+        kw_matches = detect_keywords(keyword_source_text)
+        if keyword_source_text and kw_matches:
             strong_matches, concept_matches, logic_matches = split_keyword_matches(kw_matches)
             st.markdown("**🔍 偵測到的氣候關鍵字**")
             kw_html = '<div class="kw-suggestion">'
@@ -2547,12 +2573,12 @@ if st.session_state.step == 0:
                 kw_html += f'<div style="margin-top:0.25rem;color:#1a4731;">🧩 組合條件命中：{logic_names}</div>'
             kw_html += "</div>"
             st.markdown(kw_html, unsafe_allow_html=True)
-        elif case_name:
+        elif keyword_source_text:
             st.info("📋 未偵測到特定氣候關鍵字，請繼續手動選擇工項類別。")
 
         optimized = CONFIG.get("optimized_parameters", {})
-        high_risk_hits = detect_text_keywords(case_name, optimized.get("high_risk_keywords", []))
-        adaptation_hits = detect_text_keywords(case_name, optimized.get("adaptation_keywords", []))
+        high_risk_hits = detect_text_keywords(keyword_source_text, optimized.get("high_risk_keywords", []))
+        adaptation_hits = detect_text_keywords(keyword_source_text, optimized.get("adaptation_keywords", []))
 
         if high_risk_hits:
             st.markdown(
@@ -2599,7 +2625,7 @@ if st.session_state.step == 0:
     if below_threshold:
         st.markdown(f'<div class="alert-yellow">⚠️ {UI["exclusion_warning"]}</div>', unsafe_allow_html=True)
         optimized = CONFIG.get("optimized_parameters", {})
-        low_budget_hits = detect_text_keywords(case_name, optimized.get("adaptation_keywords", []))
+        low_budget_hits = detect_text_keywords(keyword_source_text, optimized.get("adaptation_keywords", []))
         if low_budget_hits:
             hint_text = UI.get("manual_override_hint_text", optimized.get("manual_override_hints", ""))
             st.markdown(f'<div class="alert-green">📝 {hint_text}</div>', unsafe_allow_html=True)
@@ -2646,7 +2672,7 @@ if st.session_state.step == 0:
     high_budget_forced_review = (
         budget_val >= forced_review_threshold and case_name and not kw_matches
     )
-    exclusion_hits = detect_text_keywords(case_name, KWDICT.get("exclusion_keywords", []))
+    exclusion_hits = detect_text_keywords(keyword_source_text, KWDICT.get("exclusion_keywords", []))
 
     if high_budget_forced_review:
         st.markdown(
@@ -2676,6 +2702,7 @@ if st.session_state.step == 0:
 
     if st.button("下一步：選擇計畫及工項類別 →", disabled=not can_proceed, type="primary", use_container_width=True):
         st.session_state.case_name = case_name
+        st.session_state.work_item_description = work_item_description
         st.session_state.dept = selected_dept
         st.session_state.dept_other = dept_other
         st.session_state.budget = budget_val
@@ -2702,6 +2729,7 @@ if st.session_state.step == 0:
 elif st.session_state.step == 1:
     st.markdown('<div class="section-title">步驟二：複選計畫類別（最多 3 項）</div>', unsafe_allow_html=True)
     st.caption("可先選最接近者，再補選其他相關類別；補選類別或細項時，不會直接清空既有工項。")
+    st.caption("若實際工項跨越超過 3 個類別，請先選最核心的 3 類（通常以經費占比/主要成果判斷），其餘脈絡可在本步驟下方或步驟五補充說明。")
 
     # 顯示前一步產生的警告（例如超過 3 項的提示）
     if st.session_state.selection_warning:
@@ -2980,6 +3008,20 @@ elif st.session_state.step == 1:
                     st.session_state.selected_categories = updated_categories
                 st.rerun()
 
+    if len(st.session_state.selected_categories) >= 3:
+        st.info(
+            "📌 已達類別上限（3 項）。建議先保留最核心 3 類，"
+            "並把其餘跨類別工項脈絡寫在下方補充，系統會在步驟五供您確認後一併送出。"
+        )
+        overflow_note = st.text_area(
+            "🗒️ 超出三類的補充脈絡（選填）",
+            value=st.session_state.get("overflow_category_note", ""),
+            placeholder="例：另涉及 G 類社區韌性宣導與 F 類監測研究，但本案主要經費仍以 A/B/C 三類為主。",
+            height=90,
+            key="overflow_category_note_input",
+        ).strip()
+        st.session_state.overflow_category_note = overflow_note
+
     # Sub-category selection
     if st.session_state.selected_categories:
         st.markdown("---")
@@ -3180,10 +3222,7 @@ elif st.session_state.step == 2:
         for entry in item_source_entries:
             cat = entry["category"]
             sub = entry["sub"]
-            # 判斷這條細項是來自真實選取，還是 _NONE 展開
-            is_from_none = cat in none_cats and sub["id"] not in real_sub_ids
-            marker = "（全部展開）" if is_from_none else ""
-            lines.append(f"{cat['icon']} {cat['label']} › {sub['label']}{marker}")
+            lines.append(f"{cat['icon']} {cat['label']} › {sub['label']}")
         # 去重保持順序
         seen = set(); deduped = []
         for l in lines:
@@ -3807,6 +3846,12 @@ elif st.session_state.step == 4:
     # ── 補充說明（選填，同步至試算表 備註欄）
     st.markdown("**📝 補充說明（選填）**")
     st.caption("可填入表單無法正確量化、需額外說明的事項，例如：符合上方加分提示的具體執行內容、特殊工法說明、跨局處協調事項等。")
+    overflow_note = st.session_state.get("overflow_category_note", "").strip()
+    if overflow_note and not st.session_state.get("overflow_note_injected", False) and not st.session_state.get("user_note", "").strip():
+        st.session_state.user_note = f"【超出三類補充脈絡】{overflow_note}"
+        st.session_state.overflow_note_injected = True
+    if overflow_note:
+        st.caption("ℹ️ 已帶入「超出三類補充脈絡」到本欄位，您可於送出前再調整內容。")
     user_note = st.text_area(
         "補充說明",
         value=st.session_state.get("user_note", ""),

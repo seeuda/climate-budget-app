@@ -230,7 +230,11 @@
         4
       ],
       "synonyms": [],
-      "negative_context": [],
+      "negative_context": [
+        "服務",
+        "據點",
+        "關懷"
+      ],
       "learning_tip": "",
       "trigger_id": "KW_011"
     },
@@ -699,10 +703,10 @@
     },
     {
       "keyword": "環境教育",
-      "suggested_item": "節能減碳推廣教育宣導計畫",
+      "suggested_item": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
       "code": "淨零教育-1",
-      "category_id": "F",
-      "sub_id": "F2",
+      "category_id": "G",
+      "sub_id": "G2",
       "_match_type": "exact",
       "weight": 0.6,
       "purity_hint": "P3_PARTIAL",
@@ -746,7 +750,11 @@
         "岸邊",
         "濱水"
       ],
-      "negative_context": [],
+      "negative_context": [
+        "自然",
+        "生態",
+        "復育"
+      ],
       "learning_tip": "水泥護岸不代表具備調適效益，請確認是否為生態工法（NBS）。若為全面水泥硬封，則可能與韌性調適目標相衝突。",
       "trigger_id": "KW_042"
     },
@@ -1180,7 +1188,10 @@
         "野溪整治",
         "崩塌地處理"
       ],
-      "negative_context": [],
+      "negative_context": [
+        "復育",
+        "生態"
+      ],
       "learning_tip": "注意：本案不應隨意掛載「植生碳匯」，應優先評估其防災推移與承洪韌性，並檢核是否採用生態工法（NBS）。若為水泥工法，則不具備調適效益。減碳效益應來源於工程量體縮減或土方平衡。",
       "trigger_id": "KW_069"
     },
@@ -1622,7 +1633,11 @@
         "熱島效應",
         "都市降溫"
       ],
-      "negative_context": [],
+      "negative_context": [
+        "補助",
+        "宣導",
+        "教育"
+      ],
       "learning_tip": "",
       "trigger_id": "KW_098"
     },
@@ -1815,6 +1830,169 @@
       "negative_context": [],
       "learning_tip": "都市高溫調適除熱島管理外，行人層級的遮蔭設施是提升脆弱族群熱舒適的重要公共投資，對應調適行動方案中的健康領域。",
       "trigger_id": "KW_108"
+    },
+    {
+      "keyword": "宣導",
+      "suggested_item": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
+      "code": "淨零教育-1",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "宣傳推廣",
+        "氣候宣導"
+      ],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_109"
+    },
+    {
+      "keyword": "推廣",
+      "suggested_item": "節能減碳推廣教育宣導計畫",
+      "code": "淨零教育-2",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "推廣教育",
+        "推廣活動"
+      ],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_110"
+    },
+    {
+      "keyword": "培力",
+      "suggested_item": "社區規劃師/氣候輔導員培訓與駐地輔導",
+      "code": "調適-社區",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "能力建構",
+        "社區培力"
+      ],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_111"
+    },
+    {
+      "keyword": "研習",
+      "suggested_item": "氣候調適/韌性意識提升研習或工作坊",
+      "code": "調適-教育",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "工作坊",
+        "研習營",
+        "研習活動"
+      ],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_112"
+    },
+    {
+      "keyword": "教育推廣",
+      "suggested_item": "節能減碳推廣教育宣導計畫",
+      "code": "淨零教育-2",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_113"
+    },
+    {
+      "keyword": "淨零教育",
+      "suggested_item": "節能減碳推廣教育宣導計畫",
+      "code": "淨零教育-2",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_114"
+    },
+    {
+      "keyword": "氣候素養",
+      "suggested_item": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
+      "code": "淨零教育-1",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_115"
+    },
+    {
+      "keyword": "節能宣導",
+      "suggested_item": "節能減碳推廣教育宣導計畫",
+      "code": "淨零教育-2",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_117"
+    },
+    {
+      "keyword": "低碳教育",
+      "suggested_item": "節能減碳推廣教育宣導計畫",
+      "code": "淨零教育-2",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_118"
+    },
+    {
+      "keyword": "村里補助",
+      "suggested_item": "補助村里或社區進行小型調適措施（遮陽、透水、降溫等）（獎補助型）",
+      "code": "調適-社區",
+      "category_id": "G",
+      "sub_id": "G3",
+      "_match_type": "exact",
+      "weight": 0.85,
+      "purity_hint": "P2_MODERATE",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "",
+      "trigger_id": "KW_130"
     }
   ],
   "exclusion_keywords": [

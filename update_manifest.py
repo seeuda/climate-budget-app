@@ -2264,6 +2264,10 @@ def go_to_step(target_step: int, *, unlock: bool = False, enforce_transition: bo
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
+    st.markdown(
+        "[👉 115年彰化縣媽祖淨零友善地圖](https://lihi1.me/7ge4G)"
+    )
+    st.markdown("---")
     st.markdown("## 🌿 氣候預算自評系統")
     st.markdown("---")
     st.markdown("**系統說明**")

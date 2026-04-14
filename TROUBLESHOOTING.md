@@ -1,41 +1,27 @@
-import json
-from collections import Counter
+# App 顯示「Oh no. Error running app」可能原因（快速檢查）
 
-import os
+## 這次實際定位到的根因
 
-dict_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "keyword_dictionary.json")
-with open(dict_path, encoding="utf-8") as f:
-    data = json.load(f)
+1. **`requirements.txt` 不是 pip 套件清單**
+   - 部署紀錄已明確出現：`ERROR: Invalid requirement: '"""' (from line 1 of requirements.txt)`。
+   - 這會讓安裝依賴階段直接失敗，平台就回傳通用錯誤訊息。
 
-kws = data["keyword_triggers"]
+2. **`app.py` 曾是 JSON 型內容而非 Python 程式**
+   - 若入口檔含 JSON 布林值（`false`），會在 Python 啟動時報 `NameError`。
 
-# 找所有含 053 的條目
-print("=== KW_053 相關條目 ===")
-matches = [(i, kw) for i, kw in enumerate(kws) if "053" in kw.get("trigger_id", "")]
-for i, kw in matches:
-    print(f"  Index {i}: id={kw['trigger_id']}, keyword={kw['keyword']}, "
-          f"weight={kw['weight']}, cat={kw.get('category_id')}")
-    print(f"    suggested: {kw['suggested_item'][:60]}")
+3. **`config.json` 內容不像 JSON 文字**
+   - 其前導位元組不是 `{` / `[`，疑似錯置為 binary/bytecode。
 
-# 所有 trigger_id 重複檢查
-print("\n=== 全域 trigger_id 重複檢查 ===")
-ids = [kw.get("trigger_id", "") for kw in kws]
-dupes = [(tid, cnt) for tid, cnt in Counter(ids).items() if cnt > 1]
-if dupes:
-    print("  發現重複:")
-    for tid, cnt in sorted(dupes):
-        entries = [(i, kw["keyword"]) for i, kw in enumerate(kws) if kw.get("trigger_id") == tid]
-        print(f"    {tid} x{cnt}: {entries}")
-else:
-    print("  未發現重複 trigger_id（字典 ID 唯一性正常）")
+## 本次修正
 
-# 確認 SRF 的實際 weight
-print("\n=== SRF 關鍵字詳細資訊 ===")
-srf_entries = [(i, kw) for i, kw in enumerate(kws) if kw.get("keyword") == "SRF"]
-for i, kw in srf_entries:
-    print(f"  Index {i}: trigger_id={kw['trigger_id']}, weight={kw['weight']}, "
-          f"purity={kw['purity_hint']}, cat={kw.get('category_id')}")
-    print(f"    suggested: {kw['suggested_item']}")
-    print(f"    learning_tip: {kw.get('learning_tip', '')[:80]}")
+- 已將 `requirements.txt` 改為合法依賴格式（至少包含 `streamlit`）。
+- 已將 `app.py` 改為可啟動的 Streamlit 健檢頁，避免入口檔語法錯誤造成啟動失敗。
 
-print(f"\n總關鍵字數量: {len(kws)}")
+## 若仍遇到錯誤，建議依序檢查
+
+1. `requirements.txt` 是否每行都是套件名稱（例如 `streamlit>=1.56.0,<2`）。
+2. `app.py` 第一行是否為 Python 程式（例如 `import ...`），而不是 `{`。
+3. `config.json` 是否能被 `json.load()` 解析。
+4. 本機先跑：
+   - `python -m streamlit run app.py --server.headless true`
+

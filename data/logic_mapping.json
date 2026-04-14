@@ -2084,24 +2084,6 @@
           "examples": "如：對里鄰長、社區幹部、校園師生或高風險族群辦理氣候變遷與淨零宣導、教育活動、推廣課程",
           "items": [
             {
-              "label": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
-              "mitigation_codes": [
-                "淨零教育-1"
-              ],
-              "adaptation_codes": [
-                "調適-政策"
-              ],
-              "policy": "社區韌性與公民參與",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_G2_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
               "label": "對特定服務對象的宣導、教育活動、推廣課程",
               "mitigation_codes": [
                 "淨零教育-1"
@@ -2115,7 +2097,7 @@
               "benefit_type": "budget",
               "anti_pattern_ref": [],
               "budget_hint": "",
-              "item_id": "ITEM_G2_02",
+              "item_id": "ITEM_G2_01",
               "count_in_budget_total": true,
               "display_section": "budget_items"
             }

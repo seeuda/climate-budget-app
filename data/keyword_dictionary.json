@@ -1372,7 +1372,9 @@
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
       "synonyms": [
-        "GHG"
+        "GHG",
+        "減量",
+        "減緩"
       ],
       "negative_context": [
         "宣導"
@@ -2237,6 +2239,25 @@
       "learning_tip": "地方創生屬廣義治理詞，需檢核是否納入淨零/調適元素才建議計入。",
       "trigger_id": "KW_141",
       "match_type": "concept_trigger"
+    },
+    {
+      "keyword": "減量執行方案",
+      "suggested_item": "組織碳盤查或碳足跡評估",
+      "code": "淨零教育-2",
+      "category_id": "F",
+      "sub_id": "F1",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "減量方案",
+        "減緩執行方案"
+      ],
+      "negative_context": [],
+      "learning_tip": "若案名聚焦減量執行方案，通常涉及盤查、策略執行或減量管理機制，可優先導向 F1 規劃研究類工項。",
+      "trigger_id": "KW_142",
+      "match_type": "strong"
     }
   ],
   "exclusion_keywords": [
@@ -2436,6 +2457,21 @@
       "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [],
       "trigger_id": "KWL_12"
+    },
+    {
+      "triggers": [
+        "氣候變遷",
+        "推動"
+      ],
+      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
+      "category_id": "F",
+      "sub_id": "F1",
+      "_match_type": "logic",
+      "note": "需同時出現：氣候變遷＋推動",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_13"
     }
   ]
 }

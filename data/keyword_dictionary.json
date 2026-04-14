@@ -703,7 +703,7 @@
     },
     {
       "keyword": "環境教育",
-      "suggested_item": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
       "code": "淨零教育-1",
       "category_id": "G",
       "sub_id": "G2",
@@ -728,7 +728,9 @@
       "anti_pattern_ids": [
         2
       ],
-      "synonyms": [],
+      "synonyms": [
+        "清淤"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_041"
@@ -1833,7 +1835,7 @@
     },
     {
       "keyword": "宣導",
-      "suggested_item": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
       "code": "淨零教育-1",
       "category_id": "G",
       "sub_id": "G2",
@@ -1936,7 +1938,7 @@
     },
     {
       "keyword": "氣候素養",
-      "suggested_item": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
       "code": "淨零教育-1",
       "category_id": "G",
       "sub_id": "G2",
@@ -1993,6 +1995,248 @@
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_130"
+    },
+    {
+      "keyword": "辦理活動",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
+      "code": "淨零教育-1",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [
+        "演唱會",
+        "藝文",
+        "文化季",
+        "慶典",
+        "燈會",
+        "嘉年華",
+        "運動會",
+        "市集",
+        "宗教",
+        "廟會",
+        "跨年",
+        "表演"
+      ],
+      "learning_tip": "「辦理活動」屬高概括詞，需同時出現氣候/淨零/減碳/調適等語境，才建議導向 G2。",
+      "trigger_id": "KW_131",
+      "require_any_context": [
+        "氣候",
+        "淨零",
+        "減碳",
+        "調適",
+        "節能",
+        "永續",
+        "韌性",
+        "碳"
+      ]
+    },
+    {
+      "keyword": "離岸風電",
+      "suggested_item": "設置太陽光電系統或儲能設施",
+      "code": "能源-1",
+      "category_id": "A",
+      "sub_id": "A1",
+      "_match_type": "exact",
+      "weight": 0.9,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "風電運維基地"
+      ],
+      "negative_context": [],
+      "learning_tip": "若屬再生能源基礎設施建置，可納入能源轉型工項；並補充施工減碳與維運效益。",
+      "trigger_id": "KW_132"
+    },
+    {
+      "keyword": "環境影響評估",
+      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
+      "code": "調適-政策",
+      "category_id": "F",
+      "sub_id": "F1",
+      "_match_type": "exact",
+      "weight": 0.85,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "環評"
+      ],
+      "negative_context": [],
+      "learning_tip": "環評/策略評估案可檢核是否納入氣候風險、碳排與調適章節。",
+      "trigger_id": "KW_133"
+    },
+    {
+      "keyword": "脆弱度分析",
+      "suggested_item": "氣候風險評估或脆弱度調查",
+      "code": "調適-政策",
+      "category_id": "F",
+      "sub_id": "F1",
+      "_match_type": "exact",
+      "weight": 0.9,
+      "purity_hint": "P1_HIGH_PURITY",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "脆弱度"
+      ],
+      "negative_context": [],
+      "learning_tip": "屬高關聯調適治理案件，建議明確列示受衝擊對象與因應策略。",
+      "trigger_id": "KW_134"
+    },
+    {
+      "keyword": "節電夥伴",
+      "suggested_item": "智慧能源管理系統（BEMS）",
+      "code": "住商-3",
+      "category_id": "E",
+      "sub_id": "E1",
+      "_match_type": "exact",
+      "weight": 0.9,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "節能治理"
+      ],
+      "negative_context": [],
+      "learning_tip": "若計畫含節電治理/診斷/改善，建議量化節電率與減碳效益。",
+      "trigger_id": "KW_135"
+    },
+    {
+      "keyword": "航道清淤",
+      "suggested_item": "排水系統清淤與維護管理",
+      "code": "調適-水",
+      "category_id": "B",
+      "sub_id": "B1",
+      "_match_type": "exact",
+      "weight": 0.75,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [
+        2
+      ],
+      "synonyms": [],
+      "negative_context": [],
+      "learning_tip": "航道清淤可先納入調適潛力檢核，再判斷是否具氣候韌性目的與成效指標。",
+      "trigger_id": "KW_136"
+    },
+    {
+      "keyword": "輔導計畫",
+      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
+      "code": "concept",
+      "category_id": "F",
+      "sub_id": "F1",
+      "_match_type": "exact",
+      "weight": 0.55,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "輔導作法"
+      ],
+      "negative_context": [
+        "藝文",
+        "表演",
+        "慶典"
+      ],
+      "require_any_context": [
+        "淨零",
+        "氣候",
+        "減碳",
+        "節能",
+        "脆弱度"
+      ],
+      "learning_tip": "「輔導計畫」為程序性詞彙，需搭配氣候/減碳/調適語境才建議列入。",
+      "trigger_id": "KW_137",
+      "match_type": "concept_trigger"
+    },
+    {
+      "keyword": "產業學院",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
+      "code": "淨零教育-1",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.65,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "require_any_context": [
+        "淨零",
+        "減碳",
+        "節能",
+        "氣候"
+      ],
+      "learning_tip": "產業人才培訓若納入淨零/氣候內容，可作為能力建構型案件評估。",
+      "trigger_id": "KW_138"
+    },
+    {
+      "keyword": "推動辦公室",
+      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
+      "code": "concept",
+      "category_id": "F",
+      "sub_id": "F1",
+      "_match_type": "exact",
+      "weight": 0.45,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "專案辦公室"
+      ],
+      "negative_context": [
+        "人事",
+        "行政支援"
+      ],
+      "require_any_context": [
+        "產業",
+        "地方創生",
+        "工廠",
+        "淨零",
+        "節能",
+        "脆弱度"
+      ],
+      "learning_tip": "辦公室型委託案請先檢視是否包含淨零、調適、節能或脆弱度相關KPI，再決定納入比例。",
+      "trigger_id": "KW_139",
+      "match_type": "concept_trigger"
+    },
+    {
+      "keyword": "特定工廠登記",
+      "suggested_item": "中小企業低碳轉型與製程減碳輔導計畫",
+      "code": "concept",
+      "category_id": "E",
+      "sub_id": "E2",
+      "_match_type": "exact",
+      "weight": 0.5,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "工廠登記"
+      ],
+      "negative_context": [],
+      "learning_tip": "若計畫僅行政登記，通常非氣候預算；若含能源效率提升或低碳輔導，可部分納入。",
+      "trigger_id": "KW_140",
+      "match_type": "concept_trigger"
+    },
+    {
+      "keyword": "地方創生",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
+      "code": "concept",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.45,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [],
+      "require_any_context": [
+        "輔導",
+        "淨零",
+        "節能",
+        "韌性"
+      ],
+      "learning_tip": "地方創生屬廣義治理詞，需檢核是否納入淨零/調適元素才建議計入。",
+      "trigger_id": "KW_141",
+      "match_type": "concept_trigger"
     }
   ],
   "exclusion_keywords": [

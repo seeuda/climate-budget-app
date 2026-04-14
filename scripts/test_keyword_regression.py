@@ -16,10 +16,12 @@ kw_triggers = data["keyword_triggers"]
 kw_index = {kw["trigger_id"]: kw for kw in kw_triggers}
 
 def match_keyword(text, kw_entry):
-    """簡易命中判斷（含 negative_context 排除）"""
+    """簡易命中判斷（含 negative_context 與 context requirement）"""
     keyword = kw_entry["keyword"]
     synonyms = kw_entry.get("synonyms", [])
     neg_ctx = kw_entry.get("negative_context", [])
+    require_any = kw_entry.get("require_any_context", [])
+    require_all = kw_entry.get("require_all_context", [])
     
     matched = keyword in text or any(s in text for s in synonyms)
     if not matched:
@@ -28,6 +30,10 @@ def match_keyword(text, kw_entry):
     for neg in neg_ctx:
         if neg in text:
             return False
+    if require_any and not any(ctx in text for ctx in require_any):
+        return False
+    if require_all and not all(ctx in text for ctx in require_all):
+        return False
     return True
 
 def scan_text(text):
@@ -68,13 +74,17 @@ test_cases = [
     ("🆕 新增驗收", "大城鄉農業滴灌節水管路改善計畫", ["KW_106"], "灌溉/滴灌應命中 KW_106"),
     
     # --- 新增驗收：灌溉負向（僅宣導）---
-    ("❌ 負向排除", "農業節水灌溉宣導活動", [], "宣導類灌溉案件應被排除"),
+    ("❌ 負向排除", "農業節水灌溉宣導活動", ["KW_109"], "灌溉關鍵字應被排除，但宣導語意可命中 KW_109"),
     
     # --- 新增驗收：邊坡 ---
     ("🆕 新增驗收", "芬園鄉邊坡坡面植生復育工程", ["KW_107"], "邊坡/坡面應命中 KW_107，並有 anti_pattern 警示"),
     
     # --- 新增驗收：遮蔭 ---
     ("🆕 新增驗收", "彰化市騎樓整平與行人遮蔭設施計畫", ["KW_108"], "騎樓/遮蔭應命中 KW_108"),
+    
+    # --- 新增驗收：辦理活動需氣候語境 ---
+    ("🆕 新增驗收", "彰化縣淨零轉型宣導辦理活動", ["KW_131"], "辦理活動需搭配氣候/淨零語境才命中 KW_131"),
+    ("❌ 負向排除", "彰化縣文化季辦理活動委託案", [], "非氣候語境的辦理活動不得誤命中 KW_131"),
     
     # --- 回歸測試：既有高純度詞 ---
     ("🔁 回歸測試", "彰化縣滯洪池新建工程", ["KW_005"], "滯洪池應仍為 P1_HIGH_PURITY"),
@@ -97,11 +107,8 @@ for label, text, expected_ids, note in test_cases:
     if expected_ids:
         ok = all(eid in hit_ids for eid in expected_ids)
     else:
-        # 負向測試：期望特定詞不在命中結果中
-        # 取命中中是否有 KW_037 or KW_106（主要測試詞）
-        # 若無命中 or 只有其他詞命中，也算通過
-        relevant_ids = {"KW_037", "KW_106"}
-        ok = not any(h in relevant_ids for h in hit_ids)
+        # 負向測試：不得命中任何關鍵字
+        ok = len(hit_ids) == 0
 
     status = "✅ PASS" if ok else "❌ FAIL"
     if ok:

@@ -698,6 +698,12 @@ def detect_keywords(text):
         negative_context = kw.get("negative_context", [])
         if any(ctx in text for ctx in negative_context):
             continue
+        require_any_context = kw.get("require_any_context", [])
+        if require_any_context and not any(ctx in text for ctx in require_any_context):
+            continue
+        require_all_context = kw.get("require_all_context", [])
+        if require_all_context and not all(ctx in text for ctx in require_all_context):
+            continue
         hit = dict(kw)
         hit["matched_term"] = matched_term
         hit.setdefault("match_type", "strong_trigger")

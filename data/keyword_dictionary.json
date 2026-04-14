@@ -2004,13 +2004,33 @@
       "weight": 0.8,
       "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [],
-      "synonyms": [
-        "活動辦理",
-        "活動推廣"
+      "synonyms": [],
+      "negative_context": [
+        "演唱會",
+        "藝文",
+        "文化季",
+        "慶典",
+        "燈會",
+        "嘉年華",
+        "運動會",
+        "市集",
+        "宗教",
+        "廟會",
+        "跨年",
+        "表演"
       ],
-      "negative_context": [],
-      "learning_tip": "若活動主軸是特定服務對象的氣候宣導/教育/課程，建議優先歸入 G2 形成完整導引閉環。",
-      "trigger_id": "KW_131"
+      "learning_tip": "「辦理活動」屬高概括詞，需同時出現氣候/淨零/減碳/調適等語境，才建議導向 G2。",
+      "trigger_id": "KW_131",
+      "require_any_context": [
+        "氣候",
+        "淨零",
+        "減碳",
+        "調適",
+        "節能",
+        "永續",
+        "韌性",
+        "碳"
+      ]
     }
   ],
   "exclusion_keywords": [

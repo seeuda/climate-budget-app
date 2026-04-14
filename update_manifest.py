@@ -1177,7 +1177,13 @@ def safe_key(text):
     """Hash arbitrary text to a short, collision-free, alphanumeric Streamlit widget key."""
     return hashlib.md5(text.encode("utf-8")).hexdigest()[:12]
 
-def inject_button_style(key, *, is_selected=False, is_suggested=False):
+def inject_button_style(
+    key,
+    *,
+    is_selected=False,
+    is_suggested=False,
+    suggested_variant="keyword",
+):
     """Inject CSS so specific Streamlit buttons can visually reflect state."""
     if is_selected:
         bg = "#2d6a4f"
@@ -1185,10 +1191,16 @@ def inject_button_style(key, *, is_selected=False, is_suggested=False):
         border = "#2d6a4f"
         shadow = "0 4px 16px rgba(45,106,79,0.18)"
     elif is_suggested:
-        bg = "#fffbf0"
-        text = "#8f5c00"
-        border = "#f39c12"
-        shadow = "0 4px 16px rgba(243,156,18,0.2)"
+        if suggested_variant == "quick_guide":
+            bg = "#eef4ff"
+            text = "#1f3f8a"
+            border = "#5b8def"
+            shadow = "0 4px 16px rgba(91,141,239,0.22)"
+        else:
+            bg = "#fffbf0"
+            text = "#8f5c00"
+            border = "#f39c12"
+            shadow = "0 4px 16px rgba(243,156,18,0.2)"
     else:
         bg = "#e9f3ec"
         text = "#1a4731"
@@ -1199,8 +1211,15 @@ def inject_button_style(key, *, is_selected=False, is_suggested=False):
         hover_border = border
         hover_bg = bg
     else:
-        hover_border = "#2d6a4f" if not is_suggested else "#f39c12"
-        hover_bg = "#f0f9f0" if not is_suggested else "#fff6dd"
+        if not is_suggested:
+            hover_border = "#2d6a4f"
+            hover_bg = "#f0f9f0"
+        elif suggested_variant == "quick_guide":
+            hover_border = "#4f7fe0"
+            hover_bg = "#e5efff"
+        else:
+            hover_border = "#f39c12"
+            hover_bg = "#fff6dd"
 
     st.markdown(
         f"""
@@ -2828,7 +2847,24 @@ elif st.session_state.step == 1:
             st.session_state.selected_sub_categories,
         )
 
+    st.markdown(
+        """
+        <style>
+        .quick-guide-panel {
+            border: 1.5px solid #7aa8f5;
+            background: linear-gradient(180deg, #f4f8ff 0%, #eef4ff 100%);
+            border-radius: 10px;
+            padding: 0.55rem 0.7rem 0.25rem 0.7rem;
+            margin: 0.35rem 0 0.7rem 0;
+            box-shadow: 0 2px 10px rgba(91,141,239,0.12);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     with st.container(border=True):
+        st.markdown('<div class="quick-guide-panel">', unsafe_allow_html=True)
         st.caption("🧭 快速導引區")
         with st.expander("❓ 不確定選哪個類別？點此快速導引"):
             st.caption("選擇最接近您案件型態的描述，系統會在下方高亮建議類別。")
@@ -2855,6 +2891,7 @@ elif st.session_state.step == 1:
                             st.session_state.selected_sub_categories,
                         )
                         st.session_state.quick_guide_selected_key = entry["key"]
+                        st.rerun()
             if st.session_state.quick_guide_hint:
                 st.markdown(
                     f'<div style="background:#fff8e1;border-left:4px solid #f9a825;'
@@ -2871,6 +2908,8 @@ elif st.session_state.step == 1:
                     st.session_state.quick_guide_cats = []
                     st.session_state.quick_guide_subs = []
                     st.session_state.quick_guide_selected_key = ""
+                    st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
     # ── 快速入口結束 ──────────────────────────────────────────────
 
     # Category cards — 2 columns
@@ -2908,7 +2947,13 @@ elif st.session_state.step == 1:
             badge = " · ".join(badge_parts) + " · " if badge_parts else ""
             selected_mark = "✅ " if is_selected else ""
             button_key = f"cat_{cat['id']}"
-            inject_button_style(button_key, is_selected=is_selected, is_suggested=(is_suggested or is_quick_guide))
+            suggested_variant = "quick_guide" if is_quick_guide else "keyword"
+            inject_button_style(
+                button_key,
+                is_selected=is_selected,
+                is_suggested=(is_suggested or is_quick_guide),
+                suggested_variant=suggested_variant,
+            )
 
             if st.button(
                 f"{selected_mark}{cat['icon']} {cat['label']}\n{badge}（{cat['description'][:20]}…）",
@@ -3016,7 +3061,8 @@ elif st.session_state.step == 1:
                     inject_button_style(
                         button_key,
                         is_selected=is_sub_selected and not force_disabled,
-                        is_suggested=is_sub_suggested and not is_sub_selected and not force_disabled,
+                        is_suggested=(is_sub_suggested or is_sub_quick_guide) and not is_sub_selected and not force_disabled,
+                        suggested_variant="quick_guide" if is_sub_quick_guide else "keyword",
                     )
                     if st.button(
                         f"{selected_mark}{badge}{grp_cat['icon']} {sub['label']}\n📌 {sub['examples'][:28]}",

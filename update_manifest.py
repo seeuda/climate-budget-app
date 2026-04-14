@@ -2549,6 +2549,7 @@ if st.session_state.step == 0:
             if preset_preview:
                 st.markdown("**🧩 預載清單補充參考（送出時將同步保存）**")
                 st.markdown("\n".join(preset_preview))
+        st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
 
     with col2:
         # Keyword detection live preview

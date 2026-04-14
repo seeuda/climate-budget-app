@@ -1,2256 +1,1009 @@
 {
-  "taxonomy": [
+  "schema_version": {
+    "config_version": "1.3.7",
+    "effective_date": "2026-03-25",
+    "updated_at": "2026-03-31",
+    "updated_by": "氣候變遷因應科",
+    "change_log": [
+      "v1.3.7 (2026-03-31): 舊規則清理包第一階段—下修資源回收/住宅/委託營運為概念詞，並收斂永續與監測誤判語境。",
+      "v1.3.6 (2026-03-31): 新增生質能/廢棄物再利用概念詞與保守 logic 規則，避免過早綁定工項。",
+      "v1.3.5 (2026-03-31): 保守補強生質能概念詞（concept_trigger），僅提示人工確認，不直接綁定 strong 工項。",
+      "v1.3.4 (2026-03-31): 去重畜牧糞尿重疊關鍵字，改以同義詞併入 canonical trigger，降低重複命中造成的信心膨脹。",
+      "v1.3.3 (2026-03-31): 補強畜牧糞尿資源化辨識 — 新增B2強觸發關鍵字、組合規則與概念提示詞。",
+      "v1.3.2 (2026-03-27): 泛工程詞優化 — 將「修復」「新建」由 strong 調整為 concept_trigger，降低一般工程誤判。",
+      "v1.3.1 (2026-03-27): 調整 concept_trigger 調適詞負向語境，研究/規劃案件仍標記為概念相關，避免漏判。",
+      "v1.3.0 (2026-03-27): 關鍵字辨識升級 — 支援 concept_trigger 分層、Step1 顯示「相關但未確定」中間狀態、detect_keywords 支援 synonyms/negative_context",
+      "v1.2.3 (2026-03-26): Phase 1A patch — AP1 觸發條件精修（新增 require_context_keywords=[改善]，排除農業/灌溉/設施），app.py anti_pattern_check 支援 require_context_keywords 欄位",
+      "v1.2.2 (2026-03-25): Phase 1A final — 補入 manifest 區塊（keyword_dictionary_version / logic_mapping_version / checksums / last_synced_at）；集中版控保留，個別檔案異動透過 manifest 追蹤",
+      "v1.1.0 (2026-03-19): Phase 1 — 新增版本管理欄位；配合 app.py v1.1 信心分數與判讀理由面板",
+      "v1.0.0 (2026-03-11): 啟動專案開發"
+    ],
+    "data_version": "1.0.0"
+  },
+  "system_parameters": {
+    "min_threshold": 3000000,
+    "medium_alert_threshold": 10000000,
+    "high_alert_threshold": 20000000,
+    "extreme_alert_threshold": 100000000,
+    "currency": "TWD"
+  },
+  "ui_text": {
+    "app_title": "彰化縣氣候預算導引式判讀系統",
+    "app_subtitle": "Climate Budget Assessment Tool v1.1",
+    "exclusion_warning": "⚠️ 本案經費未達建議評估門檻（300萬元），建議挑選其他計畫進行評估。",
+    "manual_override_label": "本案經費未達建議評估門檻，但業務單位認為與氣候變遷高度相關，勾選後繼續評估作業。",
+    "extreme_alert_warning": "🔴 本案經費達1億元以上，屬重大公共建設，強烈建議檢核淨零與氣候韌性指標。",
+    "exclusion_guidelines": [
+      "純社會福利與個人補助（如育兒津貼、老人津貼、生活補助）",
+      "一般行政庶務與後勤採購（如影印機租賃、保全、清潔、一般辦公採購）",
+      "非氣候相關之資訊系統維護（如薪資、公文系統、防毒、一般頻寬）",
+      "短期藝文活動與節慶宣導（如桐花祭、演唱會、一般宣傳活動）",
+      "法制、審計、人資與顧問勞務（如法律顧問、訴願、審計、精算）"
+    ],
+    "manual_override_hint_text": "若標案涉及「排水清疏」或「災害修復」，即使未滿300萬元，建議仍勾選繼續評估。",
+    "summary_labels": {
+      "total": "計畫總經費",
+      "climate": "氣候變遷相關經費",
+      "ratio": "氣候預算占比"
+    },
+    "qualitative_factors": [
+      "🌱 具備自然碳匯效益（如擴大造林、增加綠地）",
+      "🗺️ 產出氣候風險圖資或關鍵數據（輔助未來調適）",
+      "💡 採用創新減碳技術示範（具推廣潛力）",
+      "📢 包含環境教育或氣候溝通工項",
+      "🤝 社會調適與公正轉型（確保脆弱族群氣候防護與平權）",
+      "🧭 土地開發氣候審核（包含氣候變遷影響評估或出流管制）",
+      "🌿 導入自然解方(NBS)或生態工法（如砌石、石籠、木排樁、草溝）",
+      "🤖 採用預鑄、模組化或自動化施工（如滑模工法、大節塊預組裝）",
+      "♻️ 施工用水取用污水廠放流水或雨水回收、現地土石方挖填平衡",
+      "🏢 申請取得低碳建築標示(LEBR)或建築能效標示(BERS)候選證書",
+      "⚡ 施工機具優先採用外部電力、太陽能或微水力發電（替代柴油發電機）"
+    ],
+    "high_alert_warning": "🔴 高碳影響力計畫：本案金額達2,000萬元以上，UI強調「隱含碳」檢核。",
+    "medium_alert_warning": "🟡 設施改善重點：本案金額達1,000萬元以上，請特別注意節能設施評估。",
+    "threshold_pass_warning": "🟢 本案符合評估門檻，請繼續完成氣候預算判讀。"
+  },
+  "alert_levels": {
+    "green": {
+      "max": 10000000,
+      "label": "藍綠燈",
+      "desc": "氣候預算潛力：基層守護",
+      "color": "#2ecc71"
+    },
+    "yellow": {
+      "min": 10000000,
+      "max": 20000000,
+      "label": "黃燈",
+      "desc": "氣候預算潛力：效能升級",
+      "color": "#f39c12"
+    },
+    "red": {
+      "min": 20000000,
+      "max": 100000000,
+      "label": "紅燈",
+      "desc": "氣候預算潛力：部門轉型",
+      "color": "#e74c3c"
+    },
+    "extreme": {
+      "min": 100000000,
+      "label": "極高風險",
+      "desc": "氣候預算潛力：城市重塑",
+      "color": "#8e44ad"
+    }
+  },
+  "departments": [
+    "行政處",
+    "經濟暨綠能發展處",
+    "農業處",
+    "水利資源處",
+    "教育處",
+    "環境保護局",
+    "交通處",
+    "城市暨觀光發展處",
+    "社會處",
+    "民政處",
+    "建設處",
+    "消防局",
+    "工務處",
+    "勞工處",
+    "衛生局"
+  ],
+  "integrations": {
+    "google_sheet_webhook_url": "",
+    "google_sheet_id": "10Z_wgmfqv4h4rk4oKDsP-V4jSS9XmO6PGAy_jrpTU7Q",
+    "google_sheet_worksheet": "工作表1"
+  },
+  "optimized_parameters": {
+    "high_risk_keywords": [
+      "新建",
+      "拓寬",
+      "改建",
+      "活動中心",
+      "宿舍",
+      "住宅"
+    ],
+    "adaptation_keywords": [
+      "排水",
+      "抽水",
+      "水利",
+      "滯洪",
+      "清疏",
+      "護岸",
+      "防洪",
+      "災修"
+    ],
+    "manual_override_hints": "排水維護、災害復建工程強烈建議進入評估"
+  },
+  "green_spending_category": [
+    "綠色工法：低碳營造技術或預鑄工法",
+    "綠色材料：再生材料、低碳水泥、低碳鋼鐵",
+    "綠色能源：太陽光電、儲能系統、建築能效(BERS)提升",
+    "綠色環境：自然碳匯、植樹造林、濕地保護"
+  ],
+  "weighting_parameters": {
+    "impact_factor": {
+      "enabled_by": "low_carbon_procurement",
+      "default": 1.0,
+      "boost": 1.15
+    },
+    "social_resilience_factor": {
+      "default": 1.0,
+      "per_vulnerable_group": 0.05,
+      "max": 1.2
+    },
+    "high_budget_forced_review_threshold": 50000000
+  },
+  "anti_patterns": [
     {
-      "id": "A",
-      "label": "興建／新建／改建／修復工程",
-      "icon": "🏗️",
-      "description": "包含建築物新建、增建、改建及古蹟修復；亦適用補助村里或社區進行建物節能改善之獎補助業務",
-      "sub_categories": [
-        {
-          "id": "A1",
-          "label": "建築物興建與修繕",
-          "examples": "如：長照大樓、青年住宅、校舍、活動中心",
-          "items": [
-            {
-              "label": "取得綠建築或建築能效(BERS)標章",
-              "mitigation_codes": [
-                "住商-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期住商部門旗艦計畫：近零碳建築",
-              "alert": "高隱含碳風險，建議檢核減碳材料與能效設計",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.2",
-                "guideline": "建築工程減碳指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "導入低蘊含碳建材或循環建材",
-              "mitigation_codes": [
-                "住商-2",
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期製造/環境部門：資源循環零廢棄",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "建築節能設備（高效空調、LED照明系統）",
-              "mitigation_codes": [
-                "住商-3",
-                "住商-4"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期住商部門：設備效率提升",
-              "alert": "",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.2",
-                "guideline": "建築工程減碳指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "古蹟或歷史建築修復（文資保存）",
-              "mitigation_codes": [
-                "住商-6"
-              ],
-              "adaptation_codes": [
-                "調適-文化"
-              ],
-              "policy": "文化資產韌性保存",
-              "alert": "",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.2",
-                "guideline": "建築工程減碳指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "近零碳建築技術(nZEB)",
-              "mitigation_codes": [
-                "1-11"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期住商方案：近零碳建築推動",
-              "alert": "新建/改建建議納入近零碳建築檢核",
-              "green_spending_type": "綠色工法",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.1",
-                "guideline": "建築工程減碳指引"
-              },
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_05",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "使用低碳水泥/低碳混凝土",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "低碳材料應用",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_06",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "應用再生材料（如焚化底渣CLSM、再生瀝青）",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "資源循環",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_07",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "現地土方平衡處理（減少運輸排碳）",
-              "mitigation_codes": [
-                "運輸-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "低碳施工管理",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_08",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "高能效機電設備（含電力回生電梯）",
-              "mitigation_codes": [
-                "住商-4"
-              ],
-              "adaptation_codes": [],
-              "policy": "設備能效提升",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_09",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "基地保水與透水鋪面工程",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "海綿城市",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_10",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "設置太陽光電系統或儲能設施",
-              "mitigation_codes": [
-                "能源-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "能源轉型",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [
-                5
-              ],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_11",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "取得低碳(低蘊含碳)建築標示(LEBR)或候選證書",
-              "mitigation_codes": [
-                "住商-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "建築指引：低蘊含碳建築標示，降低建材生命週期碳排",
-              "alert": "",
-              "green_spending_type": "綠色工法",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.2",
-                "guideline": "建築工程減碳指引"
-              },
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_12",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "模組化預鑄構件（如預鑄溝蓋、預鑄環片、系統模板）",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "建築/公路指引：減少現場施作能耗與廢棄物",
-              "alert": "",
-              "green_spending_type": "綠色工法",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A1_13",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            }
-          ],
-          "engineering_checklist": [
-            "確認是否申請綠建築標章或 BERS/LEBR 候選證書",
-            "確認結構體是否採用低碳水泥（SC40 或爐石水泥）",
-            "確認空調系統 COP 值是否符合最低能效標準",
-            "確認是否規劃屋頂太陽光電或雨水回收系統"
-          ]
-        },
-        {
-          "id": "A2",
-          "label": "道路與橋梁新建改建",
-          "examples": "如：道路拓寬、橋梁新建、田徑場工程",
-          "items": [
-            {
-              "label": "低碳路面材料或再生瀝青",
-              "mitigation_codes": [
-                "運輸-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門：低碳道路材料",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A2_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "人行道或自行車道友善環境",
-              "mitigation_codes": [
-                "運輸-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門：完備步行/自行車環境",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A2_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "橋梁防洪韌性強化設計",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "氣候韌性調適基礎設施",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A2_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "道路熱島效應改善（透水鋪面、遮蔭）",
-              "mitigation_codes": [
-                "農業-5"
-              ],
-              "adaptation_codes": [
-                "調適-降溫"
-              ],
-              "policy": "都市熱島調適",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A2_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "現地土方平衡與再利用（減少運輸與棄土）",
-              "mitigation_codes": [
-                "運輸-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "低碳施工管理",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A2_05",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            }
-          ],
-          "engineering_checklist": [
-            "確認道路鋪面是否指定 RAP 再生瀝青或溫拌瀝青",
-            "確認土方挖填是否規劃現地平衡，避免廢土外運",
-            "確認橋梁主體是否採用預鑄節塊工法"
-          ]
-        },
-        {
-          "id": "A3",
-          "label": "公路與橋梁特殊減碳工法",
-          "examples": "如：RAP再利用、溫拌瀝青、橋梁預鑄節塊吊裝",
-          "items": [
-            {
-              "label": "瀝青刨除料(RAP)再利用或溫拌瀝青",
-              "mitigation_codes": [
-                "運輸-5",
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "公路工程綠色材料",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A3_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "橋梁採預鑄節塊吊裝或支撐先進工法（減少場鑄能耗）",
-              "mitigation_codes": [
-                "運輸-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "國道/公路綠色工法",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A3_02",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "路堤回填採用瀝青刨除料或再生粒料",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "國道工程資源循環",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A3_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "地工合成加勁材擋土牆（取代傳統混凝土擋土牆）",
-              "mitigation_codes": [
-                "農業-減碳"
-              ],
-              "adaptation_codes": [],
-              "policy": "農村水保指引：輕量化防砂設施，減少混凝土用量",
-              "alert": "",
-              "green_spending_type": "綠色工法",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_A3_04",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            }
-          ],
-          "engineering_checklist": [
-            "確認 RAP 使用比例是否符合規範（建議 ≥15%）",
-            "確認是否採用溫拌瀝青技術（比熱拌降溫 ≥30°C）"
-          ]
-        }
+      "id": 1,
+      "name": "道路改善誤判調適",
+      "trigger_keywords": [
+        "道路",
+        "路面"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "排水",
+        "滯洪",
+        "防洪",
+        "透水",
+        "熱島",
+        "農業",
+        "灌溉",
+        "設施"
+      ],
+      "warning_text": "⚠ 若本案僅為路面改善，未涉及排水設計或氣候韌性工項，通常不列為調適預算。請確認是否包含氣候相關設計。",
+      "default_purity": "P3_PARTIAL",
+      "note": "道路工程最常見的誤判情境，需確認是否有防洪/透水/熱島等氣候設計",
+      "severity": "caution",
+      "action_type": "suggest_review",
+      "require_context_keywords": [
+        "改善"
       ]
     },
     {
-      "id": "B",
-      "label": "排水／水利／抽水站／污水工程",
-      "icon": "💧",
-      "description": "包含防洪排水、滯洪設施、污水處理等水利工程；亦適用補助農業/畜牧業沼氣回收或廢水處理改善之獎補助業務",
-      "sub_categories": [
+      "id": 2,
+      "name": "排水工程非氣候設計",
+      "trigger_keywords": [
+        "排水",
+        "側溝",
+        "清淤"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "提升",
+        "強化",
+        "改善容量",
+        "滯洪",
+        "防洪",
+        "韌性"
+      ],
+      "warning_text": "⚠ 一般維護性排水未必屬氣候調適。請確認是否為因應極端降雨之排水能力提升設計，而非例行清淤維護。",
+      "default_purity": "P3_PARTIAL",
+      "note": "需區分「維護型排水」與「氣候韌性提升型排水」",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 3,
+      "name": "公園綠美化誤判",
+      "trigger_keywords": [
+        "公園",
+        "綠美化",
+        "景觀",
+        "植栽"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "降溫",
+        "碳匯",
+        "生態",
+        "NBS",
+        "透水",
+        "調適"
+      ],
+      "warning_text": "⚠ 單純景觀植栽或綠美化，未必具備氣候效益。若包含降溫設計、碳匯功能或生態調適工項，才建議納入氣候預算。",
+      "default_purity": "P4_LOW",
+      "note": "景觀工程誤判比例高，需確認是否有明確的氣候設計目的",
+      "severity": "caution",
+      "action_type": "remind"
+    },
+    {
+      "id": 4,
+      "name": "校舍整修誤判節能",
+      "trigger_keywords": [
+        "整修",
+        "改建",
+        "補強"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "節能",
+        "LED",
+        "能效",
+        "BERS",
+        "光電",
+        "太陽能"
+      ],
+      "warning_text": "⚠ 一般建物整修不一定具減碳效益。請確認是否包含節能設備更新或建築能效提升措施。",
+      "default_purity": "P4_LOW",
+      "note": "結構補強/室內整修與節能改善是兩件事，需分開評估",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 5,
+      "name": "光電工程全額誤列",
+      "trigger_keywords": [
+        "太陽能",
+        "光電"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [],
+      "warning_text": "⚠ 光電工程可能包含結構補強、基礎工程等非發電相關費用。建議區分「能源設備費」與「其他工程費」後，再計算氣候預算金額。",
+      "default_purity": "P1_HIGH_PURITY",
+      "note": "光電設備本身為高純度，但整案預算常含非氣候工程費用，需拆分",
+      "severity": "warning",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 6,
+      "name": "農業設施誤判調適",
+      "trigger_keywords": [
+        "農業",
+        "灌溉",
+        "設施改善"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [
+        "抗旱",
+        "耐熱",
+        "調適",
+        "韌性",
+        "農塘",
+        "間歇灌溉"
+      ],
+      "warning_text": "⚠ 農業設施改善不一定屬於氣候調適。請確認是否與氣候風險因應（如抗旱、極端降雨）直接相關。",
+      "default_purity": "P3_PARTIAL",
+      "note": "生產效率提升 vs 氣候韌性提升，需判斷主要目的",
+      "severity": "caution",
+      "action_type": "remind"
+    },
+    {
+      "id": 7,
+      "name": "水環境複合工程未拆分",
+      "trigger_keywords": [
+        "水環境",
+        "河川整治"
+      ],
+      "require_all_triggers": false,
+      "exclude_keywords": [],
+      "warning_text": "⚠ 本類案件常同時包含景觀、生態、防洪等多種功能。建議拆分具氣候效益之工項比例，而非整案列入氣候預算。",
+      "default_purity": "P3_PARTIAL",
+      "note": "複合型工程一定要拆分計算，避免非氣候部分被誤列",
+      "severity": "warning",
+      "action_type": "require_review"
+    },
+    {
+      "id": 8,
+      "name": "監測系統漏辨識",
+      "trigger_keywords": [
+        "監測",
+        "系統"
+      ],
+      "require_all_triggers": true,
+      "require_any_context": [
+        "氣象",
+        "水位",
+        "溫度",
+        "淹水",
+        "預警",
+        "氣候"
+      ],
+      "exclude_keywords": [],
+      "warning_text": "💡 若本案為氣候監測或預警系統，可能屬於調適措施（風險管理與預警）。請評估是否適合納入氣候預算。",
+      "default_purity": "P2_HIGH_RELEVANCE",
+      "note": "監測系統有可能是氣候調適的重要投資，但容易被系統漏辨識",
+      "severity": "info",
+      "action_type": "remind"
+    },
+    {
+      "id": 9,
+      "name": "交通建設誤判減碳",
+      "trigger_keywords": [
+        "新建",
+        "拓寬"
+      ],
+      "require_all_triggers": false,
+      "require_any_context": [
+        "道路",
+        "橋梁",
+        "交通"
+      ],
+      "exclude_keywords": [
+        "電動",
+        "公共運輸",
+        "低碳",
+        "自行車",
+        "人行"
+      ],
+      "warning_text": "⚠ 一般道路/橋梁新建或拓寬，不一定具備減碳效益。請確認是否包含低碳運輸或運具轉型措施。",
+      "default_purity": "P4_LOW",
+      "note": "新增道路基礎設施可能反而增加車流，需有明確的低碳設計才列入",
+      "severity": "caution",
+      "action_type": "suggest_review"
+    },
+    {
+      "id": 10,
+      "name": "高溫勞安調適漏辨識",
+      "trigger_keywords": [
+        "工程",
+        "施工"
+      ],
+      "require_all_triggers": true,
+      "exclude_keywords": [
+        "勞安",
+        "工安",
+        "高溫",
+        "熱危害",
+        "遮蔭"
+      ],
+      "warning_text": "💡 本案若涉及戶外施工，可評估是否納入高溫作業防護措施（遮蔭設施、補充飲水、彈性工時調整）。此類措施屬於氣候健康調適，可列為管理型效益。",
+      "default_purity": "P5_MANAGEMENT",
+      "note": "觸發機制說明：此規則為 case-name 層級判斷（在 anti_pattern_check() 中實作）。當標案名稱包含「工程」或「施工」，但不含「勞安/工安/高溫/熱危害/遮蔭」時觸發。不依賴 keyword_triggers 或 item anti_pattern_ref，因為「工程/施工」過於泛用不適合列入觸發詞。Layer3 調適關鍵字中的勞安/熱危害等詞，若出現在標案名稱中，代表使用者已有意識，此規則則不觸發。",
+      "severity": "info",
+      "action_type": "remind"
+    }
+  ],
+  "department_presets": {
+    "水利資源處": {
+      "default_categories": [
+        "B"
+      ],
+      "secondary_categories": [
+        "D",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "water_flood",
+      "dept_hint": "水利資源處常見案件以防洪排水、污水下水道為主，系統已預先引導至B類工項",
+      "common_anti_pattern_ids": [
+        2,
+        7
+      ],
+      "category_priority_order": [
+        "B",
+        "D",
+        "F"
+      ],
+      "default_hint_mode": "adaptation"
+    },
+    "工務處": {
+      "default_categories": [
+        "A"
+      ],
+      "secondary_categories": [
+        "B",
+        "C"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "工務處案件以新建/改建/道路橋梁為主，請特別留意隱含碳檢核工項",
+      "common_anti_pattern_ids": [
+        1,
+        4,
+        9
+      ],
+      "category_priority_order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "建設處": {
+      "default_categories": [
+        "A"
+      ],
+      "secondary_categories": [
+        "C",
+        "E"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "建設處案件以建築新建/修繕為主，請留意建築能效與低碳材料工項",
+      "common_anti_pattern_ids": [
+        4,
+        5
+      ],
+      "category_priority_order": [
+        "A",
+        "C",
+        "E"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "農業處": {
+      "default_categories": [
+        "D"
+      ],
+      "secondary_categories": [
+        "B",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "農業處案件包含公園綠化、農村水保、NBS生態工法，請確認是否具備氣候效益",
+      "common_anti_pattern_ids": [
+        3,
+        6
+      ],
+      "category_priority_order": [
+        "D",
+        "B",
+        "F"
+      ],
+      "default_hint_mode": "adaptation"
+    },
+    "教育處": {
+      "default_categories": [
+        "E",
+        "G"
+      ],
+      "secondary_categories": [
+        "A",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "教育處案件常見節能設備汰換與場館整修，另可留意避暑/防災據點之社會韌性效益",
+      "common_anti_pattern_ids": [
+        4
+      ],
+      "category_priority_order": [
+        "E",
+        "G",
+        "A"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "社會處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "E",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "社會處案件請特別留意脆弱族群避暑防災據點（G1）及高溫健康調適（G3）工項",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F",
+        "E"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "交通處": {
+      "default_categories": [
+        "C"
+      ],
+      "secondary_categories": [
+        "A",
+        "F"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "交通處案件以綠色運輸為主，請確認是否為低碳運具或智慧運輸，避免一般道路工程誤列",
+      "common_anti_pattern_ids": [
+        1,
+        9
+      ],
+      "category_priority_order": [
+        "C",
+        "A",
+        "F"
+      ],
+      "default_hint_mode": "mitigation_check"
+    },
+    "環境保護局": {
+      "default_categories": [
+        "F"
+      ],
+      "secondary_categories": [
+        "D",
+        "G"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "環保局案件以評估規劃、監測系統為主，請留意氣候監測系統的調適價值",
+      "common_anti_pattern_ids": [
+        8
+      ],
+      "category_priority_order": [
+        "F",
+        "D",
+        "G"
+      ],
+      "default_hint_mode": "monitoring"
+    },
+    "勞工處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "勞工處案件請特別留意高溫作業防護措施，此屬氣候健康調適的管理型效益",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "衛生局": {
+      "default_categories": [
+        "G",
+        "F"
+      ],
+      "secondary_categories": [],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "衛生局案件請留意極端高溫健康風險評估及脆弱族群保護措施",
+      "common_anti_pattern_ids": [
+        10
+      ],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "城市暨觀光發展處": {
+      "default_categories": [
+        "D",
+        "E"
+      ],
+      "secondary_categories": [
+        "A",
+        "C"
+      ],
+      "adaptation_layer_emphasis": "ecology_cooling",
+      "dept_hint": "城觀處案件包含景觀、場館、觀光設施，請確認景觀工程是否具備降溫或生態效益",
+      "common_anti_pattern_ids": [
+        3
+      ],
+      "category_priority_order": [
+        "D",
+        "E",
+        "A"
+      ],
+      "default_hint_mode": "general"
+    },
+    "消防局": {
+      "default_categories": [
+        "G",
+        "F"
+      ],
+      "secondary_categories": [
+        "A"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "消防局案件請留意防災據點與韌性評估之調適價值",
+      "common_anti_pattern_ids": [],
+      "category_priority_order": [
+        "G",
+        "F",
+        "A"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "民政處": {
+      "default_categories": [
+        "G"
+      ],
+      "secondary_categories": [
+        "F"
+      ],
+      "adaptation_layer_emphasis": "social_resilience",
+      "dept_hint": "民政處案件請留意社區防災據點與脆弱族群服務的氣候調適效益",
+      "common_anti_pattern_ids": [],
+      "category_priority_order": [
+        "G",
+        "F"
+      ],
+      "default_hint_mode": "social_resilience"
+    },
+    "行政處": {
+      "default_categories": [
+        "E",
+        "F"
+      ],
+      "secondary_categories": [],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "行政處案件以設備汰換與規劃為主，請留意節能設備更新工項",
+      "common_anti_pattern_ids": [
+        4
+      ],
+      "category_priority_order": [
+        "E",
+        "F"
+      ],
+      "default_hint_mode": "general"
+    },
+    "經濟暨綠能發展處": {
+      "default_categories": [
+        "E",
+        "F"
+      ],
+      "secondary_categories": [
+        "C",
+        "D"
+      ],
+      "adaptation_layer_emphasis": "general",
+      "dept_hint": "綠能發展處案件以能源設施與評估規劃為主，請留意光電工程的費用拆分",
+      "common_anti_pattern_ids": [
+        5
+      ],
+      "category_priority_order": [
+        "E",
+        "F",
+        "C"
+      ],
+      "default_hint_mode": "general"
+    }
+  },
+  "adaptation_keyword_layers": {
+    "layer1_water_flood": {
+      "label": "水利防洪",
+      "description": "排水設施、防洪工程、水資源管理相關，最直接的調適類別",
+      "keywords": [
         {
-          "id": "B1",
-          "label": "防洪排水與滯洪設施",
-          "examples": "如：排水幹線改善、滯洪池、抽水站",
-          "items": [
-            {
-              "label": "滯洪池、抽水站建置與防洪改善",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "氣候變遷韌性調適關鍵設施",
-              "alert": "氣候韌性調適關鍵計畫",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期環境方案-策略4.2",
-                "guideline": "水利/下水道工程減碳指引"
-              },
-              "green_spending_type": "綠色環境",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B1_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "排水系統清淤與維護管理",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "極端氣候調適設施維護",
-              "alert": "",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期環境方案-策略4.2",
-                "guideline": "水利/下水道工程減碳指引"
-              },
-              "green_spending_type": "綠色環境",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [
-                2
-              ],
-              "budget_hint": "",
-              "item_id": "ITEM_B1_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "自然水岸與堤岸生態化工程",
-              "mitigation_codes": [
-                "農業-7"
-              ],
-              "adaptation_codes": [
-                "調適-生態"
-              ],
-              "policy": "生態堤岸與碳匯",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B1_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "都市地下透水排水系統",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-水",
-                "調適-降溫"
-              ],
-              "policy": "海綿城市概念調適",
-              "alert": "",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期環境方案-策略4.2",
-                "guideline": "水利/下水道工程減碳指引"
-              },
-              "green_spending_type": "綠色環境",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B1_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "使用低碳水泥/低碳混凝土",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "材料減碳",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B1_05",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "應用再生粒料或循環材料",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "資源循環",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B1_06",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "現地土方平衡處理（減少運輸排碳）",
-              "mitigation_codes": [
-                "運輸-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "低碳施工管理",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B1_07",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "水泵、閘門採用高能源效率或變頻裝置",
-              "mitigation_codes": [
-                "能源-節能"
-              ],
-              "adaptation_codes": [],
-              "policy": "水利指引：抽水機電設備節能運用，降低長期電力碳排",
-              "alert": "",
-              "green_spending_type": "綠色能源",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B1_08",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ],
-          "engineering_checklist": [
-            "確認抽水機是否採用高效率馬達（IE3 以上）或變頻控制",
-            "確認滯洪池護岸是否可導入生態化工法（石籠、植生）",
-            "確認是否有施工污水回收處理機制"
-          ]
+          "term": "排水",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
         },
         {
-          "id": "B2",
-          "label": "污水與廢水處理",
-          "examples": "如：污水廠節能、畜牧糞尿沼氣、農業廢水；亦適用補助農民/業者進行廢棄物資源化之獎補助業務",
-          "items": [
-            {
-              "label": "污水下水道建置與用戶接管",
-              "mitigation_codes": [
-                "環境-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期環境部門核心目標：提升污水處理率",
-              "alert": "",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期環境方案-策略4.2",
-                "guideline": "水利/下水道工程減碳指引"
-              },
-              "green_spending_type": "綠色環境",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B2_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "污水廠節能設備或沼氣回收",
-              "mitigation_codes": [
-                "環境-1",
-                "能源-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期能源部門：廢棄物能源化",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B2_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "廢水污泥再利用或資源化",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期環境部門：資源循環零廢棄",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B2_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "農業灌溉用水效率改善",
-              "mitigation_codes": [
-                "農業-3"
-              ],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "農業節水與調適",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [
-                6
-              ],
-              "budget_hint": "",
-              "item_id": "ITEM_B2_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "資源回收再生系統（如輔具維修回收再利用）",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "資源循環再利用",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B2_05",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "焚化底渣/飛灰資源化處理",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "循環材料替代原生資源",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B2_06",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "畜牧糞尿氨氮回收與沼氣發電",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "農業與環境部門減碳整合",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B2_07",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "補助農民或畜牧業者進行沼氣回收或沼氣發電（獎補助型）",
-              "mitigation_codes": [
-                "農業-1",
-                "能源-再生"
-              ],
-              "adaptation_codes": [],
-              "policy": "農業部門減碳：畜牧糞尿資源化與再生能源推廣",
-              "alert": "本工項為對農民/業者的獎補助，應確認補助對象符合資格且設備達到減碳效益",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額可全額計入氣候相關支出",
-              "item_id": "ITEM_B2_08",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_farmer",
-              "note": "適用情境：縣府補助畜牧農場建置沼氣回收設備、沼氣發電機組或廢水處理減排設施"
-            },
-            {
-              "label": "補助農民進行農業節水、節能或低碳農法改善（獎補助型）",
-              "mitigation_codes": [
-                "農業-2"
-              ],
-              "adaptation_codes": [
-                "調適-農業"
-              ],
-              "policy": "農業部門調適與減碳：農業用水效率與低碳耕作",
-              "alert": "應說明改善前後的水電用量或排碳差異，作為效益佐證",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B2_09",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_farmer",
-              "note": "適用情境：補助農民改用滴灌/智慧灌溉、轉作低碳作物、採用有機農法等"
-            }
-          ],
-          "engineering_checklist": [
-            "確認污水廠是否評估沼氣回收或再生能源設置可行性",
-            "確認管線是否採用長壽命管材（HDPE 或玻璃纖維管）",
-            "確認廢水污泥是否規劃資源化處理"
-          ]
+          "term": "抽水",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
         },
         {
-          "id": "B3",
-          "label": "下水道與管線減碳設計",
-          "examples": "如：重力流設計、長壽命管材、施工用水循環利用",
-          "items": [
-            {
-              "label": "地勢評估採用重力流設計（節省抽送能源）",
-              "mitigation_codes": [
-                "水利-節能"
-              ],
-              "adaptation_codes": [],
-              "policy": "下水道指引：減少營運耗能",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B3_01",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "採用長壽命管材（如HDPE高密度聚乙烯管）",
-              "mitigation_codes": [
-                "水利-材料"
-              ],
-              "adaptation_codes": [],
-              "policy": "下水道指引：延長設施壽命",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B3_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "施工用水取用污水廠放流水（減少自來水碳排）",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "下水道指引：水資源循環",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "management",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B3_03",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "施工便道及臨時用電優先採用台電接電或再生能源",
-              "mitigation_codes": [
-                "能源-節能"
-              ],
-              "adaptation_codes": [],
-              "policy": "下水道指引：替代柴油發電，降低施工碳排",
-              "alert": "",
-              "green_spending_type": "綠色能源",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "management",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_B3_04",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            }
-          ],
-          "engineering_checklist": [
-            "確認管線路由是否優先採用重力流設計",
-            "確認管材選用是否評估 HDPE 或其他低碳長壽命管材",
-            "確認施工期間用水是否可取用再生水或雨水"
-          ]
+          "term": "水利",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "滯洪",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "清疏",
+          "weight": 0.8,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "護岸",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "防洪",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "災修",
+          "weight": 0.7,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "出流管制",
+          "weight": 1.0,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "農塘",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "透水鋪面",
+          "weight": 1.0,
+          "suggested_category": "A",
+          "suggested_sub": "A2"
         }
       ]
     },
-    {
-      "id": "C",
-      "label": "交通改善／綠色運輸／智慧運輸",
-      "icon": "🚌",
-      "description": "包含道路交通設施、大眾運輸、電動化等；亦適用補助民眾或鄉鎮購置低碳運具（自行車、電動機車等）之獎補助業務",
-      "sub_categories": [
+    "layer2_ecology_cooling": {
+      "label": "降溫與生態",
+      "description": "都市降溫、自然解方（NBS）、生態工法、植栽碳匯，Phase 1B 新增",
+      "keywords": [
         {
-          "id": "C1",
-          "label": "人本交通與步行環境",
-          "examples": "如：人行空間改善、自行車道、無障礙設施",
-          "items": [
-            {
-              "label": "建置友善行人空間或自行車道",
-              "mitigation_codes": [
-                "運輸-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門目標：完備步行/自行車環境",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C1_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "公共自行車站點擴建",
-              "mitigation_codes": [
-                "運輸-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "共享運輸推廣",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C1_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "道路照明LED燈具汰換",
-              "mitigation_codes": [
-                "住商-3",
-                "1-7"
-              ],
-              "adaptation_codes": [],
-              "policy": "能源轉型：路燈節能",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C1_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "停車場電動車充電樁設置",
-              "mitigation_codes": [
-                "運輸-2"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門：電動車基礎設施",
-              "alert": "",
-              "central_alignment": {
-                "sector": "運輸部門",
-                "strategy_ref": "第三期運輸方案-策略2.1/2.2",
-                "guideline": "省道/軌道工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C1_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ],
-          "engineering_checklist": [
-            "確認路燈是否全面採用 LED 並納入智慧節能控制",
-            "確認人行道鋪面是否採用透水材料（海綿城市概念）"
-          ]
+          "term": "高溫",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3"
         },
         {
-          "id": "C2",
-          "label": "大眾運輸與智慧運輸系統",
-          "examples": "如：公車站牌、智慧交通、停車管理",
-          "items": [
-            {
-              "label": "導入大眾運輸智慧化系統（智慧站牌）",
-              "mitigation_codes": [
-                "運輸-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門：提升運輸系統能源效率",
-              "alert": "",
-              "central_alignment": {
-                "sector": "運輸部門",
-                "strategy_ref": "第三期運輸方案-策略2.1/2.2",
-                "guideline": "省道/軌道工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C2_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "電動公車或電動公務車採購",
-              "mitigation_codes": [
-                "運輸-2"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門：運具電動化",
-              "alert": "",
-              "central_alignment": {
-                "sector": "運輸部門",
-                "strategy_ref": "第三期運輸方案-策略2.1/2.2",
-                "guideline": "省道/軌道工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C2_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "交通號誌智慧化節能",
-              "mitigation_codes": [
-                "運輸-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "智慧交通節能",
-              "alert": "",
-              "central_alignment": {
-                "sector": "運輸部門",
-                "strategy_ref": "第三期運輸方案-策略2.1/2.2",
-                "guideline": "省道/軌道工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C2_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "共享運輸服務平台建置",
-              "mitigation_codes": [
-                "運輸-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "共享運輸推廣",
-              "alert": "",
-              "central_alignment": {
-                "sector": "運輸部門",
-                "strategy_ref": "第三期運輸方案-策略2.1/2.2",
-                "guideline": "省道/軌道工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C2_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ],
-          "engineering_checklist": [
-            "確認電動車充電樁規格是否符合未來快充需求",
-            "確認智慧號誌是否整合節能模式"
-          ]
+          "term": "遮蔭",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3"
         },
         {
-          "id": "C3",
-          "label": "軌道與鐵道系統優化",
-          "examples": "如：長軌無縫化、無柱懸吊、道碴循環再利用",
-          "items": [
-            {
-              "label": "採用長軌(CWR)無縫技術與道岔優化設計",
-              "mitigation_codes": [
-                "運輸-輕量化"
-              ],
-              "adaptation_codes": [],
-              "policy": "鐵道指引：綠色工法",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C3_01",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "電車線採用無柱懸吊技術（減少支柱材料）",
-              "mitigation_codes": [
-                "運輸-輕量化"
-              ],
-              "adaptation_codes": [],
-              "policy": "鐵道指引：減量設計",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C3_02",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "道碴碎石區域內重複再利用",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "鐵道指引：就地取材",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C3_03",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            }
-          ],
-          "engineering_checklist": [
-            "確認道碴更換料是否規劃區域內循環再利用",
-            "確認長軌焊接作業是否採用低碳施工流程"
-          ],
-          "enabled": false,
-          "disabled_reason": "彰化縣目前無軌道／鐵道工程業務，暫時關閉；已對應中央工程減碳指引，日後開放時移除此欄位即可"
+          "term": "熱島",
+          "weight": 0.8,
+          "suggested_category": "A",
+          "suggested_sub": "A2"
         },
         {
-          "id": "C4",
-          "label": "獎補助：低碳運具與交通服務",
-          "examples": "如：補助民眾購置電動機車、補助村里服務用自行車、補助偏鄉接駁巴士",
-          "items": [
-            {
-              "label": "補助民眾購置自行車或電動自行車",
-              "mitigation_codes": [
-                "運輸-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門：完備步行/自行車環境；促進低碳運具普及",
-              "alert": "獎補助業務（非工程採購）；氣候效益來自促進低碳通勤行為",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額可全額計入氣候相關支出",
-              "item_id": "ITEM_C4_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_public",
-              "note": "補助對象：一般民眾。含腳踏車、電動輔助自行車等人力/低動力運具"
-            },
-            {
-              "label": "補助民眾購置電動機車",
-              "mitigation_codes": [
-                "運輸-2"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期運輸部門：運具電動化；電動機車補助推廣",
-              "alert": "獎補助業務（非工程採購）；確認補助對象資格與減碳效益說明",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額可全額計入氣候相關支出",
-              "item_id": "ITEM_C4_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_public",
-              "note": "補助對象：一般民眾。含電動重機、電動輕型機車等動力運具"
-            },
-            {
-              "label": "補助鄉鎮公所或村里購置低碳服務用車輛",
-              "mitigation_codes": [
-                "運輸-2"
-              ],
-              "adaptation_codes": [
-                "調適-社會"
-              ],
-              "policy": "交通平權與公正轉型；基層公共服務低碳化",
-              "alert": "獎補助業務；補助對象為鄉鎮公所或村里，應確認用途為對外公共服務",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額可全額計入氣候相關支出",
-              "item_id": "ITEM_C4_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_township",
-              "note": "補助對象：鄉鎮公所、村里辦公室。含服務用自行車、電動機車、電動公務車等"
-            },
-            {
-              "label": "補助偏鄉或社區低碳接駁服務營運",
-              "mitigation_codes": [
-                "運輸-3"
-              ],
-              "adaptation_codes": [
-                "調適-社會"
-              ],
-              "policy": "共享運輸推廣；偏鄉交通平權",
-              "alert": "獎補助業務（服務營運補助，非設備採購）；應說明服務範圍與低碳效益",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_C4_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_service",
-              "note": "補助對象：社區組織、民間團體或業者。含社區巡迴巴士、共乘平台等接駁服務"
-            }
-          ]
+          "term": "NBS",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "生態工法",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "砌石",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "石籠",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "木排樁",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "野溪",
+          "weight": 1.0,
+          "suggested_category": "D",
+          "suggested_sub": "D3"
+        },
+        {
+          "term": "都市降溫",
+          "weight": 0.8,
+          "suggested_category": "D",
+          "suggested_sub": "D2"
+        },
+        {
+          "term": "降溫綠廊",
+          "weight": 0.9,
+          "suggested_category": "D",
+          "suggested_sub": "D1"
+        },
+        {
+          "term": "海綿城市",
+          "weight": 0.8,
+          "suggested_category": "B",
+          "suggested_sub": "B1"
+        },
+        {
+          "term": "透水",
+          "weight": 0.8,
+          "suggested_category": "A",
+          "suggested_sub": "A1"
         }
       ]
     },
-    {
-      "id": "D",
-      "label": "公園／綠美化／生態環境",
-      "icon": "🌿",
-      "description": "包含公園綠化、植樹造林、濕地棲地保育；亦適用補助農村、社區或私有地主進行植樹固碳、生態復育之獎補助業務",
-      "sub_categories": [
+    "layer3_social_resilience": {
+      "label": "社會韌性與健康調適",
+      "description": "脆弱族群防護、高溫健康風險、社區防災、勞工安全，Phase 1B 新增，完全空白補入",
+      "keywords": [
         {
-          "id": "D1",
-          "label": "自然碳匯與生態營造",
-          "examples": "如：公園植樹、行道樹、濕地、紅樹林",
-          "items": [
-            {
-              "label": "植樹造林或都市綠化",
-              "mitigation_codes": [
-                "農業-5"
-              ],
-              "adaptation_codes": [
-                "調適-降溫"
-              ],
-              "policy": "第三期農業部門旗艦計畫：森林碳匯",
-              "alert": "具備自然碳匯貢獻",
-              "central_alignment": {
-                "sector": "農業部門",
-                "strategy_ref": "第三期農業方案-策略3.2/3.3",
-                "guideline": "水保工程減碳指引"
-              },
-              "green_spending_type": "綠色環境",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D1_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "濕地、紅樹林或棲地復育",
-              "mitigation_codes": [
-                "農業-7"
-              ],
-              "adaptation_codes": [
-                "調適-生態"
-              ],
-              "policy": "第三期農業部門旗艦計畫：海洋與濕地碳匯",
-              "alert": "海洋/濕地藍碳計畫",
-              "central_alignment": {
-                "sector": "農業部門",
-                "strategy_ref": "第三期農業方案-策略3.2/3.3",
-                "guideline": "水保工程減碳指引"
-              },
-              "green_spending_type": "綠色環境",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D1_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "公園草坪智慧節水灌溉",
-              "mitigation_codes": [
-                "農業-3"
-              ],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "農業節水",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D1_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "太陽能路燈或公園節能設施",
-              "mitigation_codes": [
-                "能源-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期能源部門：再生能源",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D1_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ],
-          "engineering_checklist": [
-            "確認植栽物種是否優先採用原生種（提升碳匯效益）",
-            "確認濕地復育是否有長期監測計畫"
+          "term": "勞安",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
           ]
         },
         {
-          "id": "D2",
-          "label": "景觀與人本環境改善",
-          "examples": "如：景觀整治、廣場美化、環境教育設施",
-          "items": [
-            {
-              "label": "環境教育設施建置",
-              "mitigation_codes": [
-                "淨零教育-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期淨零教育部門：環境教育推廣",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D2_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "廣場透水鋪面改善",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-水",
-                "調適-降溫"
-              ],
-              "policy": "都市調適",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D2_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "都市農園或食農教育設施",
-              "mitigation_codes": [
-                "農業-4"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期農業部門：有機友善農業",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D2_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "海岸或河岸環境景觀整治",
-              "mitigation_codes": [
-                "農業-7"
-              ],
-              "adaptation_codes": [
-                "調適-生態"
-              ],
-              "policy": "海岸韌性與碳匯",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [
-                7
-              ],
-              "budget_hint": "",
-              "item_id": "ITEM_D2_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
+          "term": "工安",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
           ]
         },
         {
-          "id": "D3",
-          "label": "農村水保與自然解方(NBS)",
-          "examples": "如：砌石石籠護岸、野溪復育、農塘調適設施",
-          "items": [
-            {
-              "label": "採用砌石、石籠等自然材料工法（減少混凝土）",
-              "mitigation_codes": [
-                "農業-生態"
-              ],
-              "adaptation_codes": [],
-              "policy": "水保指引：低碳材料與NBS",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D3_01",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "野溪復育、崩塌地處理結合植生碳匯營造",
-              "mitigation_codes": [
-                "農業-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "水保指引：增加土壤與植生碳匯",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D3_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "農塘營造與蓄排水調適設施",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "水保指引：氣候韌性調適",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D3_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "地工合成加勁材擋土牆（取代傳統混凝土擋土牆）",
-              "mitigation_codes": [
-                "農業-減碳"
-              ],
-              "adaptation_codes": [],
-              "policy": "農村水保指引：輕量化防砂設施",
-              "alert": "",
-              "green_spending_type": "綠色工法",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D3_04",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "採用砌石、石籠、木排樁等自然材料工法（取代混凝土）",
-              "mitigation_codes": [
-                "農業-生態"
-              ],
-              "adaptation_codes": [
-                "調適-生態"
-              ],
-              "policy": "水保指引：低碳材料與NBS自然解方",
-              "alert": "",
-              "green_spending_type": "綠色材料",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D3_05",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            }
-          ],
-          "engineering_checklist": [
-            "確認護岸工法是否優先採用砌石、石籠等自然材料",
-            "確認加勁擋土牆是否評估取代混凝土擋土牆的可行性",
-            "確認野溪整治是否結合植生碳匯營造"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "E",
-      "label": "裝修／設備汰換／場館改善",
-      "icon": "🔧",
-      "description": "包含室內裝修、設備更新、既有建物節能改善；亦適用補助社區、村里辦公室、小型場所進行節電或能源改善之獎補助業務",
-      "sub_categories": [
-        {
-          "id": "E1",
-          "label": "節能設備汰換與能源管理",
-          "examples": "如：LED汰換、高效空調、太陽能；亦適用補助村里辦公室、社區活動中心或小型場所節電改善之獎補助業務",
-          "items": [
-            {
-              "label": "LED燈具全面汰換",
-              "mitigation_codes": [
-                "1-7",
-                "住商-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期能源轉型：照明節能",
-              "alert": "",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.1",
-                "guideline": "建築工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E1_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "高能效空調系統更新",
-              "mitigation_codes": [
-                "住商-4"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期住商部門：設備效率提升",
-              "alert": "",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.1",
-                "guideline": "建築工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E1_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "屋頂太陽能光電設置",
-              "mitigation_codes": [
-                "能源-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期能源部門：擴大再生能源",
-              "alert": "",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.1",
-                "guideline": "建築工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [
-                5
-              ],
-              "budget_hint": "",
-              "item_id": "ITEM_E1_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "智慧能源管理系統（BEMS）",
-              "mitigation_codes": [
-                "住商-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "建築智慧能源管理",
-              "alert": "",
-              "central_alignment": {
-                "sector": "住商部門",
-                "strategy_ref": "第三期住商方案-策略1.1",
-                "guideline": "建築工程減碳指引"
-              },
-              "green_spending_type": "綠色能源",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E1_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "補助村里辦公室或社區活動中心節電設備改善（獎補助型）",
-              "mitigation_codes": [
-                "住商-1",
-                "住商-3"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期住商部門：既有建物節能改善；基層單位節電推廣",
-              "alert": "本工項為對村里的獎補助，應確認設備改善範圍與預期省電量",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額可全額計入氣候相關支出",
-              "item_id": "ITEM_E1_05",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_community",
-              "note": "適用情境：縣府補助各村里辦公室更換LED、加裝太陽能板、更新高效空調等節電措施"
-            },
-            {
-              "label": "補助社區、學校或小型場所安裝太陽光電（獎補助型）",
-              "mitigation_codes": [
-                "住商-2",
-                "能源-再生"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期能源部門：再生能源裝置量擴大；屋頂型太陽能推廣",
-              "alert": "確認補助對象用電歸屬與躉售/自用比例說明",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額可全額計入氣候相關支出",
-              "item_id": "ITEM_E1_06",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_community",
-              "note": "適用情境：補助社區活動中心、廟宇、學校屋頂安裝太陽光電系統"
-            }
-          ],
-          "engineering_checklist": [
-            "確認空調設備 EER/COP 是否符合節能標準（EER ≥ 4.0）",
-            "確認 LED 燈具色溫與照度是否符合 CNS 標準",
-            "確認太陽光電系統裝置容量與回收年限試算"
+          "term": "熱危害",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
           ]
         },
         {
-          "id": "E2",
-          "label": "場館與室內裝修改善",
-          "examples": "如：活動中心翻新、辦公室整修、廁所改善",
-          "items": [
-            {
-              "label": "場館室內裝修（通用節能檢核）",
-              "mitigation_codes": [
-                "住商-3",
-                "住商-4"
-              ],
-              "adaptation_codes": [
-                "調適-降溫"
-              ],
-              "policy": "跨局處通用：場館裝修應同步檢核節能空調與LED",
-              "alert": "建議同步檢核高能效空調與LED照明配置",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [
-                4
-              ],
-              "budget_hint": "",
-              "item_id": "ITEM_E2_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "室內裝修使用低逸散環保建材",
-              "mitigation_codes": [
-                "住商-2"
-              ],
-              "adaptation_codes": [],
-              "policy": "住商部門：環保建材",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E2_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "無障礙設施改善（兼顧高齡調適）",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-社會"
-              ],
-              "policy": "氣候調適社會韌性",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E2_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "節水設備安裝（省水馬桶、感應龍頭）",
-              "mitigation_codes": [
-                "農業-3"
-              ],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "節水調適",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E2_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "通風採光改善（被動式節能設計）",
-              "mitigation_codes": [
-                "住商-3"
-              ],
-              "adaptation_codes": [
-                "調適-降溫"
-              ],
-              "policy": "被動式建築節能",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E2_05",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "有機廢棄物現地堆肥化/資源化",
-              "mitigation_codes": [
-                "環境-5"
-              ],
-              "adaptation_codes": [],
-              "policy": "維護作業低碳化",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E2_06",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "使用電力驅動維護機具（如電動割草機）",
-              "mitigation_codes": [
-                "能源-2"
-              ],
-              "adaptation_codes": [],
-              "policy": "維護設備電動化",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_E2_07",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ],
-          "engineering_checklist": [
-            "確認裝修材料是否選用低逸散(低 VOC)環保建材",
-            "確認裝修廢棄物是否規劃分類回收處理"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "F",
-      "label": "評估／規劃／顧問／系統建置／委託營運管理",
-      "icon": "📋",
-      "description": "包含可行性評估、規劃設計、委託研究、資訊系統與委外營運管理；宣導教育類計畫若含顧問規劃成分亦可加選本類別",
-      "sub_categories": [
-        {
-          "id": "F1",
-          "label": "淨零與氣候相關規劃研究",
-          "examples": "如：氣候變遷調適計畫、淨零路徑研究、碳盤查",
-          "items": [
-            {
-              "label": "縣市層級淨零/氣候調適計畫研擬",
-              "mitigation_codes": [
-                "淨零教育-1"
-              ],
-              "adaptation_codes": [
-                "調適-政策"
-              ],
-              "policy": "地方淨零治理",
-              "alert": "",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期跨部門治理策略",
-                "guideline": "工程減碳作業參考指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F1_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "組織碳盤查或碳足跡評估",
-              "mitigation_codes": [
-                "淨零教育-2"
-              ],
-              "adaptation_codes": [],
-              "policy": "碳管理能量建置",
-              "alert": "",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期跨部門治理策略",
-                "guideline": "工程減碳作業參考指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F1_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "綠能或再生能源可行性評估",
-              "mitigation_codes": [
-                "能源-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "再生能源推動",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F1_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "氣候風險評估或脆弱度調查",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-政策"
-              ],
-              "policy": "氣候韌性治理",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F1_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ],
-          "engineering_checklist": [
-            "確認規劃報告是否納入氣候變遷脆弱度評估章節",
-            "確認碳盤查是否採用 ISO 14064-1 或 GHG Protocol 標準"
+          "term": "熱中暑",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
           ]
         },
         {
-          "id": "F2",
-          "label": "智慧城市與環境監測系統",
-          "examples": "如：空氣品質監測、智慧水表、環境感測",
-          "items": [
-            {
-              "label": "空氣品質或溫室氣體監測系統",
-              "mitigation_codes": [
-                "環境-4"
-              ],
-              "adaptation_codes": [],
-              "policy": "環境監測能量",
-              "alert": "",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期跨部門治理策略",
-                "guideline": "工程減碳作業參考指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F2_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "智慧水資源管理系統",
-              "mitigation_codes": [
-                "農業-3"
-              ],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "水資源智慧管理",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [
-                8
-              ],
-              "budget_hint": "",
-              "item_id": "ITEM_F2_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "災害預警或韌性資訊平台",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-政策"
-              ],
-              "policy": "氣候韌性資訊系統",
-              "alert": "",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F2_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "節能減碳推廣教育宣導計畫",
-              "mitigation_codes": [
-                "淨零教育-1"
-              ],
-              "adaptation_codes": [],
-              "policy": "第三期淨零教育部門",
-              "alert": "",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期跨部門治理策略",
-                "guideline": "工程減碳作業參考指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F2_04",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ],
-          "engineering_checklist": [
-            "確認監測設備是否具備即時資料傳輸與開放資料功能",
-            "確認系統是否與縣府防災或環境資訊平台介接"
+          "term": "高溫作業",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
           ]
         },
         {
-          "id": "F3",
-          "label": "科學監測與政策研究",
-          "examples": "如：水文監測、空品監測、政策評估、資料庫建置",
-          "items": [
-            {
-              "label": "水文/空氣品質科學監測與資料分析",
-              "mitigation_codes": [
-                "環境-4"
-              ],
-              "adaptation_codes": [
-                "調適-水"
-              ],
-              "policy": "監測型計畫：強化氣候風險早期辨識",
-              "alert": "可依監測設備比重拆分氣候預算",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期跨部門治理策略",
-                "guideline": "工程減碳作業參考指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F3_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "氣候政策研究與治理評估",
-              "mitigation_codes": [
-                "淨零教育-1"
-              ],
-              "adaptation_codes": [
-                "調適-政策"
-              ],
-              "policy": "政策型計畫：淨零路徑與調適治理",
-              "alert": "建議佐證對應之政策目標與指標",
-              "central_alignment": {
-                "sector": "環境部門",
-                "strategy_ref": "第三期跨部門治理策略",
-                "guideline": "工程減碳作業參考指引"
-              },
-              "green_spending_type": "綠色工法",
-              "default_purity": "P1_HIGH_PURITY",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F3_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
+          "term": "防暑",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": [
+            10
           ]
         },
         {
-          "id": "F4",
-          "label": "委託營運管理與維運服務",
-          "examples": "如：場館委外營運、系統維運、公共設施管理服務",
-          "items": [
-            {
-              "label": "委託營運管理（含節能與減碳要求）",
-              "mitigation_codes": [
-                "住商-2"
-              ],
-              "adaptation_codes": [
-                "調適-政策"
-              ],
-              "policy": "委外契約納入節能減碳與韌性管理",
-              "alert": "建議於契約規範能源使用與碳管理指標",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F4_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "維運服務（含設備效率與低碳採購）",
-              "mitigation_codes": [
-                "能源-2"
-              ],
-              "adaptation_codes": [],
-              "policy": "維運階段持續改善能效與採購管理",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_F4_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "G",
-      "label": "公正轉型與社會韌性",
-      "icon": "🤝",
-      "description": "包含社區韌性強化、弱勢族群氣候調適、基層能力建構；亦適用補助社區/村里進行防熱島、防洪調適、宣導培力等氣候行動之獎補助業務；辦理氣候宣導活動、研習培訓、社區規劃輔導亦屬本類別",
-      "sub_categories": [
-        {
-          "id": "G1",
-          "label": "弱勢族群低碳交通與防災據點",
-          "examples": "如：電動復康巴士、身障中心、長照關懷中心、補助鄉鎮購置服務用低碳運具",
-          "items": [
-            {
-              "label": "弱勢族群低碳交通平權（如電動復康巴士）",
-              "mitigation_codes": [
-                "運輸-2"
-              ],
-              "adaptation_codes": [
-                "調適-社會"
-              ],
-              "policy": "交通平權與公正轉型",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_G1_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            },
-            {
-              "label": "氣候脆弱族群避暑與防災據點（身障中心/長照關懷中心營運）",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-社會"
-              ],
-              "policy": "社福據點氣候韌性",
-              "alert": "",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_G1_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ]
+          "term": "避暑",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
         },
         {
-          "id": "G2",
-          "label": "基層氣候能力建構與宣導培力",
-          "examples": "如：氣候宣導活動、淨零教育推廣、研習培訓、社區大學氣候課程、社區規劃師駐地輔導",
-          "items": [
-            {
-              "label": "基層氣候能力建構與綠生活推廣（社區大學/社區規劃師）",
-              "mitigation_codes": [
-                "淨零教育-1"
-              ],
-              "adaptation_codes": [
-                "調適-政策"
-              ],
-              "policy": "社區韌性與公民參與",
-              "alert": "",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_G2_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items"
-            }
-          ]
+          "term": "防災據點",
+          "weight": 1.0,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
         },
         {
-          "id": "G3",
-          "label": "社區與農村小型氣候調適行動補助",
-          "examples": "如：補助村里防熱島措施、農村小型防洪調適、社區韌性改善",
-          "items": [
-            {
-              "label": "補助村里或社區進行小型調適措施（遮陽、透水、降溫等）（獎補助型）",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-城市",
-                "調適-社會"
-              ],
-              "policy": "縣市氣候調適：都市熱島與韌性社區；社區防災調適能力建構",
-              "alert": "應說明補助措施的調適效益（如降溫幅度、滯水量等），避免流於一般環境美化",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "補助金額可全額計入氣候相關支出",
-              "item_id": "ITEM_G3_01",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_community",
-              "note": "適用情境：補助村里辦理遮陽棚架、透水鋪面、屋頂隔熱、社區雨水回收等小型調適工程"
-            },
-            {
-              "label": "補助農民進行農業氣候調適（防旱、防洪、轉作）（獎補助型）",
-              "mitigation_codes": [],
-              "adaptation_codes": [
-                "調適-農業",
-                "調適-水"
-              ],
-              "policy": "農業部門調適：農業生產韌性強化；極端氣候農業衝擊因應",
-              "alert": "確認補助措施與氣候風險（旱澇、高溫）的對應關係",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_G3_02",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_farmer",
-              "note": "適用情境：補助農民建置防旱設施、改種耐旱耐熱品種、轉作因應極端氣候之農業調適措施"
-            },
-            {
-              "label": "補助社區或民間團體推動氣候韌性行動計畫（獎補助型）",
-              "mitigation_codes": [
-                "淨零教育-1"
-              ],
-              "adaptation_codes": [
-                "調適-社會",
-                "調適-政策"
-              ],
-              "policy": "社區韌性與公民參與；地方氣候行動能力建構",
-              "alert": "確認計畫內容有具體氣候行動目標，非一般社區活動",
-              "default_purity": "P3_PARTIAL",
-              "benefit_type": "budget",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_G3_03",
-              "count_in_budget_total": true,
-              "display_section": "budget_items",
-              "subsidy_type": "grant_to_community",
-              "note": "適用情境：補助社區規劃師、環保團體、村里辦理氣候減碳或調適計畫、講習或示範行動"
-            }
-          ]
+          "term": "避難",
+          "weight": 0.7,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "關懷據點",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "脆弱族群",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G1",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "社區韌性",
+          "weight": 0.8,
+          "suggested_category": "G",
+          "suggested_sub": "G2",
+          "anti_pattern_ids": []
+        },
+        {
+          "term": "氣候健康",
+          "weight": 0.9,
+          "suggested_category": "G",
+          "suggested_sub": "G3",
+          "anti_pattern_ids": []
         }
       ]
     }
-  ],
-  "engineering_guideline_types": [
-    "建築",
-    "道路",
-    "水利",
-    "景觀",
-    "軌道",
-    "下水道",
-    "港口",
-    "公路",
-    "國道",
-    "鐵道",
-    "農村水保"
-  ],
-  "central_sector_strategies": {
-    "住商部門": [
-      "策略1.1 建築能效(BERS)",
-      "策略1.2 近零碳建築(nZEB)"
-    ],
-    "運輸部門": [
-      "策略2.1 運具電動化比例提升",
-      "策略2.2 充電基礎設施佈建"
-    ],
-    "農業部門": [
-      "策略3.1 水稻間歇灌溉",
-      "策略3.2 竹林經營管理",
-      "策略3.3 海草床修復"
-    ],
-    "環境部門": [
-      "策略4.1 沼氣發電回收",
-      "策略4.2 SRF固體再生燃料"
-    ]
   },
-  "engineering_checklists": {
-    "A": [
-      "📐 是否已評估取得綠建築標章(EEWH)或建築能效標示(BERS)？",
-      "🏗️ 混凝土用量是否採低碳配比（SCM/爐石/飛灰替代率）？",
-      "🔋 是否規劃設置太陽光電或儲能系統？",
-      "♻️ 施工廢棄物是否訂有資源化處置計畫？",
-      "🌡️ 是否採用被動式節能設計（隔熱、遮陽、自然採光）？"
-    ],
-    "B": [
-      "💧 排水設計是否優先採重力流、減少抽水機裝置容量？",
-      "🔧 抽水機組是否採高效率泵或變頻控制節能？",
-      "🪨 護岸工法是否評估以自然工法（石籠、砌石）取代混凝土？",
-      "♻️ 施工用水是否評估取用污水廠放流水或雨水回收？",
-      "📊 是否規劃碳排放量化估算（工程 LCA）？"
-    ],
-    "C": [
-      "🚌 新購車輛是否為電動或油電混合車型？",
-      "💡 道路照明是否全面採 LED 並搭配智慧調光？",
-      "🛤️ 鋪面材料是否評估溫拌瀝青或 RAP 再生料？",
-      "🚶 是否同步改善人行/自行車道連結性？",
-      "📡 是否導入智慧號誌、感應偵測等節能控制系統？"
-    ],
-    "D": [
-      "🌿 植栽計畫是否優先選用原生樹種/喬木以增加碳匯？",
-      "🌊 是否評估以生態工法（石籠、砌石、木樁）取代硬鋪面？",
-      "💧 灌溉系統是否採滴灌或智慧感測節水設計？",
-      "🦋 生態廊道是否納入設計避免棲地破碎？",
-      "📏 土方挖填是否於基地內平衡，減少車運碳排？"
-    ],
-    "E": [
-      "💡 照明系統是否全面汰換為 LED 並搭配感測調光？",
-      "❄️ 空調設備 EER/COP 是否達法規要求的 110% 以上？",
-      "☀️ 屋頂或外牆是否評估設置太陽光電系統？",
-      "📊 是否規劃建置能源管理系統(BEMS/EMS)？",
-      "🌡️ 外殼隔熱是否達建築能效 1~3 級以上標準？"
-    ],
-    "F": [
-      "📋 顧問計畫是否納入氣候風險評估或碳盤查工作項目？",
-      "🎯 是否設定可量化的減碳目標或 KPI？",
-      "📡 監測系統是否具備氣候敏感參數擷取功能？",
-      "🤝 是否規劃公民參與或利害關係人諮詢機制？"
-    ],
-    "G": [
-      "♿ 設施是否符合通用設計並考量極端氣候避難需求？",
-      "🌡️ 夏季高溫避暑/冬季低溫庇護功能是否已評估？",
-      "⚡ 是否規劃緊急供電備援（儲能、太陽能）？",
-      "📢 是否包含氣候調適意識提升的教育或宣導工項？"
+  "purity_codes": {
+    "P1_HIGH_PURITY": {
+      "label": "高純度氣候工項",
+      "desc": "主要目的即為氣候行動，效益直接且明確",
+      "color": "#1a6b3c"
+    },
+    "P2_HIGH_RELEVANCE": {
+      "label": "高相關性氣候工項",
+      "desc": "氣候效益為主要組成之一，具直接關聯",
+      "color": "#2b7ab5"
+    },
+    "P3_PARTIAL": {
+      "label": "部分相關氣候工項",
+      "desc": "僅部分工項具氣候效益，其餘屬常規支出",
+      "color": "#b5762b"
+    },
+    "P4_LOW": {
+      "label": "低度相關氣候工項",
+      "desc": "間接或附帶效益，主要功能非氣候行動",
+      "color": "#888888"
+    },
+    "P5_MANAGEMENT": {
+      "label": "管理型效益",
+      "desc": "施工管理或行政層次，不列入預算金額，僅於摘要呈現",
+      "color": "#6b3b8b"
+    }
+  },
+  "weight_definitions": {
+    "1.0": "高專屬低歧義：關鍵字幾乎只對應單一氣候工項，命中即強觸發",
+    "0.8": "中專屬：關鍵字多數情境與氣候相關，但偶有例外",
+    "0.7": "中歧義：關鍵字有氣候涵義但也常出現在非氣候情境，保守觸發",
+    "0.6": "弱提示：廣泛工程用語，需搭配其他訊號才有意義",
+    "0.4": "教育型提示：主要為引導思考，不做強推薦"
+  },
+  "manifest": {
+    "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
+    "config_version": "1.2.3",
+    "data_version": "1.0.0",
+    "keyword_dictionary_version": "1.0.6",
+    "logic_mapping_version": "1.0.0",
+    "last_synced_at": "2026-03-31T17:57:14+08:00",
+    "checksums": {
+      "keyword_dictionary": "c4653cda7feb411caeb26d2f41556bc4",
+      "logic_mapping": "836c7ba5adbfa0a3f293c1251a5937fe"
+    },
+    "checksum_algorithm": "md5_json_normalized",
+    "checksum_updated_at": "2026-03-31T17:57:14+08:00"
+  },
+  "keyword_strategy": {
+    "match_types": {
+      "strong_trigger": "可直接導向具體工項之高專屬關鍵字",
+      "concept_trigger": "僅表示氣候相關概念，需後續導引確認"
+    },
+    "weight_definitions": {
+      "1.0": "高專屬強觸發詞",
+      "0.7": "中度提示詞",
+      "0.4-0.5": "高概括背景詞"
+    },
+    "concept_layer_keywords": [
+      "低碳",
+      "永續",
+      "溫室氣體",
+      "氣候變遷",
+      "調適",
+      "韌性"
     ]
   }
 }

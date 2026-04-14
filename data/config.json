@@ -978,14 +978,14 @@
     "config_version": "1.2.3",
     "data_version": "1.0.0",
     "keyword_dictionary_version": "1.0.6",
-    "logic_mapping_version": "1.0.0",
-    "last_synced_at": "2026-03-31T17:57:14+08:00",
+    "logic_mapping_version": "1.0.1",
+    "last_synced_at": "2026-04-14T00:00:00+00:00",
     "checksums": {
       "keyword_dictionary": "c4653cda7feb411caeb26d2f41556bc4",
-      "logic_mapping": "836c7ba5adbfa0a3f293c1251a5937fe"
+      "logic_mapping": "2e5209ad1c8dd4a53bb24029a3aaac98"
     },
     "checksum_algorithm": "md5_json_normalized",
-    "checksum_updated_at": "2026-03-31T17:57:14+08:00"
+    "checksum_updated_at": "2026-04-14T00:00:00+00:00"
   },
   "keyword_strategy": {
     "match_types": {

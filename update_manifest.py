@@ -2850,7 +2850,7 @@ elif st.session_state.step == 1:
     st.markdown(
         """
         <style>
-        .quick-guide-panel {
+        .st-key-quick_guide_panel {
             border: 1.5px solid #7aa8f5;
             background: linear-gradient(180deg, #f4f8ff 0%, #eef4ff 100%);
             border-radius: 10px;
@@ -2863,8 +2863,7 @@ elif st.session_state.step == 1:
         unsafe_allow_html=True,
     )
 
-    with st.container(border=True):
-        st.markdown('<div class="quick-guide-panel">', unsafe_allow_html=True)
+    with st.container(border=True, key="quick_guide_panel"):
         st.caption("🧭 快速導引區")
         with st.expander("❓ 不確定選哪個類別？點此快速導引"):
             st.caption("選擇最接近您案件型態的描述，系統會在下方高亮建議類別。")
@@ -2909,7 +2908,6 @@ elif st.session_state.step == 1:
                     st.session_state.quick_guide_subs = []
                     st.session_state.quick_guide_selected_key = ""
                     st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
     # ── 快速入口結束 ──────────────────────────────────────────────
 
     # Category cards — 2 columns

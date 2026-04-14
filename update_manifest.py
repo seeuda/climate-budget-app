@@ -2489,6 +2489,7 @@ if st.session_state.step == 0:
                 placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
                 help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
             ).strip()
+            st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
 
             departments = get_department_options()
             dept_options = ["（請選擇）"] + departments + ["其他"]
@@ -2529,6 +2530,7 @@ if st.session_state.step == 0:
                 placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
                 help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
             ).strip()
+            st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
             st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
             budget_input = st.text_input(
                 "💰 決標金額或預計金額（元）",
@@ -2546,7 +2548,6 @@ if st.session_state.step == 0:
             if preset_preview:
                 st.markdown("**🧩 預載清單補充參考（送出時將同步保存）**")
                 st.markdown("\n".join(preset_preview))
-        st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
 
     with col2:
         # Keyword detection live preview

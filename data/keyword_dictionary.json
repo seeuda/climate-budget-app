@@ -1833,7 +1833,7 @@
     },
     {
       "keyword": "宣導",
-      "suggested_item": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
       "code": "淨零教育-1",
       "category_id": "G",
       "sub_id": "G2",
@@ -1936,7 +1936,7 @@
     },
     {
       "keyword": "氣候素養",
-      "suggested_item": "對特定服務對象的氣候與淨零能力建構（宣導/教育/推廣課程）",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
       "code": "淨零教育-1",
       "category_id": "G",
       "sub_id": "G2",
@@ -1993,6 +1993,24 @@
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_130"
+    },
+    {
+      "keyword": "辦理活動",
+      "suggested_item": "對特定服務對象的宣導、教育活動、推廣課程",
+      "code": "淨零教育-1",
+      "category_id": "G",
+      "sub_id": "G2",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P3_PARTIAL",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "活動辦理",
+        "活動推廣"
+      ],
+      "negative_context": [],
+      "learning_tip": "若活動主軸是特定服務對象的氣候宣導/教育/課程，建議優先歸入 G2 形成完整導引閉環。",
+      "trigger_id": "KW_131"
     }
   ],
   "exclusion_keywords": [

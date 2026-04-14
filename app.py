@@ -161,8 +161,39 @@ def render_health_check_link() -> None:
     )
 
 
+def render_startup_dependency_error(exc: ModuleNotFoundError) -> None:
+    st.set_page_config(page_title="Climate Budget App Dependency Error", layout="wide")
+    st.title("彰化縣氣候預算系統｜啟動依賴缺失")
+    st.error(
+        "偵測到部署環境缺少必要套件，已改為顯示診斷資訊，避免整個 App 直接中止。"
+    )
+
+    missing_module = getattr(exc, "name", None) or "unknown"
+    st.code(f"ModuleNotFoundError: {missing_module}")
+    st.markdown(
+        """
+        目前入口會執行 `update_manifest.py`，若環境缺少該模組就會在啟動時失敗。  
+        請確認 Streamlit Cloud 已重新部署並使用最新 `requirements.txt`。
+        """
+    )
+
+    req_path = REPO / "requirements.txt"
+    if req_path.exists():
+        st.subheader("requirements.txt（目前版本）")
+        st.code(req_path.read_text(encoding="utf-8", errors="ignore"))
+
+    st.subheader("快速檢查")
+    st.write("1. 在 Streamlit Cloud 執行 **Reboot app** / **Clear cache** 後重新部署。")
+    st.write("2. 確認部署分支是最新 commit。")
+    st.write("3. 開啟 `?health_check=1` 進行啟動檢查。")
+    render_health_check_link()
+
+
 if str(st.query_params.get("health_check", "")).lower() in {"1", "true", "yes", "on"}:
     render_health_check()
 else:
-    runpy.run_path(str(REPO / "update_manifest.py"), run_name="__main__")
-    render_health_check_link()
+    try:
+        runpy.run_path(str(REPO / "update_manifest.py"), run_name="__main__")
+        render_health_check_link()
+    except ModuleNotFoundError as exc:
+        render_startup_dependency_error(exc)

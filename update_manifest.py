@@ -3169,7 +3169,7 @@ elif st.session_state.step == 1:
 
     if len(st.session_state.selected_categories) >= 3:
         st.info(
-            "📌 已達類別上限（3 項）。建議先保留最核心 3 類，"
+            "📌 已達類別上限（3 項）。如工項涵蓋類別超過 3 類，建議先保留最核心 3 類，"
             "並把其餘跨類別工項脈絡寫在下方補充，系統會在步驟五供您確認後一併送出。"
         )
         overflow_note = st.text_area(

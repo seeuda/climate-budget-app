@@ -106,8 +106,8 @@ HEADER_ALIAS_MAP = {
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
-    "細項分類明細(JSON)" : ["細項分類明細(JSON)"],
-    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)"],
+    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "sub_categories_json"],
+    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "counted_items_json"],
     "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "非預算型效益與減量明細(JSON)"],
 }
 
@@ -1979,12 +1979,8 @@ def build_sync_row_dict(payload):
         # ── 解讀資料 ──────────────────────────────────────────────────
         "工項相關性摘要"    : is_.get("item_relevance_text", "") if is_ else "",
         "非預算型效益"      : (
-            "；".join(
-                p for p in [
-                    (is_.get("non_budget_benefits", "") if is_ else ""),
-                    phys_text,
-                ] if p
-            )
+            (is_.get("non_budget_benefits", "") if is_ else "")
+            or phys_text
         ),
         "細項分類明細"      : sub_category_details_text,
         "氣候工項（預算型）明細": counted_items_amount_detail_text,

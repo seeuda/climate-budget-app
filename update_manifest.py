@@ -100,9 +100,9 @@ HEADER_ALIAS_MAP = {
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
-    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "sub_categories_json"],
-    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "counted_items_json"],
-    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "non_budget_items_json"],
+    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "細項分類明細", "sub_categories_json"],
+    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "氣候工項明細", "counted_items_json"],
+    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "非預算型效益明細", "non_budget_items_json"],
 }
 
 PRESET_REFERENCE_COLUMNS = {
@@ -1787,18 +1787,24 @@ def build_sync_row_dict(payload):
         else ""
     )
 
+    def format_item_text(item: dict) -> str:
+        label = str(item.get("label", "")).strip()
+        item_id = str(item.get("item_id", "")).strip()
+        if label and item_id:
+            return f"{label}（{item_id}）"
+        return label or item_id
+
     # 工項文字
     if bs:
         items_text = "、".join(
-            i.get("label", "") for i in bs.get("counted_items", []) if i.get("label")
+            t for t in (format_item_text(i) for i in bs.get("counted_items", [])) if t
         )
         cat_labels = bs.get("category_labels", "")
         sub_labels = bs.get("sub_category_labels", "")
     else:
         old_assessment = payload.get("climate_assessment", {})
         items_text = "、".join(
-            i.get("label", "") for i in old_assessment.get("selected_items", [])
-            if i.get("label")
+            t for t in (format_item_text(i) for i in old_assessment.get("selected_items", [])) if t
         )
         cat_labels = old_assessment.get("category_labels", "")
         sub_labels = old_assessment.get("sub_category_labels", "")
@@ -1896,20 +1902,20 @@ def build_sync_row_dict(payload):
     sub_category_details_text = join_detail_entries(sub_category_entries)
 
     counted_item_amount_entries = [
-        f"{idx}. {item.get('label', '')}：{int(item.get('amount', 0) or 0):,} 元"
+        f"{idx}. {format_item_text(item)}：{int(item.get('amount', 0) or 0):,} 元"
         f"（{float(item.get('ratio', 0) or 0):.1f}%）"
         for idx, item in enumerate(counted_items, start=1)
-        if item.get("label")
+        if format_item_text(item)
     ]
     counted_items_amount_detail_text = join_detail_entries(counted_item_amount_entries)
 
     benefit_type_label_map = {"design": "設計型", "management": "管理型"}
     non_budget_item_entries = [
         f"{idx}. 【{benefit_type_label_map.get(item.get('benefit_type', ''), item.get('benefit_type', ''))}】"
-        f"{item.get('label', '')}"
+        f"{format_item_text(item)}"
         + (f"：{item.get('note', '')}" if item.get("note") else "")
         for idx, item in enumerate(non_budget_items_detail, start=1)
-        if item.get("label")
+        if format_item_text(item)
     ]
     non_budget_items_detail_text = join_detail_entries(non_budget_item_entries)
 
@@ -2203,8 +2209,8 @@ def build_user_sync_success_message(sync_message: str, spreadsheet_id: str) -> s
             msg += "，系統自動檢核比對成功。可點擊連結檢查確認是否完成上傳。"
             return msg
         msg += (
-            f"，系統目前仍在比對中（{matched_count}/{total_count} 欄已完成），"
-            "請稍候再點擊連結檢查確認是否完成上傳。"
+            f"，系統已完成同步，但欄位對應僅成功 {matched_count}/{total_count}，"
+            "請檢查試算表欄位名稱設定是否完整。"
         )
         return msg
 

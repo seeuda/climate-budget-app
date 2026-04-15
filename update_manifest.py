@@ -1313,6 +1313,32 @@ def format_category_labels(category_ids):
         cat["label"] for cat in get_taxonomies_by_ids(category_ids)
     )
 
+def format_category_labels_for_sheet(category_ids, fallback_labels_text: str = ""):
+    """以編號與分號格式化計畫類別，並保留舊資料可追溯性。"""
+    fallback_labels = [
+        p.strip() for p in re.split(r"[、；;]", str(fallback_labels_text or "")) if p.strip()
+    ]
+    resolved_categories = get_taxonomies_by_ids(category_ids)
+    id_to_label = {cat.get("id", ""): cat.get("label", "") for cat in resolved_categories}
+
+    entries = []
+    for idx, cat_id in enumerate(category_ids, start=1):
+        label = id_to_label.get(cat_id) or (
+            fallback_labels[idx - 1] if idx - 1 < len(fallback_labels) else str(cat_id).strip()
+        )
+        if label:
+            entries.append(f"{idx}. {label}")
+
+    if not entries and fallback_labels:
+        entries = [f"{idx}. {label}" for idx, label in enumerate(fallback_labels, start=1)]
+    elif len(fallback_labels) > len(entries):
+        entries.extend(
+            f"{idx}. {label}"
+            for idx, label in enumerate(fallback_labels[len(entries):], start=len(entries) + 1)
+        )
+
+    return join_detail_entries(entries)
+
 def format_sub_category_labels(sub_ids):
     labels = []
     for sub_id in sub_ids:
@@ -1935,6 +1961,7 @@ def build_sync_row_dict(payload):
             t for t in (format_item_label(i) for i in bs.get("counted_items", [])) if t
         )
         cat_labels = bs.get("category_labels", "")
+        cat_ids = bs.get("categories", []) or []
         sub_labels = bs.get("sub_category_labels", "")
     else:
         old_assessment = payload.get("climate_assessment", {})
@@ -1942,6 +1969,7 @@ def build_sync_row_dict(payload):
             t for t in (format_item_label(i) for i in old_assessment.get("selected_items", [])) if t
         )
         cat_labels = old_assessment.get("category_labels", "")
+        cat_ids = old_assessment.get("categories", []) or []
         sub_labels = old_assessment.get("sub_category_labels", "")
 
     # 量體縮減摘要
@@ -2032,17 +2060,22 @@ def build_sync_row_dict(payload):
     ]
     if sub_amount_breakdown:
         sub_category_entries = [
-            f"{idx}. {row['sub_label']}（{row['sub_id']}）：{row['amount']:,} 元（{row['ratio']:.1f}%）"
+            f"{idx}. {row['sub_label']}：{row['amount']:,} 元（{row['ratio']:.1f}%）"
             for idx, row in enumerate(sub_amount_breakdown, start=1)
         ]
     else:
         sub_category_entries = [
-            f"{idx}. {sub_category_label_parts[idx-1]}（{sid}）"
+            f"{idx}. {sub_category_label_parts[idx-1]}"
             if idx - 1 < len(sub_category_label_parts)
-            else f"{idx}. {sid}"
+            else (
+                f"{idx}. {resolved_sub.get('label')}"
+                if (resolved_sub := get_sub_by_id_global(sid)[1]) and resolved_sub.get("label")
+                else f"{idx}. 細項代碼 {sid}"
+            )
             for idx, sid in enumerate(sub_categories, start=1)
         ]
     sub_category_details_text = join_detail_entries(sub_category_entries)
+    category_details_text = format_category_labels_for_sheet(cat_ids, cat_labels) or cat_labels
 
     counted_item_amount_entries = [
         f"{idx}. {format_item_text(item)}：{int(item.get('amount', 0) or 0):,} 元"
@@ -2083,7 +2116,7 @@ def build_sync_row_dict(payload):
         "決標金額"          : total_budget,
         "氣候預算"          : climate_total,
         "氣候預算比例%"     : climate_ratio_decimal,
-        "計畫類別"          : cat_labels,
+        "計畫類別"          : category_details_text,
         "細項分類"          : sub_category_details_text or sub_labels,
         "氣候工項（預算型）": counted_items_amount_detail_text or items_text,
         "關鍵字信心"        : conf.get("label", ""),

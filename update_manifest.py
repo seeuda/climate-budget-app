@@ -48,9 +48,6 @@ BUDGET_SUMMARY_HEADERS = [
 # 解讀資料欄位（相關性標記、非預算型效益、診斷資訊）
 INTERPRETATION_SUMMARY_HEADERS = [
     "非預算型效益",           # benefit_type=design/management 的工項說明
-    "細項分類明細",           # 細項代碼 + 中文 + 金額/比例
-    "氣候工項（預算型）明細",  # 工項代碼 + 中文 + 金額/比例
-    "非預算型效益明細",        # 工項代碼 + 中文 + 備註
     "工項相關性摘要",          # 各工項 purity label 的文字摘要
     "anti_pattern命中",       # 觸發的 anti_pattern id 與名稱
     "減量資訊完整度",
@@ -62,6 +59,9 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "潛在調適/韌性亮點 (實務細節 - Action B)",
     "防呆提醒",
     "補充說明",
+    "細項分類明細",           # 細項代碼 + 中文 + 金額/比例（保留相容舊版）
+    "氣候工項（預算型）明細",  # 工項代碼 + 中文 + 金額/比例（保留相容舊版）
+    "非預算型效益明細",        # 工項代碼 + 中文 + 備註（保留相容舊版）
     "細項分類明細(JSON)",
     "氣候工項明細(JSON)",
     "非預算型效益明細(JSON)",
@@ -93,8 +93,8 @@ HEADER_ALIAS_MAP = {
     # ── 解讀資料欄位 ────────────────────────────────────────────────────────
     "非預算型效益"      : ["非預算型效益", "設計型效益", "管理型效益", "效益補充"],
     "細項分類明細"      : ["細項分類明細"],
-    "氣候工項（預算型）明細": ["氣候工項（預算型）明細", "氣候工項(預算型)明細"],
-    "非預算型效益明細"  : ["非預算型效益明細"],
+    "氣候工項（預算型）明細": ["氣候工項（預算型）明細", "氣候工項(預算型)明細", "氣候工項明細"],
+    "非預算型效益明細"  : ["非預算型效益明細", "非預算型效益與減量明細"],
     "工項相關性摘要"    : ["工項相關性摘要", "純度摘要", "相關性標記"],
     "anti_pattern命中" : ["anti_pattern命中", "誤判提示", "反例命中"],
     "減量資訊完整度"    : ["減量資訊完整度", "減量完整度", "工程減量完整度"],
@@ -106,9 +106,9 @@ HEADER_ALIAS_MAP = {
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
-    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "sub_categories_json"],
-    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "counted_items_json"],
-    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "non_budget_items_json"],
+    "細項分類明細(JSON)" : ["細項分類明細(JSON)"],
+    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)"],
+    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "非預算型效益與減量明細(JSON)"],
 }
 
 PRESET_REFERENCE_COLUMNS = {
@@ -1423,6 +1423,9 @@ def generate_export_json(state):
             entry += f"：{note}"
         non_budget_parts.append(entry)
     non_budget_text = "；".join(non_budget_parts)
+    other_benefit_note = str((state.get("physical_reductions", {}) or {}).get("other_benefit_note", "")).strip()
+    if other_benefit_note:
+        non_budget_text = "；".join([p for p in [non_budget_text, f"【其他效益】{other_benefit_note}"] if p])
 
     # anti_pattern 命中記錄（Phase 1B 由 anti_pattern_check() 寫入 state）
     ap_hits = state.get("anti_pattern_hits", [])
@@ -1490,7 +1493,16 @@ def generate_export_json(state):
                     "note":         ib.get("note", ""),
                 }
                 for ib in non_budget_items
-            ],
+            ] + (
+                [{
+                    "label": "其他未呈現於預算的效益說明",
+                    "item_id": "",
+                    "benefit_type": "other",
+                    "note": other_benefit_note,
+                }]
+                if other_benefit_note
+                else []
+            ),
             "anti_pattern_hits":       ap_hits,
             "anti_pattern_hits_text":  ap_hits_text,
             "has_low_relevance_items": any(
@@ -1830,6 +1842,18 @@ def build_sync_row_dict(payload):
     if phys.get("other_benefit_note", ""):
         phys_parts.append(phys["other_benefit_note"])
     phys_text = "；".join(phys_parts)
+    phys_detail_entries = []
+    if phys.get("soil_reduction_ton", 0):
+        phys_detail_entries.append(f"減少土方購置量：{phys['soil_reduction_ton']} 公噸")
+    if phys.get("waste_reduction_ton", 0):
+        phys_detail_entries.append(f"減少廢棄物外運處理量：{phys['waste_reduction_ton']} 公噸")
+    if phys.get("cement_reduction_ton", 0):
+        phys_detail_entries.append(f"減少水泥等建材使用量：{phys['cement_reduction_ton']} 公噸")
+    if phys.get("other_benefit_note", ""):
+        phys_detail_entries.append(f"其他未呈現於預算之效益說明：{phys['other_benefit_note']}")
+    phys_detail_text = join_detail_entries(
+        [f"{idx}. {entry}" for idx, entry in enumerate(phys_detail_entries, start=1)]
+    )
 
     # 規則版本字串
     rv = metadata.get("rule_versions", {})
@@ -1889,10 +1913,6 @@ def build_sync_row_dict(payload):
         counted_items,
         ensure_ascii=False,
     )
-    non_budget_items_json = json.dumps(
-        non_budget_items_detail,
-        ensure_ascii=False,
-    )
 
     sub_category_label_parts = [
         p.strip() for p in re.split(r"[、；;]", str(sub_labels or "")) if p.strip()
@@ -1919,7 +1939,7 @@ def build_sync_row_dict(payload):
     ]
     counted_items_amount_detail_text = join_detail_entries(counted_item_amount_entries)
 
-    benefit_type_label_map = {"design": "設計型", "management": "管理型"}
+    benefit_type_label_map = {"design": "設計型", "management": "管理型", "other": "其他效益"}
     non_budget_item_entries = [
         f"{idx}. 【{benefit_type_label_map.get(item.get('benefit_type', ''), item.get('benefit_type', ''))}】"
         f"{format_item_text(item)}"
@@ -1928,7 +1948,19 @@ def build_sync_row_dict(payload):
         if format_item_text(item)
     ]
     non_budget_items_detail_text = join_detail_entries(non_budget_item_entries)
-
+    combined_non_budget_entries = []
+    if non_budget_items_detail_text:
+        combined_non_budget_entries.append(f"非預算型工項：{non_budget_items_detail_text}")
+    if phys_detail_text:
+        combined_non_budget_entries.append(f"工程量體縮減與其他效益：{phys_detail_text}")
+    combined_non_budget_text = join_detail_entries(combined_non_budget_entries)
+    combined_non_budget_json = json.dumps(
+        {
+            "non_budget_items_detail": non_budget_items_detail,
+            "physical_reductions": phys,
+        },
+        ensure_ascii=False,
+    )
     return {
         # ── 計算資料 ──────────────────────────────────────────────────
         "填報日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
@@ -1939,17 +1971,24 @@ def build_sync_row_dict(payload):
         "氣候預算"          : climate_total,
         "氣候預算比例%"     : climate_ratio_decimal,
         "計畫類別"          : cat_labels,
-        "細項分類"          : sub_labels or sub_category_details_text,
-        "氣候工項（預算型）": items_text or counted_items_amount_detail_text,
+        "細項分類"          : sub_category_details_text or sub_labels,
+        "氣候工項（預算型）": counted_items_amount_detail_text or items_text,
         "關鍵字信心"        : conf.get("label", ""),
         "命中關鍵字"        : "、".join(payload.get("matched_keywords", [])),
         "規則版本"          : rule_ver_text,
         # ── 解讀資料 ──────────────────────────────────────────────────
         "工項相關性摘要"    : is_.get("item_relevance_text", "") if is_ else "",
-        "非預算型效益"      : (is_.get("non_budget_benefits", "") if is_ else "") or non_budget_items_detail_text,
+        "非預算型效益"      : (
+            "；".join(
+                p for p in [
+                    (is_.get("non_budget_benefits", "") if is_ else ""),
+                    phys_text,
+                ] if p
+            )
+        ),
         "細項分類明細"      : sub_category_details_text,
         "氣候工項（預算型）明細": counted_items_amount_detail_text,
-        "非預算型效益明細"  : non_budget_items_detail_text,
+        "非預算型效益明細"  : combined_non_budget_text,
         "anti_pattern命中"  : is_.get("anti_pattern_hits_text", "") if is_ else "",
         "減量資訊完整度"    : (payload.get("reduction_completeness") or {}).get("label", ""),
         "工程量體縮減效益"  : phys_text,
@@ -1962,7 +2001,7 @@ def build_sync_row_dict(payload):
         "補充說明"          : ameta.get("user_note", ""),
         "細項分類明細(JSON)" : sub_category_json,
         "氣候工項明細(JSON)" : counted_items_json,
-        "非預算型效益明細(JSON)" : non_budget_items_json,
+        "非預算型效益明細(JSON)" : combined_non_budget_json,
     }
 
 

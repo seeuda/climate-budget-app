@@ -1313,6 +1313,12 @@ def format_category_labels(category_ids):
         cat["label"] for cat in get_taxonomies_by_ids(category_ids)
     )
 
+def format_category_labels_for_sheet(category_ids):
+    """以編號與分號格式化計畫類別，提升試算表可讀性。"""
+    labels = [cat["label"] for cat in get_taxonomies_by_ids(category_ids)]
+    entries = [f"{idx}. {label}" for idx, label in enumerate(labels, start=1)]
+    return join_detail_entries(entries)
+
 def format_sub_category_labels(sub_ids):
     labels = []
     for sub_id in sub_ids:
@@ -1935,6 +1941,7 @@ def build_sync_row_dict(payload):
             t for t in (format_item_label(i) for i in bs.get("counted_items", [])) if t
         )
         cat_labels = bs.get("category_labels", "")
+        cat_ids = bs.get("categories", []) or []
         sub_labels = bs.get("sub_category_labels", "")
     else:
         old_assessment = payload.get("climate_assessment", {})
@@ -1942,6 +1949,7 @@ def build_sync_row_dict(payload):
             t for t in (format_item_label(i) for i in old_assessment.get("selected_items", [])) if t
         )
         cat_labels = old_assessment.get("category_labels", "")
+        cat_ids = old_assessment.get("categories", []) or []
         sub_labels = old_assessment.get("sub_category_labels", "")
 
     # 量體縮減摘要
@@ -2032,17 +2040,18 @@ def build_sync_row_dict(payload):
     ]
     if sub_amount_breakdown:
         sub_category_entries = [
-            f"{idx}. {row['sub_label']}（{row['sub_id']}）：{row['amount']:,} 元（{row['ratio']:.1f}%）"
+            f"{idx}. {row['sub_label']}：{row['amount']:,} 元（{row['ratio']:.1f}%）"
             for idx, row in enumerate(sub_amount_breakdown, start=1)
         ]
     else:
         sub_category_entries = [
-            f"{idx}. {sub_category_label_parts[idx-1]}（{sid}）"
+            f"{idx}. {sub_category_label_parts[idx-1]}"
             if idx - 1 < len(sub_category_label_parts)
-            else f"{idx}. {sid}"
-            for idx, sid in enumerate(sub_categories, start=1)
+            else f"{idx}. （未命名細項）"
+            for idx, _sid in enumerate(sub_categories, start=1)
         ]
     sub_category_details_text = join_detail_entries(sub_category_entries)
+    category_details_text = format_category_labels_for_sheet(cat_ids) or cat_labels
 
     counted_item_amount_entries = [
         f"{idx}. {format_item_text(item)}：{int(item.get('amount', 0) or 0):,} 元"
@@ -2083,7 +2092,7 @@ def build_sync_row_dict(payload):
         "決標金額"          : total_budget,
         "氣候預算"          : climate_total,
         "氣候預算比例%"     : climate_ratio_decimal,
-        "計畫類別"          : cat_labels,
+        "計畫類別"          : category_details_text,
         "細項分類"          : sub_category_details_text or sub_labels,
         "氣候工項（預算型）": counted_items_amount_detail_text or items_text,
         "關鍵字信心"        : conf.get("label", ""),

@@ -106,9 +106,14 @@ HEADER_ALIAS_MAP = {
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
-    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "sub_categories_json"],
-    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "counted_items_json"],
-    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "非預算型效益與減量明細(JSON)"],
+    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "細項分類明細（JSON）", "sub_categories_json"],
+    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "氣候工項明細（JSON）", "counted_items_json"],
+    "非預算型效益明細(JSON)" : [
+        "非預算型效益明細(JSON)",
+        "非預算型效益明細（JSON）",
+        "非預算型效益與減量明細(JSON)",
+        "非預算型效益與減量明細（JSON）",
+    ],
 }
 
 PRESET_REFERENCE_COLUMNS = {
@@ -139,9 +144,138 @@ PRESET_REFERENCE_COLUMNS = {
 }
 
 
+def normalize_brackets(text: str) -> str:
+    """Normalize full-width brackets to half-width brackets."""
+    return str(text or "").translate(str.maketrans({
+        "（": "(",
+        "）": ")",
+    }))
+
+
 def normalize_text_key(text: str) -> str:
     """Normalize text for resilient column-name matching."""
-    return re.sub(r"\s+", "", str(text or "")).lower()
+    normalized = normalize_brackets(text)
+    normalized = normalized.translate(str.maketrans({
+        "％": "%",
+        "：": ":",
+        "；": ";",
+        "，": ",",
+        "。": ".",
+        "／": "/",
+        "－": "-",
+        "＋": "+",
+        "＝": "=",
+        "　": " ",
+    }))
+    return re.sub(r"[\s\n\r\t]+", "", normalized).lower()
+
+
+def _is_json_header_label(header_name: str) -> bool:
+    return "json" in normalize_text_key(header_name)
+
+
+def _header_key_pool(is_json_header: bool) -> dict:
+    return {
+        std_key: aliases
+        for std_key, aliases in HEADER_ALIAS_MAP.items()
+        if _is_json_header_label(std_key) == is_json_header
+    }
+
+
+def _resolve_header_key_with_meta(col_name: str) -> tuple[str | None, str]:
+    normalized_col = normalize_text_key(col_name)
+    if not normalized_col:
+        return None, "none"
+
+    is_json_header = _is_json_header_label(normalized_col)
+    key_pool = _header_key_pool(is_json_header)
+
+    # 1) exact key
+    for std_key in key_pool.keys():
+        if normalize_text_key(std_key) == normalized_col:
+            return std_key, "exact_key"
+
+    # 2) exact alias
+    for std_key, aliases in key_pool.items():
+        for alias in aliases:
+            if normalize_text_key(alias) == normalized_col:
+                return std_key, "exact_alias"
+
+    # 3) contains alias
+    contains_alias_candidates = []
+    for std_key, aliases in key_pool.items():
+        if any(
+            normalize_text_key(alias) and normalize_text_key(alias) in normalized_col
+            for alias in aliases
+        ):
+            contains_alias_candidates.append(std_key)
+    if len(contains_alias_candidates) == 1:
+        return contains_alias_candidates[0], "contains_alias"
+    if len(contains_alias_candidates) > 1:
+        import logging
+        logging.warning(
+            "[resolve_header_key] 欄位「%s」(normalized=%s) 模糊 alias 比對到多個 key: %s，略過（填空白）",
+            col_name, normalized_col, contains_alias_candidates
+        )
+        return None, "none"
+
+    # 4) contains key
+    contains_key_candidates = [
+        std_key for std_key in key_pool.keys()
+        if normalize_text_key(std_key) in normalized_col
+    ]
+    if len(contains_key_candidates) == 1:
+        return contains_key_candidates[0], "contains_key"
+    if len(contains_key_candidates) > 1:
+        import logging
+        logging.warning(
+            "[resolve_header_key] 欄位「%s」(normalized=%s) 模糊 key 比對到多個 key: %s，略過（填空白）",
+            col_name, normalized_col, contains_key_candidates
+        )
+        return None, "none"
+
+    return None, "none"
+
+
+def validate_header_alias_map() -> None:
+    """Validate normalized alias uniqueness and warn/raise on conflicts."""
+    normalized_alias_owner = {}
+    conflict_map = {}
+    for std_key, aliases in HEADER_ALIAS_MAP.items():
+        for alias in aliases:
+            normalized_alias = normalize_text_key(alias)
+            if not normalized_alias:
+                continue
+            owner = normalized_alias_owner.get(normalized_alias)
+            if owner and owner != std_key:
+                conflict_map.setdefault(normalized_alias, {owner}).add(std_key)
+            else:
+                normalized_alias_owner[normalized_alias] = std_key
+
+    if conflict_map:
+        rendered = ", ".join(
+            f"{alias} -> {sorted(list(keys))}"
+            for alias, keys in sorted(conflict_map.items())
+        )
+        raise ValueError(f"HEADER_ALIAS_MAP alias 衝突：{rendered}")
+
+
+def diagnose_sheet_headers(headers: list[str]) -> list[dict]:
+    """Diagnose sheet header resolution and matching behavior."""
+    diagnostics = []
+    for header in headers:
+        resolved_key, matched_by = _resolve_header_key_with_meta(header)
+        diagnostics.append({
+            "original_header": header,
+            "normalized_header": normalize_text_key(header),
+            "resolved_key": resolved_key,
+            "is_json_header": _is_json_header_label(header),
+            "matched_by": matched_by,
+        })
+    return diagnostics
+
+
+validate_header_alias_map()
 
 
 DETAIL_ENTRY_SEPARATOR = "；"
@@ -1604,6 +1738,22 @@ def get_google_sheet_target():
     }
 
 
+def _to_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def is_google_sheet_sync_debug_enabled() -> bool:
+    """Read debug flag from secrets/config for sheet-header diagnostics."""
+    secret_flag = st.secrets.get("google_sheet_sync_debug")
+    if secret_flag is not None:
+        return _to_bool(secret_flag)
+    return _to_bool(CONFIG.get("integrations", {}).get("google_sheet_sync_debug"))
+
+
 def get_department_options() -> list[str]:
     """回傳局處清單（供 Step 0 下拉選單使用）。"""
     configured_departments = CONFIG.get("departments", [])
@@ -1726,52 +1876,15 @@ def resolve_header_key(col_name: str) -> str | None:
     """
     試算表欄位名稱 → 標準資料 key。
 
-    比對順序（Phase 1A 強化版）：
-      1. 精確相等：col_name == 標準 key
-      2. alias 白名單精確比對：col_name == 某個 alias（完全相等）
-      3. alias 白名單包含比對：alias in col_name（alias 是 col_name 的子字串）
-         — 僅在步驟 1/2 都失敗時才嘗試，且同一 col_name 只能命中一個 key
-         — 若多個 key 的 alias 都能匹配，視為不唯一，回傳 None 並記 log
-      4. 找不到 → 回傳 None（該欄填空白）
-
-    與舊版差異：
-      - 舊版同時做「alias in col」和「col in alias」雙向包含，容易誤配
-      - 新版只做單向（alias in col），且步驟 2 精確比對先行
-      - 不唯一時明確拒絕（不猜），讓 unmatched_log 記錄供日後維護
+    比對順序（Phase 1A+ 強化版）：
+      1. 先 normalize（大小寫、空白、全半形括號/符號）
+      2. 先判斷輸入欄位是否屬於 JSON 欄
+      3. JSON 欄僅在 JSON key 池內比對；非 JSON 欄僅在非 JSON key 池內比對
+      4. 比對序：exact_key → exact_alias → contains_alias → contains_key
+      5. 若有歧義（命中多個 key）或找不到，回傳 None
     """
-    col_stripped = col_name.strip()
-    if not col_stripped:
-        return None
-
-    # 步驟 1：精確相等
-    if col_stripped in HEADER_ALIAS_MAP:
-        return col_stripped
-
-    # 步驟 2：alias 白名單精確比對
-    for std_key, aliases in HEADER_ALIAS_MAP.items():
-        if col_stripped in aliases:
-            return std_key
-
-    # 步驟 3：alias 白名單包含比對（單向，不唯一時拒絕）
-    candidates = []
-    for std_key, aliases in HEADER_ALIAS_MAP.items():
-        for alias in aliases:
-            if alias in col_stripped:
-                candidates.append(std_key)
-                break  # 同一 std_key 只算一次
-
-    if len(candidates) == 1:
-        return candidates[0]
-    elif len(candidates) > 1:
-        # 不唯一：記錄但不配對
-        import logging
-        logging.warning(
-            f"[resolve_header_key] 欄位「{col_stripped}」模糊比對到多個 key: "
-            f"{candidates}，略過（填空白）"
-        )
-        return None
-
-    return None
+    resolved_key, _ = _resolve_header_key_with_meta(col_name)
+    return resolved_key
 
 
 def build_sync_row_dict(payload):
@@ -1978,9 +2091,11 @@ def build_sync_row_dict(payload):
         "規則版本"          : rule_ver_text,
         # ── 解讀資料 ──────────────────────────────────────────────────
         "工項相關性摘要"    : is_.get("item_relevance_text", "") if is_ else "",
-        "非預算型效益"      : (
-            (is_.get("non_budget_benefits", "") if is_ else "")
-            or phys_text
+        "非預算型效益"      : "；".join(
+            p for p in [
+                (is_.get("non_budget_benefits", "") if is_ else ""),
+                phys_text,
+            ] if p
         ),
         "細項分類明細"      : sub_category_details_text,
         "氣候工項（預算型）明細": counted_items_amount_detail_text,
@@ -2048,14 +2163,28 @@ def sync_to_google_sheet_direct(payload):
         except Exception as e:
             return False, f"初始化試算表表頭失敗：{e}"
 
+    # ── 可控表頭診斷（預設關閉）
+    header_diagnostics = diagnose_sheet_headers(headers)
+    debug_enabled = is_google_sheet_sync_debug_enabled()
+    if debug_enabled:
+        print("[google_sheet_sync_debug] header_diagnostics:")
+        for diag in header_diagnostics:
+            print(diag)
+
     # ── 組資料字典（以標準 key 為索引）
     row_dict = build_sync_row_dict(payload)
 
     # ── 依試算表表頭順序，模糊比對填入每欄值
     row = []
-    for col_name in headers:
-        std_key = resolve_header_key(col_name)
+    for col_name, diag in zip(headers, header_diagnostics):
+        std_key = diag.get("resolved_key")
         row.append(row_dict.get(std_key, "") if std_key else "")
+        if not std_key and debug_enabled:
+            print(
+                f"[google_sheet_sync_debug] unresolved header: "
+                f"original={diag.get('original_header')}, "
+                f"normalized={diag.get('normalized_header')}"
+            )
 
     # ── 寫入
     try:
@@ -2063,8 +2192,8 @@ def sync_to_google_sheet_direct(payload):
     except Exception as e:
         return False, f"寫入試算表失敗：{e}"
 
-    matched = sum(1 for col in headers if resolve_header_key(col))
-    unmatched = [col for col in headers if not resolve_header_key(col)]
+    matched = sum(1 for d in header_diagnostics if d.get("resolved_key"))
+    unmatched = [d.get("original_header", "") for d in header_diagnostics if not d.get("resolved_key")]
     msg = f"已寫入試算表 {spreadsheet_id}（{matched}/{len(headers)} 欄比對成功）"
     if unmatched:
         msg += f"，未比對欄位留空：{'、'.join(unmatched)}"

@@ -48,6 +48,9 @@ BUDGET_SUMMARY_HEADERS = [
 # 解讀資料欄位（相關性標記、非預算型效益、診斷資訊）
 INTERPRETATION_SUMMARY_HEADERS = [
     "非預算型效益",           # benefit_type=design/management 的工項說明
+    "細項分類明細",           # 細項代碼 + 中文 + 金額/比例
+    "氣候工項（預算型）明細",  # 工項代碼 + 中文 + 金額/比例
+    "非預算型效益明細",        # 工項代碼 + 中文 + 備註
     "工項相關性摘要",          # 各工項 purity label 的文字摘要
     "anti_pattern命中",       # 觸發的 anti_pattern id 與名稱
     "減量資訊完整度",
@@ -89,6 +92,9 @@ HEADER_ALIAS_MAP = {
     "規則版本"          : ["規則版本", "config_version", "data_version"],
     # ── 解讀資料欄位 ────────────────────────────────────────────────────────
     "非預算型效益"      : ["非預算型效益", "設計型效益", "管理型效益", "效益補充"],
+    "細項分類明細"      : ["細項分類明細"],
+    "氣候工項（預算型）明細": ["氣候工項（預算型）明細", "氣候工項(預算型)明細"],
+    "非預算型效益明細"  : ["非預算型效益明細"],
     "工項相關性摘要"    : ["工項相關性摘要", "純度摘要", "相關性標記"],
     "anti_pattern命中" : ["anti_pattern命中", "誤判提示", "反例命中"],
     "減量資訊完整度"    : ["減量資訊完整度", "減量完整度", "工程減量完整度"],
@@ -100,9 +106,9 @@ HEADER_ALIAS_MAP = {
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
-    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "細項分類明細", "sub_categories_json"],
-    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "氣候工項明細", "counted_items_json"],
-    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "非預算型效益明細", "non_budget_items_json"],
+    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "sub_categories_json"],
+    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "counted_items_json"],
+    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "non_budget_items_json"],
 }
 
 PRESET_REFERENCE_COLUMNS = {
@@ -1794,17 +1800,21 @@ def build_sync_row_dict(payload):
             return f"{label}（{item_id}）"
         return label or item_id
 
+    def format_item_label(item: dict) -> str:
+        label = str(item.get("label", "")).strip()
+        return label
+
     # 工項文字
     if bs:
         items_text = "、".join(
-            t for t in (format_item_text(i) for i in bs.get("counted_items", [])) if t
+            t for t in (format_item_label(i) for i in bs.get("counted_items", [])) if t
         )
         cat_labels = bs.get("category_labels", "")
         sub_labels = bs.get("sub_category_labels", "")
     else:
         old_assessment = payload.get("climate_assessment", {})
         items_text = "、".join(
-            t for t in (format_item_text(i) for i in old_assessment.get("selected_items", [])) if t
+            t for t in (format_item_label(i) for i in old_assessment.get("selected_items", [])) if t
         )
         cat_labels = old_assessment.get("category_labels", "")
         sub_labels = old_assessment.get("sub_category_labels", "")
@@ -1929,14 +1939,17 @@ def build_sync_row_dict(payload):
         "氣候預算"          : climate_total,
         "氣候預算比例%"     : climate_ratio_decimal,
         "計畫類別"          : cat_labels,
-        "細項分類"          : sub_category_details_text or sub_labels,
-        "氣候工項（預算型）": counted_items_amount_detail_text or items_text,
+        "細項分類"          : sub_labels or sub_category_details_text,
+        "氣候工項（預算型）": items_text or counted_items_amount_detail_text,
         "關鍵字信心"        : conf.get("label", ""),
         "命中關鍵字"        : "、".join(payload.get("matched_keywords", [])),
         "規則版本"          : rule_ver_text,
         # ── 解讀資料 ──────────────────────────────────────────────────
         "工項相關性摘要"    : is_.get("item_relevance_text", "") if is_ else "",
-        "非預算型效益"      : non_budget_items_detail_text or (is_.get("non_budget_benefits", "") if is_ else ""),
+        "非預算型效益"      : (is_.get("non_budget_benefits", "") if is_ else "") or non_budget_items_detail_text,
+        "細項分類明細"      : sub_category_details_text,
+        "氣候工項（預算型）明細": counted_items_amount_detail_text,
+        "非預算型效益明細"  : non_budget_items_detail_text,
         "anti_pattern命中"  : is_.get("anti_pattern_hits_text", "") if is_ else "",
         "減量資訊完整度"    : (payload.get("reduction_completeness") or {}).get("label", ""),
         "工程量體縮減效益"  : phys_text,

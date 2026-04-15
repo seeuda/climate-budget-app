@@ -59,6 +59,10 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "潛在調適/韌性亮點 (實務細節 - Action B)",
     "防呆提醒",
     "補充說明",
+    "細項分類明細(JSON)",
+    "氣候工項明細(JSON)",
+    "非預算型效益明細(JSON)",
+    "同步回執碼",
 ]
 
 DEFAULT_SYNC_HEADERS = BUDGET_SUMMARY_HEADERS + INTERPRETATION_SUMMARY_HEADERS
@@ -97,6 +101,10 @@ HEADER_ALIAS_MAP = {
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
+    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "細項分類明細", "sub_categories_json"],
+    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "氣候工項明細", "counted_items_json"],
+    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "非預算型效益明細", "non_budget_items_json"],
+    "同步回執碼"        : ["同步回執碼", "上傳回執碼", "sync_receipt_id", "同步追蹤碼"],
 }
 
 PRESET_REFERENCE_COLUMNS = {
@@ -1808,6 +1816,19 @@ def build_sync_row_dict(payload):
         f"lm={rv.get('lm_version','?')}"
     ) if rv else ""
     preset_ref = ameta.get("preset_reference", {}) or {}
+    sync_receipt_id = ameta.get("sync_receipt_id", "")
+    sub_category_json = json.dumps(
+        bs.get("sub_categories", []) if bs else payload.get("climate_assessment", {}).get("sub_categories", []),
+        ensure_ascii=False,
+    )
+    counted_items_json = json.dumps(
+        bs.get("counted_items", []) if bs else payload.get("climate_assessment", {}).get("selected_items", []),
+        ensure_ascii=False,
+    )
+    non_budget_items_json = json.dumps(
+        is_.get("non_budget_items_detail", []) if is_ else [],
+        ensure_ascii=False,
+    )
 
     return {
         # ── 計算資料 ──────────────────────────────────────────────────
@@ -1837,6 +1858,10 @@ def build_sync_row_dict(payload):
         "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
         "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
         "補充說明"          : ameta.get("user_note", ""),
+        "細項分類明細(JSON)" : sub_category_json,
+        "氣候工項明細(JSON)" : counted_items_json,
+        "非預算型效益明細(JSON)" : non_budget_items_json,
+        "同步回執碼"        : sync_receipt_id,
     }
 
 
@@ -1905,6 +1930,13 @@ def sync_to_google_sheet_direct(payload):
     matched = sum(1 for col in headers if resolve_header_key(col))
     unmatched = [col for col in headers if not resolve_header_key(col)]
     msg = f"已寫入試算表 {spreadsheet_id}（{matched}/{len(headers)} 欄比對成功）"
+    receipt_id = row_dict.get("同步回執碼", "")
+    if receipt_id:
+        try:
+            cell = worksheet.find(receipt_id)
+            msg += f"，回執碼：{receipt_id}（第 {cell.row} 列）"
+        except Exception:
+            msg += f"，回執碼：{receipt_id}（可用此碼人工查詢）"
     if unmatched:
         msg += f"，未比對欄位留空：{'、'.join(unmatched)}"
     return True, msg
@@ -2049,11 +2081,19 @@ def extract_preset_reference(raw_row: pd.Series | dict | None) -> dict:
 
 def sync_to_google_sheet(payload):
     """Send assessment payload to Google Sheet webhook."""
+    sync_payload = dict(payload)
+    sync_receipt_id = (
+        f"SYNC-{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d%H%M%S')}-"
+        f"{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
+    )
+    assessment_metadata = dict(sync_payload.get("assessment_metadata", {}) or {})
+    assessment_metadata["sync_receipt_id"] = sync_receipt_id
+    sync_payload["assessment_metadata"] = assessment_metadata
+
     webhook_url = get_google_sheet_webhook_url()
     if not webhook_url:
-        return sync_to_google_sheet_direct(payload)
+        return sync_to_google_sheet_direct(sync_payload)
 
-    sync_payload = dict(payload)
     sync_payload["google_sheet_target"] = get_google_sheet_target()
 
     req = request.Request(
@@ -2068,13 +2108,25 @@ def sync_to_google_sheet(payload):
             status_code = resp.getcode()
             body = resp.read().decode("utf-8", errors="ignore")
             if 200 <= status_code < 300:
-                return True, body or "同步成功"
+                normalized_body = (body or "").strip()
+                if not normalized_body:
+                    return True, f"同步成功，回執碼：{sync_receipt_id}"
+                if sync_receipt_id in normalized_body:
+                    return True, normalized_body
+                return True, f"{normalized_body}｜回執碼：{sync_receipt_id}"
             return False, f"同步失敗（HTTP {status_code}）：{body}"
     except error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
         return False, f"同步失敗（HTTP {e.code}）：{body}"
     except error.URLError as e:
         return False, f"同步失敗（連線錯誤）：{e.reason}"
+
+
+def extract_sync_receipt_id(message: str) -> str:
+    """從同步訊息中提取回執碼（若有）。"""
+    text = str(message or "")
+    m = re.search(r"(SYNC-\d{14}-[A-Z0-9]{4})", text)
+    return m.group(1) if m else ""
 
 # ── Session state init ────────────────────────────────────────────────────────
 
@@ -3916,12 +3968,17 @@ elif st.session_state.step == 4:
 
     if st.session_state.sync_message:
         if st.session_state.sync_done:
+            receipt_id = extract_sync_receipt_id(st.session_state.sync_message)
             if sheet_target.get("spreadsheet_id"):
                 st.markdown(
                     f"✅ 已完成同步：已直接寫入[試算表](https://docs.google.com/spreadsheets/d/{sheet_target['spreadsheet_id']}/edit)"
                 )
+                st.info(f"📌 同步資訊：{st.session_state.sync_message}")
             else:
                 st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
+            if receipt_id:
+                st.code(f"同步回執碼：{receipt_id}")
+            st.caption("建議：下載 JSON 報告留存（含完整欄位），並記下同步回執碼以利後續稽核追蹤。")
         else:
             st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
 

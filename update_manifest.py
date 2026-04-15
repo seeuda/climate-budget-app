@@ -2108,7 +2108,12 @@ def sync_to_google_sheet(payload):
             status_code = resp.getcode()
             body = resp.read().decode("utf-8", errors="ignore")
             if 200 <= status_code < 300:
-                return True, body or f"同步成功，回執碼：{sync_receipt_id}"
+                normalized_body = (body or "").strip()
+                if not normalized_body:
+                    return True, f"同步成功，回執碼：{sync_receipt_id}"
+                if sync_receipt_id in normalized_body:
+                    return True, normalized_body
+                return True, f"{normalized_body}｜回執碼：{sync_receipt_id}"
             return False, f"同步失敗（HTTP {status_code}）：{body}"
     except error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")

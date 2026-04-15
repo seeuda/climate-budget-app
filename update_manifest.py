@@ -2094,15 +2094,28 @@ def build_sync_row_dict(payload):
         if format_item_text(item)
     ]
     non_budget_items_detail_text = join_detail_entries(non_budget_item_entries)
+    management_adaptation_prompt = ameta.get("management_adaptation_prompt", {}) or {}
+    heat_prompt_triggered = bool(management_adaptation_prompt.get("triggered", False))
+    heat_prompt_response = str(management_adaptation_prompt.get("response", "") or "").strip()
+    heat_prompt_note = str(management_adaptation_prompt.get("note", "") or "").strip()
+    heat_prompt_text = ""
+    if heat_prompt_triggered and heat_prompt_response and heat_prompt_response != "不適用":
+        heat_prompt_text = f"🌡️ 高溫作業調適提醒回應：{heat_prompt_response}"
+        if heat_prompt_note:
+            heat_prompt_text += f"；{heat_prompt_note}"
+
     combined_non_budget_entries = []
     if non_budget_items_detail_text:
         combined_non_budget_entries.append(f"非預算型工項：{non_budget_items_detail_text}")
+    if heat_prompt_text:
+        combined_non_budget_entries.append(heat_prompt_text)
     if phys_detail_text:
         combined_non_budget_entries.append(f"工程量體縮減與其他效益：{phys_detail_text}")
     combined_non_budget_text = join_detail_entries(combined_non_budget_entries)
     combined_non_budget_json = json.dumps(
         {
             "non_budget_items_detail": non_budget_items_detail,
+            "management_adaptation_prompt": management_adaptation_prompt,
             "physical_reductions": phys,
         },
         ensure_ascii=False,
@@ -2127,6 +2140,7 @@ def build_sync_row_dict(payload):
         "非預算型效益"      : "；".join(
             p for p in [
                 (is_.get("non_budget_benefits", "") if is_ else ""),
+                heat_prompt_text,
                 phys_text,
             ] if p
         ),

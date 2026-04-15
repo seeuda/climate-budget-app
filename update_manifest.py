@@ -48,6 +48,9 @@ BUDGET_SUMMARY_HEADERS = [
 # 解讀資料欄位（相關性標記、非預算型效益、診斷資訊）
 INTERPRETATION_SUMMARY_HEADERS = [
     "非預算型效益",           # benefit_type=design/management 的工項說明
+    "細項分類明細",           # 細項代碼 + 中文 + 金額/比例
+    "氣候工項（預算型）明細",  # 工項代碼 + 中文 + 金額/比例
+    "非預算型效益明細",        # 工項代碼 + 中文 + 備註
     "工項相關性摘要",          # 各工項 purity label 的文字摘要
     "anti_pattern命中",       # 觸發的 anti_pattern id 與名稱
     "減量資訊完整度",
@@ -62,7 +65,6 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "細項分類明細(JSON)",
     "氣候工項明細(JSON)",
     "非預算型效益明細(JSON)",
-    "同步回執碼",
 ]
 
 DEFAULT_SYNC_HEADERS = BUDGET_SUMMARY_HEADERS + INTERPRETATION_SUMMARY_HEADERS
@@ -84,12 +86,15 @@ HEADER_ALIAS_MAP = {
     "氣候預算比例%"     : ["氣候預算比例%", "氣候預算比例", "氣候比例"],
     "計畫類別"          : ["計畫類別", "判讀主類別", "主類別"],
     "細項分類"          : ["細項分類", "判讀子類別", "子類別"],
-    "氣候工項（預算型）": ["氣候工項（預算型）", "氣候工項", "工項清單", "預算型工項"],
+    "氣候工項（預算型）": ["氣候工項（預算型）", "氣候工項(預算型)", "氣候工項", "工項清單", "預算型工項"],
     "關鍵字信心"        : ["關鍵字信心", "判讀信心", "信心等級"],
     "命中關鍵字"        : ["命中關鍵字", "觸發關鍵字", "命中詞彙"],
     "規則版本"          : ["規則版本", "config_version", "data_version"],
     # ── 解讀資料欄位 ────────────────────────────────────────────────────────
     "非預算型效益"      : ["非預算型效益", "設計型效益", "管理型效益", "效益補充"],
+    "細項分類明細"      : ["細項分類明細"],
+    "氣候工項（預算型）明細": ["氣候工項（預算型）明細", "氣候工項(預算型)明細"],
+    "非預算型效益明細"  : ["非預算型效益明細"],
     "工項相關性摘要"    : ["工項相關性摘要", "純度摘要", "相關性標記"],
     "anti_pattern命中" : ["anti_pattern命中", "誤判提示", "反例命中"],
     "減量資訊完整度"    : ["減量資訊完整度", "減量完整度", "工程減量完整度"],
@@ -101,10 +106,9 @@ HEADER_ALIAS_MAP = {
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
-    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "細項分類明細", "sub_categories_json"],
-    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "氣候工項明細", "counted_items_json"],
-    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "非預算型效益明細", "non_budget_items_json"],
-    "同步回執碼"        : ["同步回執碼", "上傳回執碼", "sync_receipt_id", "同步追蹤碼"],
+    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "sub_categories_json"],
+    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "counted_items_json"],
+    "非預算型效益明細(JSON)" : ["非預算型效益明細(JSON)", "non_budget_items_json"],
 }
 
 PRESET_REFERENCE_COLUMNS = {
@@ -138,6 +142,15 @@ PRESET_REFERENCE_COLUMNS = {
 def normalize_text_key(text: str) -> str:
     """Normalize text for resilient column-name matching."""
     return re.sub(r"\s+", "", str(text or "")).lower()
+
+
+DETAIL_ENTRY_SEPARATOR = "；"
+
+
+def join_detail_entries(entries: list[str]) -> str:
+    """Join multi-value detail entries with a consistent separator for sheet display."""
+    clean_entries = [str(e).strip() for e in entries if str(e).strip()]
+    return DETAIL_ENTRY_SEPARATOR.join(clean_entries)
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -1780,18 +1793,28 @@ def build_sync_row_dict(payload):
         else ""
     )
 
+    def format_item_text(item: dict) -> str:
+        label = str(item.get("label", "")).strip()
+        item_id = str(item.get("item_id", "")).strip()
+        if label and item_id:
+            return f"{label}（{item_id}）"
+        return label or item_id
+
+    def format_item_label(item: dict) -> str:
+        label = str(item.get("label", "")).strip()
+        return label
+
     # 工項文字
     if bs:
         items_text = "、".join(
-            i.get("label", "") for i in bs.get("counted_items", []) if i.get("label")
+            t for t in (format_item_label(i) for i in bs.get("counted_items", [])) if t
         )
         cat_labels = bs.get("category_labels", "")
         sub_labels = bs.get("sub_category_labels", "")
     else:
         old_assessment = payload.get("climate_assessment", {})
         items_text = "、".join(
-            i.get("label", "") for i in old_assessment.get("selected_items", [])
-            if i.get("label")
+            t for t in (format_item_label(i) for i in old_assessment.get("selected_items", [])) if t
         )
         cat_labels = old_assessment.get("category_labels", "")
         sub_labels = old_assessment.get("sub_category_labels", "")
@@ -1816,19 +1839,95 @@ def build_sync_row_dict(payload):
         f"lm={rv.get('lm_version','?')}"
     ) if rv else ""
     preset_ref = ameta.get("preset_reference", {}) or {}
-    sync_receipt_id = ameta.get("sync_receipt_id", "")
+    sub_categories = bs.get("sub_categories", []) if bs else payload.get("climate_assessment", {}).get("sub_categories", [])
+    counted_items = bs.get("counted_items", []) if bs else payload.get("climate_assessment", {}).get("selected_items", [])
+    non_budget_items_detail = is_.get("non_budget_items_detail", []) if is_ else []
+
+    # 建立 item -> sub 對照，供「各細項金額」彙整使用
+    item_to_sub_map = {}
+    label_to_sub_map = {}
+    for cat in LOGIC.get("taxonomy", []):
+        for sub in cat.get("sub_categories", []):
+            sub_id = sub.get("id", "")
+            sub_label = sub.get("label", "")
+            for item in sub.get("items", []):
+                item_id = item.get("item_id", "")
+                item_label = item.get("label", "")
+                if item_id:
+                    item_to_sub_map[item_id] = {"sub_id": sub_id, "sub_label": sub_label}
+                if item_label:
+                    label_to_sub_map[item_label] = {"sub_id": sub_id, "sub_label": sub_label}
+
+    sub_amounts = {}
+    for entry in counted_items:
+        item_id = entry.get("item_id", "")
+        item_label = entry.get("label", "")
+        amount = float(entry.get("amount", 0) or 0)
+        mapped = item_to_sub_map.get(item_id) or label_to_sub_map.get(item_label) or {}
+        sub_id = mapped.get("sub_id", "UNMAPPED")
+        sub_label = mapped.get("sub_label", "未對應細項")
+        key = (sub_id, sub_label)
+        sub_amounts[key] = sub_amounts.get(key, 0.0) + amount
+
+    sub_amount_breakdown = []
+    for (sub_id, sub_label), amount in sub_amounts.items():
+        sub_amount_breakdown.append({
+            "sub_id": sub_id,
+            "sub_label": sub_label,
+            "amount": int(round(amount)),
+            "ratio": round((amount / climate_total * 100), 1) if climate_total else 0.0,
+        })
+
     sub_category_json = json.dumps(
-        bs.get("sub_categories", []) if bs else payload.get("climate_assessment", {}).get("sub_categories", []),
+        {
+            "selected_sub_categories": sub_categories,
+            "amount_breakdown": sub_amount_breakdown,
+        },
         ensure_ascii=False,
     )
     counted_items_json = json.dumps(
-        bs.get("counted_items", []) if bs else payload.get("climate_assessment", {}).get("selected_items", []),
+        counted_items,
         ensure_ascii=False,
     )
     non_budget_items_json = json.dumps(
-        is_.get("non_budget_items_detail", []) if is_ else [],
+        non_budget_items_detail,
         ensure_ascii=False,
     )
+
+    sub_category_label_parts = [
+        p.strip() for p in re.split(r"[、；;]", str(sub_labels or "")) if p.strip()
+    ]
+    if sub_amount_breakdown:
+        sub_category_entries = [
+            f"{idx}. {row['sub_label']}（{row['sub_id']}）：{row['amount']:,} 元（{row['ratio']:.1f}%）"
+            for idx, row in enumerate(sub_amount_breakdown, start=1)
+        ]
+    else:
+        sub_category_entries = [
+            f"{idx}. {sub_category_label_parts[idx-1]}（{sid}）"
+            if idx - 1 < len(sub_category_label_parts)
+            else f"{idx}. {sid}"
+            for idx, sid in enumerate(sub_categories, start=1)
+        ]
+    sub_category_details_text = join_detail_entries(sub_category_entries)
+
+    counted_item_amount_entries = [
+        f"{idx}. {format_item_text(item)}：{int(item.get('amount', 0) or 0):,} 元"
+        f"（{float(item.get('ratio', 0) or 0):.1f}%）"
+        for idx, item in enumerate(counted_items, start=1)
+        if format_item_text(item)
+    ]
+    counted_items_amount_detail_text = join_detail_entries(counted_item_amount_entries)
+
+    benefit_type_label_map = {"design": "設計型", "management": "管理型"}
+    non_budget_item_entries = [
+        f"{idx}. 【{benefit_type_label_map.get(item.get('benefit_type', ''), item.get('benefit_type', ''))}】"
+        f"{format_item_text(item)}"
+        + (f"：{item.get('note', '')}" if item.get("note") else "")
+        for idx, item in enumerate(non_budget_items_detail, start=1)
+        if format_item_text(item)
+    ]
+    non_budget_items_detail_text = join_detail_entries(non_budget_item_entries)
 
     return {
         # ── 計算資料 ──────────────────────────────────────────────────
@@ -1840,14 +1939,17 @@ def build_sync_row_dict(payload):
         "氣候預算"          : climate_total,
         "氣候預算比例%"     : climate_ratio_decimal,
         "計畫類別"          : cat_labels,
-        "細項分類"          : sub_labels,
-        "氣候工項（預算型）": items_text,
+        "細項分類"          : sub_labels or sub_category_details_text,
+        "氣候工項（預算型）": items_text or counted_items_amount_detail_text,
         "關鍵字信心"        : conf.get("label", ""),
         "命中關鍵字"        : "、".join(payload.get("matched_keywords", [])),
         "規則版本"          : rule_ver_text,
         # ── 解讀資料 ──────────────────────────────────────────────────
         "工項相關性摘要"    : is_.get("item_relevance_text", "") if is_ else "",
-        "非預算型效益"      : is_.get("non_budget_benefits", "") if is_ else "",
+        "非預算型效益"      : (is_.get("non_budget_benefits", "") if is_ else "") or non_budget_items_detail_text,
+        "細項分類明細"      : sub_category_details_text,
+        "氣候工項（預算型）明細": counted_items_amount_detail_text,
+        "非預算型效益明細"  : non_budget_items_detail_text,
         "anti_pattern命中"  : is_.get("anti_pattern_hits_text", "") if is_ else "",
         "減量資訊完整度"    : (payload.get("reduction_completeness") or {}).get("label", ""),
         "工程量體縮減效益"  : phys_text,
@@ -1861,7 +1963,6 @@ def build_sync_row_dict(payload):
         "細項分類明細(JSON)" : sub_category_json,
         "氣候工項明細(JSON)" : counted_items_json,
         "非預算型效益明細(JSON)" : non_budget_items_json,
-        "同步回執碼"        : sync_receipt_id,
     }
 
 
@@ -1930,13 +2031,6 @@ def sync_to_google_sheet_direct(payload):
     matched = sum(1 for col in headers if resolve_header_key(col))
     unmatched = [col for col in headers if not resolve_header_key(col)]
     msg = f"已寫入試算表 {spreadsheet_id}（{matched}/{len(headers)} 欄比對成功）"
-    receipt_id = row_dict.get("同步回執碼", "")
-    if receipt_id:
-        try:
-            cell = worksheet.find(receipt_id)
-            msg += f"，回執碼：{receipt_id}（第 {cell.row} 列）"
-        except Exception:
-            msg += f"，回執碼：{receipt_id}（可用此碼人工查詢）"
     if unmatched:
         msg += f"，未比對欄位留空：{'、'.join(unmatched)}"
     return True, msg
@@ -2082,13 +2176,6 @@ def extract_preset_reference(raw_row: pd.Series | dict | None) -> dict:
 def sync_to_google_sheet(payload):
     """Send assessment payload to Google Sheet webhook."""
     sync_payload = dict(payload)
-    sync_receipt_id = (
-        f"SYNC-{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d%H%M%S')}-"
-        f"{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
-    )
-    assessment_metadata = dict(sync_payload.get("assessment_metadata", {}) or {})
-    assessment_metadata["sync_receipt_id"] = sync_receipt_id
-    sync_payload["assessment_metadata"] = assessment_metadata
 
     webhook_url = get_google_sheet_webhook_url()
     if not webhook_url:
@@ -2110,10 +2197,8 @@ def sync_to_google_sheet(payload):
             if 200 <= status_code < 300:
                 normalized_body = (body or "").strip()
                 if not normalized_body:
-                    return True, f"同步成功，回執碼：{sync_receipt_id}"
-                if sync_receipt_id in normalized_body:
-                    return True, normalized_body
-                return True, f"{normalized_body}｜回執碼：{sync_receipt_id}"
+                    return True, "同步成功"
+                return True, normalized_body
             return False, f"同步失敗（HTTP {status_code}）：{body}"
     except error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
@@ -2122,11 +2207,28 @@ def sync_to_google_sheet(payload):
         return False, f"同步失敗（連線錯誤）：{e.reason}"
 
 
-def extract_sync_receipt_id(message: str) -> str:
-    """從同步訊息中提取回執碼（若有）。"""
-    text = str(message or "")
-    m = re.search(r"(SYNC-\d{14}-[A-Z0-9]{4})", text)
-    return m.group(1) if m else ""
+def build_user_sync_success_message(sync_message: str, spreadsheet_id: str) -> str:
+    """建立給一般使用者看的同步成功訊息。"""
+    sheet_link = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+    msg = (
+        "✅ 已完成同步：已直接寫入"
+        f"[試算表]({sheet_link})"
+    )
+
+    matched = re.search(r"（(\d+)/(\d+)\s*欄比對成功）", str(sync_message or ""))
+    if matched:
+        matched_count, total_count = matched.groups()
+        if matched_count == total_count:
+            msg += "，系統自動檢核比對成功。可點擊連結檢查確認是否完成上傳。"
+            return msg
+        msg += (
+            f"，系統已完成同步，但欄位對應僅成功 {matched_count}/{total_count}，"
+            "請檢查試算表欄位名稱設定是否完整。"
+        )
+        return msg
+
+    msg += "，系統目前仍在比對中，請稍候再點擊連結檢查確認是否完成上傳。"
+    return msg
 
 # ── Session state init ────────────────────────────────────────────────────────
 
@@ -3968,17 +4070,16 @@ elif st.session_state.step == 4:
 
     if st.session_state.sync_message:
         if st.session_state.sync_done:
-            receipt_id = extract_sync_receipt_id(st.session_state.sync_message)
             if sheet_target.get("spreadsheet_id"):
                 st.markdown(
-                    f"✅ 已完成同步：已直接寫入[試算表](https://docs.google.com/spreadsheets/d/{sheet_target['spreadsheet_id']}/edit)"
+                    build_user_sync_success_message(
+                        st.session_state.sync_message,
+                        sheet_target["spreadsheet_id"],
+                    )
                 )
-                st.info(f"📌 同步資訊：{st.session_state.sync_message}")
             else:
                 st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
-            if receipt_id:
-                st.code(f"同步回執碼：{receipt_id}")
-            st.caption("建議：下載 JSON 報告留存（含完整欄位），並記下同步回執碼以利後續稽核追蹤。")
+            st.caption("建議：下載 JSON 報告留存（含完整欄位）以利後續稽核追蹤。")
         else:
             st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
 

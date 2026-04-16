@@ -2430,11 +2430,11 @@ def build_user_sync_success_message(sync_message: str, spreadsheet_id: str) -> s
     if matched:
         matched_count, total_count = matched.groups()
         if matched_count == total_count:
-            msg += "，系統自動檢核比對成功。可點擊連結檢查確認是否完成上傳。"
+            msg += "，系統自動檢核比對成功。可點擊連結查看上傳結果。"
             return msg
         msg += (
             f"，系統已完成同步，但欄位對應僅成功 {matched_count}/{total_count}，"
-            "請檢查試算表欄位名稱設定是否完整。"
+            "請回報客服人員檢查試算表欄位名稱設定。"
         )
         return msg
 

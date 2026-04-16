@@ -36,8 +36,11 @@
 │  └─ config.json               # 規則設定、版本資訊、系統參數
 ├─ requirements.txt             # Python 相依套件
 ├─ TROUBLESHOOTING.md           # 常見部署錯誤與排查建議
-├─ check_duplicate_ids.py       # trigger_id 重複檢查工具
-└─ test_keyword_regression.py   # 關鍵字回歸測試腳本
+├─ scripts/
+│  ├─ check_duplicate_ids.py    # trigger_id 重複檢查工具（可執行版）
+│  └─ test_keyword_regression.py# 關鍵字回歸測試腳本（可執行版）
+├─ check_duplicate_ids.py       # 舊版/歷史檔（非主要執行入口）
+└─ test_keyword_regression.py   # 舊版/歷史檔（非主要執行入口）
 ```
 
 ---
@@ -104,13 +107,13 @@ python -m py_compile app.py update_manifest.py
 ### 關鍵字回歸（依專案腳本）
 
 ```bash
-python test_keyword_regression.py
+python scripts/test_keyword_regression.py
 ```
 
 ### trigger_id 唯一性檢查
 
 ```bash
-python check_duplicate_ids.py
+python scripts/check_duplicate_ids.py
 ```
 
 ---

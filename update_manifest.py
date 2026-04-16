@@ -1,7 +1,7 @@
 """
 彰化縣氣候預算導引式判讀系統
 Climate Budget Assessment Tool for Changhua County Government
-v1.3 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
+v1.4 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
         resolve_header_key強化、init_state型別穩定化、
         anti_pattern_check骨幹、manifest版本管控
 """
@@ -1947,15 +1947,72 @@ def _build_drive_upload_filename(case_name: str, original_name: str, file_bytes:
     return f"{timestamp}_{short_hash}_{original_name}"
 
 
+def get_google_drive_oauth_settings() -> tuple[dict, str]:
+    """Read OAuth settings for Google Drive uploads from Streamlit secrets."""
+    required_keys = [
+        "google_oauth_client_id",
+        "google_oauth_client_secret",
+        "google_oauth_refresh_token",
+    ]
+    settings = {}
+    missing = []
+    for key in required_keys:
+        value = st.secrets.get(key)
+        if value is None or not str(value).strip():
+            missing.append(key)
+        else:
+            settings[key] = str(value).strip()
+
+    if missing:
+        return {}, "尚未完成 Google Drive OAuth 設定，缺少 secrets：" + "、".join(missing)
+
+    settings["google_drive_upload_owner"] = str(st.secrets.get("google_drive_upload_owner", "")).strip()
+    return settings, ""
+
+
+def get_google_drive_oauth_access_token() -> tuple[str, str]:
+    """Exchange refresh token for an access token used by Google Drive uploads."""
+    settings, err = get_google_drive_oauth_settings()
+    if err:
+        return "", err
+
+    token_payload = urlencode({
+        "client_id": settings["google_oauth_client_id"],
+        "client_secret": settings["google_oauth_client_secret"],
+        "refresh_token": settings["google_oauth_refresh_token"],
+        "grant_type": "refresh_token",
+    }).encode("utf-8")
+
+    req = request.Request(
+        "https://oauth2.googleapis.com/token",
+        data=token_payload,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+
+    try:
+        with request.urlopen(req, timeout=60) as resp:
+            resp_body = resp.read().decode("utf-8")
+            result = json.loads(resp_body) if resp_body else {}
+    except error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="ignore")
+        return "", f"Google OAuth 驗證失敗（HTTP {e.code}）：{detail or e.reason}"
+    except Exception as e:
+        return "", f"Google OAuth 驗證失敗：{e}"
+
+    access_token = str(result.get("access_token", "")).strip()
+    if not access_token:
+        return "", "Google OAuth 驗證失敗：未取得 access token"
+    return access_token, ""
+
+
 def upload_supporting_file_to_drive(uploaded_file, *, case_name: str = "", folder_id: str = "") -> tuple[bool, dict | str]:
-    """Upload one supporting document to Google Drive private folder via service account."""
+    """Upload one supporting document to Google Drive private folder via OAuth user delegation."""
     folder_id = str(folder_id or get_drive_upload_folder_id()).strip()
     if not folder_id:
         return False, "尚未設定 Google Drive 上傳資料夾 ID"
 
-    creds, err = get_google_service_account_credentials([
-        "https://www.googleapis.com/auth/drive",
-    ])
+    access_token, err = get_google_drive_oauth_access_token()
     if err:
         return False, err
 
@@ -1965,12 +2022,6 @@ def upload_supporting_file_to_drive(uploaded_file, *, case_name: str = "", folde
 
     mime_type = uploaded_file.type or mimetypes.guess_type(uploaded_file.name)[0] or "application/octet-stream"
     upload_name = _build_drive_upload_filename(case_name, uploaded_file.name, file_bytes)
-
-    try:
-        creds.refresh(Request())
-        token = creds.token
-    except Exception as e:
-        return False, f"Google Drive 驗證失敗：{e}"
 
     metadata = json.dumps({
         "name": upload_name,
@@ -1990,12 +2041,16 @@ def upload_supporting_file_to_drive(uploaded_file, *, case_name: str = "", folde
         + b"--" + boundary.encode("utf-8") + b"--" + crlf
     )
 
-    query = urlencode({"uploadType": "multipart", "supportsAllDrives": "true", "fields": "id,name,size,createdTime,webViewLink"})
+    query = urlencode({
+        "uploadType": "multipart",
+        "supportsAllDrives": "true",
+        "fields": "id,name,size,createdTime,webViewLink,owners",
+    })
     req = request.Request(
         f"https://www.googleapis.com/upload/drive/v3/files?{query}",
         data=body,
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {access_token}",
             "Content-Type": f"multipart/related; boundary={boundary}",
             "Content-Length": str(len(body)),
         },
@@ -2012,6 +2067,11 @@ def upload_supporting_file_to_drive(uploaded_file, *, case_name: str = "", folde
     except Exception as e:
         return False, f"Google Drive 上傳失敗：{e}"
 
+    owner_email = ""
+    owners = result.get("owners") or []
+    if owners and isinstance(owners, list):
+        owner_email = str((owners[0] or {}).get("emailAddress", "")).strip()
+
     return True, {
         "file_id": result.get("id", ""),
         "name": result.get("name") or upload_name,
@@ -2021,6 +2081,7 @@ def upload_supporting_file_to_drive(uploaded_file, *, case_name: str = "", folde
         "created_time": result.get("createdTime", ""),
         "web_view_link": result.get("webViewLink", ""),
         "folder_id": folder_id,
+        "owner_email": owner_email,
         "uploaded_at": datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
         "md5": hashlib.md5(file_bytes).hexdigest(),
     }

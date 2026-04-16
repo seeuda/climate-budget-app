@@ -4430,11 +4430,11 @@ elif st.session_state.step == 4:
     )
     st.session_state.user_note = user_note
 
-    st.markdown("**📎 上傳工作內容說明文件（選填）**")
-    st.caption("可拖曳或選取多個檔案上傳至系統指定的 Google Drive 私有資料夾，例如：招標規範、工作計畫書、經費概算表等。檔案不會公開顯示給一般使用者。")
+    st.markdown("**📎 建議上傳工作內容說明文件，將用於程式開發優化及回饋使用者意見 **")
+    st.caption("可拖曳或選取多個檔案上傳，例如：招標規範、工作計畫書、經費概算表等。")
     drive_folder_id = get_drive_upload_folder_id()
     if not drive_folder_id:
-        st.warning("⚠️ 尚未設定 Google Drive 上傳資料夾，暫無法上傳補充文件。")
+        st.warning("⚠️ 上傳資料夾重新設定中，暫無法上傳補充文件。")
     else:
         uploaded_docs = st.file_uploader(
             "上傳工作內容說明文件",

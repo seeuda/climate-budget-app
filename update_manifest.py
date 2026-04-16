@@ -17,12 +17,17 @@ import random
 import string
 import re
 from urllib import request, error
+from urllib.parse import urlencode
+import mimetypes
 import hashlib
 import gspread
 from google.oauth2.service_account import Credentials
+from google.auth.transport.requests import Request
 
 PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
 PRESET_SHEET_GID = "0"
+DEFAULT_DRIVE_UPLOAD_FOLDER_ID = "1uMGEVB7bZahPCigXtdMlmBhcdHfczFpW"
+MAX_SUPPORTING_FILE_MB = 200
 
 # ── Google Sheet 同步：輸出欄位定義 ───────────────────────────────────────────
 # 分兩組：計算資料（budget_summary）與解讀資料（interpretation_summary）
@@ -1721,7 +1726,8 @@ def generate_export_json(state):
                 "note": heat_safety_note,
             },
             "preset_reference": state.get("preset_reference", {}),
-            "system_version": "1.2",
+            "uploaded_supporting_files": state.get("uploaded_supporting_files", []),
+            "system_version": "1.3",
         },
     }
     return result
@@ -1872,16 +1878,17 @@ def fetch_update_log():
         return []
 
 
-def get_google_sheet_client():
-    """Create Google Sheets client from Streamlit secrets service account."""
+def get_google_service_account_credentials(scopes: list[str] | None = None):
+    """Create service account credentials from Streamlit secrets."""
     service_account_info = st.secrets.get("gcp_service_account")
     if not service_account_info:
         return None, "尚未設定 gcp_service_account（service account 金鑰）"
 
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
+    if not scopes:
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ]
 
     try:
         service_account_dict = dict(service_account_info)
@@ -1893,9 +1900,130 @@ def get_google_sheet_client():
             service_account_dict,
             scopes=scopes,
         )
-        return gspread.authorize(creds), ""
+        return creds, ""
     except Exception as e:
         return None, f"service account 驗證失敗：{e}"
+
+
+def get_google_sheet_client():
+    """Create Google Sheets client from Streamlit secrets service account."""
+    creds, err = get_google_service_account_credentials()
+    if err:
+        return None, err
+    try:
+        return gspread.authorize(creds), ""
+    except Exception as e:
+        return None, f"Google Sheet client 建立失敗：{e}"
+
+
+def get_drive_upload_folder_id() -> str:
+    """Get target Google Drive folder id for supporting document uploads."""
+    candidate_keys = [
+        "google_drive_upload_folder_id",
+        "drive_upload_folder_id",
+        "supporting_docs_drive_folder_id",
+    ]
+    for key in candidate_keys:
+        value = st.secrets.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+
+    integrations = CONFIG.get("integrations", {}) if isinstance(CONFIG, dict) else {}
+    for key in candidate_keys:
+        value = integrations.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+
+    return DEFAULT_DRIVE_UPLOAD_FOLDER_ID
+
+
+def _build_drive_upload_filename(case_name: str, original_name: str, file_bytes: bytes) -> str:
+    """Build a stable, traceable filename for uploaded supporting documents."""
+    safe_case_name = re.sub(r'[\/:*?"<>|]+', '_', str(case_name or '').strip())[:40]
+    timestamp = datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d-%H%M%S')
+    short_hash = hashlib.md5(file_bytes).hexdigest()[:6].upper()
+    if safe_case_name:
+        return f"{timestamp}_{safe_case_name}_{short_hash}_{original_name}"
+    return f"{timestamp}_{short_hash}_{original_name}"
+
+
+def upload_supporting_file_to_drive(uploaded_file, *, case_name: str = "", folder_id: str = "") -> tuple[bool, dict | str]:
+    """Upload one supporting document to Google Drive private folder via service account."""
+    folder_id = str(folder_id or get_drive_upload_folder_id()).strip()
+    if not folder_id:
+        return False, "尚未設定 Google Drive 上傳資料夾 ID"
+
+    creds, err = get_google_service_account_credentials([
+        "https://www.googleapis.com/auth/drive",
+    ])
+    if err:
+        return False, err
+
+    file_bytes = uploaded_file.getvalue()
+    if not file_bytes:
+        return False, f"檔案 {uploaded_file.name} 內容為空，無法上傳"
+
+    mime_type = uploaded_file.type or mimetypes.guess_type(uploaded_file.name)[0] or "application/octet-stream"
+    upload_name = _build_drive_upload_filename(case_name, uploaded_file.name, file_bytes)
+
+    try:
+        creds.refresh(Request())
+        token = creds.token
+    except Exception as e:
+        return False, f"Google Drive 驗證失敗：{e}"
+
+    metadata = json.dumps({
+        "name": upload_name,
+        "parents": [folder_id],
+        "description": f"彰化縣氣候預算判讀系統補充文件；原始檔名：{uploaded_file.name}",
+    }, ensure_ascii=False).encode("utf-8")
+
+    boundary = "===============" + hashlib.md5((upload_name + str(datetime.now())).encode("utf-8")).hexdigest()
+    crlf = b"\r\n"
+    body = (
+        b"--" + boundary.encode("utf-8") + crlf
+        + b"Content-Type: application/json; charset=UTF-8" + crlf + crlf
+        + metadata + crlf
+        + b"--" + boundary.encode("utf-8") + crlf
+        + f"Content-Type: {mime_type}".encode("utf-8") + crlf + crlf
+        + file_bytes + crlf
+        + b"--" + boundary.encode("utf-8") + b"--" + crlf
+    )
+
+    query = urlencode({"uploadType": "multipart", "supportsAllDrives": "true", "fields": "id,name,size,createdTime,webViewLink"})
+    req = request.Request(
+        f"https://www.googleapis.com/upload/drive/v3/files?{query}",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": f"multipart/related; boundary={boundary}",
+            "Content-Length": str(len(body)),
+        },
+        method="POST",
+    )
+
+    try:
+        with request.urlopen(req, timeout=120) as resp:
+            resp_body = resp.read().decode("utf-8")
+            result = json.loads(resp_body) if resp_body else {}
+    except error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="ignore")
+        return False, f"Google Drive 上傳失敗（HTTP {e.code}）：{detail or e.reason}"
+    except Exception as e:
+        return False, f"Google Drive 上傳失敗：{e}"
+
+    return True, {
+        "file_id": result.get("id", ""),
+        "name": result.get("name") or upload_name,
+        "original_name": uploaded_file.name,
+        "mime_type": mime_type,
+        "size_bytes": int(result.get("size") or len(file_bytes)),
+        "created_time": result.get("createdTime", ""),
+        "web_view_link": result.get("webViewLink", ""),
+        "folder_id": folder_id,
+        "uploaded_at": datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
+        "md5": hashlib.md5(file_bytes).hexdigest(),
+    }
 
 
 def resolve_header_key(col_name: str) -> str | None:
@@ -2494,6 +2622,10 @@ def init_state():
         "qualitative_factors":      [],      # list[str]
         "physical_reductions":      {},      # dict
         "user_note":                "",
+        "uploaded_supporting_files": [],
+        "uploaded_supporting_file_signatures": [],
+        "upload_message":           "",
+        "upload_error_message":     "",
         "heat_safety_prompt_triggered": False,
         "heat_safety_response":     "",
         "heat_safety_note":         "",
@@ -4110,6 +4242,11 @@ elif st.session_state.step == 4:
         # 補充說明
         if state.get("user_note", ""):
             st.markdown(f"**📝 補充說明：** {state.user_note}")
+        if state.get("uploaded_supporting_files"):
+            st.markdown("**📎 已上傳工作內容說明文件：**")
+            for file_meta in state.get("uploaded_supporting_files", []):
+                size_mb = (file_meta.get("size_bytes", 0) or 0) / (1024 * 1024)
+                st.markdown(f"- {file_meta.get('original_name', file_meta.get('name', '未命名檔案'))}（{size_mb:.2f} MB）")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -4232,6 +4369,73 @@ elif st.session_state.step == 4:
     )
     st.session_state.user_note = user_note
 
+    st.markdown("**📎 上傳工作內容說明文件（選填）**")
+    st.caption("可拖曳或選取多個檔案上傳至系統指定的 Google Drive 私有資料夾，例如：招標規範、工作計畫書、經費概算表等。檔案不會公開顯示給一般使用者。")
+    drive_folder_id = get_drive_upload_folder_id()
+    if not drive_folder_id:
+        st.warning("⚠️ 尚未設定 Google Drive 上傳資料夾，暫無法上傳補充文件。")
+    else:
+        uploaded_docs = st.file_uploader(
+            "上傳工作內容說明文件",
+            accept_multiple_files=True,
+            key="supporting_docs_uploader",
+            label_visibility="collapsed",
+        )
+
+        if st.session_state.get("upload_message"):
+            st.success(st.session_state.upload_message)
+        if st.session_state.get("upload_error_message"):
+            st.error(st.session_state.upload_error_message)
+
+        if uploaded_docs:
+            st.caption(f"已選取 {len(uploaded_docs)} 個檔案。點擊下方按鈕後才會正式上傳。")
+            if st.button("📤 上傳補充文件", use_container_width=True, key="upload_supporting_docs_btn"):
+                success_items = []
+                skipped_names = []
+                error_messages = []
+                existing_signatures = set(st.session_state.get("uploaded_supporting_file_signatures", []))
+                for uploaded_file in uploaded_docs:
+                    file_bytes = uploaded_file.getvalue()
+                    size_mb = len(file_bytes) / (1024 * 1024) if file_bytes else 0
+                    if size_mb > MAX_SUPPORTING_FILE_MB:
+                        error_messages.append(f"{uploaded_file.name} 超過 {MAX_SUPPORTING_FILE_MB} MB 上限，未上傳。")
+                        continue
+                    signature = hashlib.md5((uploaded_file.name + str(len(file_bytes)) + hashlib.md5(file_bytes).hexdigest()).encode("utf-8")).hexdigest()
+                    if signature in existing_signatures:
+                        skipped_names.append(uploaded_file.name)
+                        continue
+                    ok, result = upload_supporting_file_to_drive(
+                        uploaded_file,
+                        case_name=st.session_state.get("case_name", ""),
+                        folder_id=drive_folder_id,
+                    )
+                    if ok:
+                        success_items.append(result)
+                        existing_signatures.add(signature)
+                        st.session_state.uploaded_supporting_file_signatures = list(existing_signatures)
+                    else:
+                        error_messages.append(str(result))
+
+                if success_items:
+                    st.session_state.uploaded_supporting_files = st.session_state.get("uploaded_supporting_files", []) + success_items
+                    uploaded_names = "、".join(item.get("original_name", item.get("name", "未命名檔案")) for item in success_items)
+                    msg = f"✅ 已成功上傳 {len(success_items)} 個檔案：{uploaded_names}"
+                    if skipped_names:
+                        msg += f"；略過已上傳檔案：{'、'.join(skipped_names)}"
+                    st.session_state.upload_message = msg
+                else:
+                    st.session_state.upload_message = ""
+                st.session_state.upload_error_message = "\n".join(error_messages)
+                st.rerun()
+
+        uploaded_files = st.session_state.get("uploaded_supporting_files", [])
+        if uploaded_files:
+            st.markdown("**目前已上傳文件**")
+            for idx, file_meta in enumerate(uploaded_files, start=1):
+                size_mb = (file_meta.get("size_bytes", 0) or 0) / (1024 * 1024)
+                uploaded_at = file_meta.get("uploaded_at", "")
+                st.markdown(f"{idx}. {file_meta.get('original_name', file_meta.get('name', '未命名檔案'))}｜{size_mb:.2f} MB｜{uploaded_at}")
+
     # Export section
     st.markdown("---")
     st.markdown('<div class="section-title">📤 匯出評估報告</div>', unsafe_allow_html=True)
@@ -4248,6 +4452,7 @@ elif st.session_state.step == 4:
         "engineering_guideline_type": state.engineering_guideline_type,
         "physical_reductions": state.get("physical_reductions", {}),
         "user_note": state.get("user_note", ""),
+        "uploaded_supporting_files": state.get("uploaded_supporting_files", []),
         "heat_safety_prompt_triggered": state.get("heat_safety_prompt_triggered", False),
         "heat_safety_response": state.get("heat_safety_response", ""),
         "heat_safety_note": state.get("heat_safety_note", ""),

@@ -13,7 +13,7 @@ import runpy
 
 import streamlit as st
 
-st.write("DEBUG:", list(st.secrets.keys()))
+# st.write("DEBUG:", list(st.secrets.keys()))
 
 from packaging.requirements import InvalidRequirement, Requirement
 

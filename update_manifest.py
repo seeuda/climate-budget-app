@@ -811,6 +811,32 @@ button[kind="secondary"] {
     background-color: #f3f9f4 !important;
     border: 1px solid #b7d3be !important;
 }
+
+/* Supporting document uploader */
+[data-testid="stFileUploader"] {
+    background: #f6fbf7 !important;
+    border: 2px dashed #7fb38d !important;
+    border-radius: 14px !important;
+    padding: 1rem 1rem 0.75rem 1rem !important;
+    margin: 0.75rem 0 1rem 0 !important;
+}
+
+[data-testid="stFileUploader"]:hover {
+    background: #eef8f0 !important;
+    border-color: #2d6a4f !important;
+}
+
+[data-testid="stFileUploader"] section {
+    padding: 0.5rem 0 !important;
+}
+
+[data-testid="stFileUploader"] small {
+    color: #456b52 !important;
+}
+
+[data-testid="stFileUploader"] button {
+    border-radius: 8px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -4430,17 +4456,29 @@ elif st.session_state.step == 4:
     )
     st.session_state.user_note = user_note
 
-    st.markdown("**📎 建議上傳工作內容說明文件，將用於程式開發優化及回饋使用者意見 **")
-    st.caption("可拖曳或選取多個檔案上傳，例如：招標規範、工作計畫書、經費概算表等。")
+    st.markdown("**📎 建議上傳工作內容說明文件，將用於程式開發優化及回饋使用者意見**")
+    st.markdown("""
+    <div style="
+        background:#eef8f0;
+        border-left:4px solid #2d6a4f;
+        padding:0.8rem 1rem;
+        border-radius:0 8px 8px 0;
+        margin:0.5rem 0 0.75rem 0;
+        color:#1f4d36;
+        font-size:0.92rem;
+    ">
+    📎 可直接將檔案拖曳到下方區域，或點擊區塊選取檔案。支援多檔上傳，例如：招標規範、工作計畫書、經費概算表等。
+    </div>
+    """, unsafe_allow_html=True)
     drive_folder_id = get_drive_upload_folder_id()
     if not drive_folder_id:
         st.warning("⚠️ 上傳資料夾重新設定中，暫無法上傳補充文件。")
     else:
         uploaded_docs = st.file_uploader(
-            "上傳工作內容說明文件",
+            "上傳工作內容說明文件（可拖曳多個檔案到此處）",
             accept_multiple_files=True,
             key="supporting_docs_uploader",
-            label_visibility="collapsed",
+            help="支援多檔上傳，可拖曳或點擊選檔。",
         )
 
         if st.session_state.get("upload_message"):

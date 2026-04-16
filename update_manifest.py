@@ -2882,7 +2882,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>🌿 彰化縣氣候預算導引式判讀系統</h1>
-    <p>Changhua County · Climate Budget Assessment Tool · v1.2</p>
+    <p>Changhua County · Climate Budget Assessment Tool · v1.3</p>
 </div>
 """, unsafe_allow_html=True)
 

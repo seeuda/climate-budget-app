@@ -356,6 +356,12 @@ DATA_VERSION        = _sv.get("data_version", "unknown")
 KD_VERSION          = _mf.get("keyword_dictionary_version", "unknown")
 LM_VERSION          = _mf.get("logic_mapping_version", "unknown")
 
+# App 與規則採雙軌版控：
+# - APP_VERSION：對使用者顯示的系統版本（UI/流程/整合能力）
+# - CONFIG_VERSION：規則/判讀字典版本（匯出 metadata 供稽核追溯）
+APP_VERSION = "1.4.0"
+DISPLAY_VERSION_BADGE = f"v{APP_VERSION}"
+
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -1753,7 +1759,8 @@ def generate_export_json(state):
             },
             "preset_reference": state.get("preset_reference", {}),
             "uploaded_supporting_files": state.get("uploaded_supporting_files", []),
-            "system_version": "1.3",
+            "system_version": APP_VERSION,
+            "rules_version": CONFIG_VERSION,
         },
     }
     return result
@@ -2905,10 +2912,10 @@ with st.sidebar:
 
 # ── Header ────────────────────────────────────────────────────────────────────
 
-st.markdown("""
+st.markdown(f"""
 <div class="main-header">
     <h1>🌿 彰化縣氣候預算導引式判讀系統</h1>
-    <p>Changhua County · Climate Budget Assessment Tool · v1.3</p>
+    <p>Changhua County · Climate Budget Assessment Tool · {DISPLAY_VERSION_BADGE}</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -4690,8 +4697,8 @@ elif st.session_state.step == 4:
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown(
-    '<p style="text-align:center;color:#888;font-size:0.78rem;">'
-    '彰化縣氣候預算導引式判讀系統 v1.3 ｜ 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引、國家氣候變遷調適行動計畫'
+    f'<p style="text-align:center;color:#888;font-size:0.78rem;">'
+    f'彰化縣氣候預算導引式判讀系統 {DISPLAY_VERSION_BADGE} ｜ 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引、國家氣候變遷調適行動計畫'
     '</p>',
     unsafe_allow_html=True
 )

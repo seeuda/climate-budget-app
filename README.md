@@ -7,7 +7,7 @@
 - 產出可追溯的判讀結果（包含規則版本、命中理由、明細資料）
 - 視需要將結果同步到 Google 試算表
 
-目前系統程式已更新至 **v1.4**（功能層），規則資料仍沿用 **v1.3.7**（`data/config.json` 的 `config_version`）。
+目前系統程式已更新至 **v1.4.0**（功能層），規則資料仍沿用 **v1.3.7**（`data/config.json` 的 `config_version`）。
 
 本次 v1.4 版本重點包含：
 - 新增「補充文件上傳」流程（可多檔拖曳上傳至 Google Drive 私有資料夾）
@@ -25,6 +25,7 @@
 - **版本可追溯**
   - 規則與資料版本集中於 `data/config.json` 的 `schema_version` / `manifest`。
   - 程式功能版本（`update_manifest.py`）與規則版本（`config_version`）可分層管理。
+  - 前台建議僅顯示 App 版號（例如 `v1.4.0`）以降低使用者混淆；Rules 版號保留於匯出 JSON / 管理資訊。
   - 同步輸出可附帶規則版本資訊，方便稽核與回溯。
 
 - **v1.4 新增補充文件上傳**
@@ -103,10 +104,10 @@ http://localhost:8501/?health_check=1
 - **Rules Version（規則層）**：例如 `1.3.7`（`data/config.json` 的 `config_version`）
   - 專注在關鍵字、邏輯映射、誤判防呆等判讀規則變更
 
-### 版本拉齊建議（避免混淆）
+### 版本顯示建議（避免混淆）
 
-- **對外發布時建議拉齊 Major.Minor**：例如 `App 1.4.x` 搭配 `Rules 1.4.x`。
-- 內部快速迭代可短暫不一致（如 `App 1.4.0` + `Rules 1.3.7`），但需在首頁/匯出欄位同時顯示兩者版本。
+- **前台（主畫面／頁尾）建議僅顯示 App 版號**：例如 `v1.4.0`。
+- **Rules 版號保留在匯出與管理資訊**：例如 JSON metadata 的 `rules_version`、`rule_versions.config_version`，以維持稽核追溯能力。
 - 若只有規則調整且程式未改，可只升 `Rules patch`；若程式流程改動，至少升 `App minor/patch` 並在 release note 說明相依的 Rules 最低版本。
 
 ---

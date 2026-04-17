@@ -357,10 +357,10 @@ KD_VERSION          = _mf.get("keyword_dictionary_version", "unknown")
 LM_VERSION          = _mf.get("logic_mapping_version", "unknown")
 
 # App 與規則採雙軌版控：
-# - APP_VERSION：程式功能版本（UI/流程/整合能力）
-# - CONFIG_VERSION：規則/判讀字典版本（來自 data/config.json）
+# - APP_VERSION：程式功能版本（UI/流程/整合能力；前台僅顯示此版號）
+# - CONFIG_VERSION：規則/判讀字典版本（來自 data/config.json；保留於匯出 metadata）
 APP_VERSION = "1.4.0"
-DISPLAY_VERSION_BADGE = f"App v{APP_VERSION} · Rules v{CONFIG_VERSION}"
+DISPLAY_VERSION_BADGE = f"v{APP_VERSION}"
 
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""

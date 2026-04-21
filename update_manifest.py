@@ -2852,6 +2852,40 @@ def go_to_step(target_step: int, *, unlock: bool = False, enforce_transition: bo
         st.rerun()
     return True
 
+
+def trigger_scroll_to_top() -> None:
+    """在步驟切換後強制將頁面滾動回最上方。"""
+    components.html(
+        """
+        <script>
+        (function () {
+          function forceTop(targetWindow) {
+            if (!targetWindow) return;
+            try {
+              targetWindow.scrollTo({ top: 0, behavior: "auto" });
+            } catch (e) {}
+            try {
+              const doc = targetWindow.document;
+              if (!doc) return;
+              if (doc.documentElement) doc.documentElement.scrollTop = 0;
+              if (doc.body) doc.body.scrollTop = 0;
+            } catch (e) {}
+          }
+
+          // 立即觸發 + 延遲補觸發，提升跨瀏覽器穩定度
+          forceTop(window);
+          forceTop(window.parent);
+          setTimeout(function () {
+            forceTop(window);
+            forceTop(window.parent);
+          }, 30);
+        })();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
@@ -2951,15 +2985,7 @@ for i, col in enumerate(step_nav_cols):
             go_to_step(i, enforce_transition=True)
 
 if st.session_state.get("scroll_to_top", False):
-    components.html(
-        """
-        <script>
-        window.parent.scrollTo({top: 0, behavior: "instant"});
-        </script>
-        """,
-        height=0,
-        width=0,
-    )
+    trigger_scroll_to_top()
     st.session_state.scroll_to_top = False
 
 # Breadcrumb

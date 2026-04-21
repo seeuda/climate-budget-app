@@ -2869,16 +2869,29 @@ def trigger_scroll_to_top() -> None:
               if (!doc) return;
               if (doc.documentElement) doc.documentElement.scrollTop = 0;
               if (doc.body) doc.body.scrollTop = 0;
+              const selectors = [
+                ".main",
+                "[data-testid='stAppViewContainer']",
+                "[data-testid='stAppScrollToTopContainer']",
+                "section.main",
+                ".stApp",
+              ];
+              selectors.forEach(function (selector) {
+                doc.querySelectorAll(selector).forEach(function (el) {
+                  el.scrollTop = 0;
+                });
+              });
             } catch (e) {}
           }
 
-          // 立即觸發 + 延遲補觸發，提升跨瀏覽器穩定度
-          forceTop(window);
-          forceTop(window.parent);
-          setTimeout(function () {
-            forceTop(window);
-            forceTop(window.parent);
-          }, 30);
+          // 連續多次觸發，避免 rerun / DOM 重建後位置被還原
+          var retryDelays = [0, 30, 120, 260, 500];
+          retryDelays.forEach(function (delay) {
+            setTimeout(function () {
+              forceTop(window);
+              forceTop(window.parent);
+            }, delay);
+          });
         })();
         </script>
         """,

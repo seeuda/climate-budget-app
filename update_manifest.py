@@ -2859,37 +2859,50 @@ def trigger_scroll_to_top() -> None:
         """
         <script>
         (function () {
-          function forceTop(targetWindow) {
-            if (!targetWindow) return;
+          var selectors = [
+            ".main",
+            "section.main",
+            "[data-testid='stAppViewContainer']",
+            "[data-testid='stAppScrollToTopContainer']",
+            "[data-testid='stMain']",
+            ".stApp",
+            "body",
+          ];
+
+          function forceTopInDoc(doc) {
+            if (!doc) return;
             try {
-              targetWindow.scrollTo({ top: 0, behavior: "auto" });
-            } catch (e) {}
-            try {
-              const doc = targetWindow.document;
-              if (!doc) return;
               if (doc.documentElement) doc.documentElement.scrollTop = 0;
               if (doc.body) doc.body.scrollTop = 0;
-              const selectors = [
-                ".main",
-                "[data-testid='stAppViewContainer']",
-                "[data-testid='stAppScrollToTopContainer']",
-                "section.main",
-                ".stApp",
-              ];
-              selectors.forEach(function (selector) {
-                doc.querySelectorAll(selector).forEach(function (el) {
-                  el.scrollTop = 0;
-                });
+              selectors.forEach(function (sel) {
+                try {
+                  doc.querySelectorAll(sel).forEach(function (el) {
+                    el.scrollTop = 0;
+                    el.scrollIntoView && el.scrollIntoView({ block: "start", behavior: "instant" });
+                  });
+                } catch (e) {}
               });
             } catch (e) {}
           }
 
-          // 連續多次觸發，避免 rerun / DOM 重建後位置被還原
-          var retryDelays = [0, 30, 120, 260, 500];
-          retryDelays.forEach(function (delay) {
+          function forceTop(targetWindow) {
+            if (!targetWindow) return;
+            try { targetWindow.scrollTo({ top: 0, behavior: "instant" }); } catch (e) {}
+            try { forceTopInDoc(targetWindow.document); } catch (e) {}
+          }
+
+          // 連續多次觸發（含較長延遲），確保重內容頁面 DOM 完全重建後仍能捲回頂部
+          [0, 50, 150, 300, 500, 800, 1200].forEach(function (delay) {
             setTimeout(function () {
               forceTop(window);
-              forceTop(window.parent);
+              try { forceTop(window.parent); } catch (e) {}
+              // 針對 Streamlit Cloud iframe 結構，嘗試找真正的捲動容器
+              try {
+                var frames = window.parent.document.querySelectorAll("iframe");
+                frames.forEach(function(f) {
+                  try { forceTopInDoc(f.contentDocument || f.contentWindow.document); } catch(e) {}
+                });
+              } catch(e) {}
             }, delay);
           });
         })();

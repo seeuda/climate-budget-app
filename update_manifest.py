@@ -656,6 +656,22 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] button span {
     color: #ffffff !important;
 }
+
+/* Sidebar strategy reminder */
+.sidebar-strategy-note {
+    background: rgba(32, 116, 126, 0.35);
+    border: 1px solid rgba(144, 215, 222, 0.35);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    margin: 0.75rem 0 0.25rem;
+    line-height: 1.55;
+    color: #e9f9f8 !important;
+}
+
+.sidebar-strategy-note .strategy-highlight {
+    color: #fff0a8 !important;
+    font-weight: 700;
+}
 /* Section headers */
 .section-title {
     font-size: 1.05rem;
@@ -2933,10 +2949,15 @@ with st.sidebar:
 5. 填寫各工項預算
 6. 確認並匯出評估報告
     """)
-    st.info(
-        "🧭 填寫策略提醒：前半段（步驟二、三）先勾選「看似相關/可能相關」項目即可，"
-        "即使先勾選較寬鬆也沒關係；最終金額以步驟四由您自行填寫為準，"
-        "不會因前段誤判直接造成重大金額錯誤。送出前的步驟五也提供「自由補充說明（選填）」可再註記。"
+    st.markdown(
+        """
+<div class="sidebar-strategy-note">
+🧭 <strong>填寫策略提醒：</strong>前半段（步驟二、三）先勾選「看似相關/可能相關」項目即可，
+即使先勾選較寬鬆也沒關係；最終金額以步驟四由您自行填寫為準，不會因前段誤判直接造成重大金額錯誤。
+<span class="strategy-highlight">送出前的步驟五也提供「自由補充說明（選填）」可再註記。</span>
+</div>
+        """,
+        unsafe_allow_html=True,
     )
     st.markdown("---")
     # ── 系統更新日誌 ──────────────────────────────────

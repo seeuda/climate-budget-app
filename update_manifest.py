@@ -4540,25 +4540,6 @@ elif st.session_state.step == 4:
             for gopt in green_options:
                 st.markdown(f"- {gopt}")
 
-    # ── 補充說明（選填，同步至試算表 備註欄）
-    st.markdown("**📝 補充說明（選填）**")
-    st.caption("可填入表單無法正確量化、需額外說明的事項，例如：符合上方加分提示的具體執行內容、特殊工法說明、跨局處協調事項等。")
-    overflow_note = st.session_state.get("overflow_category_note", "").strip()
-    if overflow_note and not st.session_state.get("overflow_note_injected", False) and not st.session_state.get("user_note", "").strip():
-        st.session_state.user_note = f"【超出三類補充脈絡】{overflow_note}"
-        st.session_state.overflow_note_injected = True
-    if overflow_note:
-        st.caption("ℹ️ 已帶入「超出三類補充脈絡」到本欄位，您可於送出前再調整內容。")
-    user_note = st.text_area(
-        "補充說明",
-        value=st.session_state.get("user_note", ""),
-        placeholder="例：本案護岸工程規劃採用砌石護岸（自然解方），並預計在施工期間取用附近污水廠放流水作為工程用水……",
-        height=100,
-        label_visibility="collapsed",
-        key="user_note_input",
-    )
-    st.session_state.user_note = user_note
-
     st.markdown("**📎 建議上傳工作內容說明文件，將用於程式開發優化及回饋使用者意見**")
     st.markdown("""
     <div style="
@@ -4637,6 +4618,25 @@ elif st.session_state.step == 4:
                 size_mb = (file_meta.get("size_bytes", 0) or 0) / (1024 * 1024)
                 uploaded_at = file_meta.get("uploaded_at", "")
                 st.markdown(f"{idx}. {file_meta.get('original_name', file_meta.get('name', '未命名檔案'))}｜{size_mb:.2f} MB｜{uploaded_at}")
+
+    # ── 補充說明（選填，同步至試算表 備註欄）
+    st.markdown("**📝 補充說明（選填）**")
+    st.caption("可填入表單無法正確量化、需額外說明的事項，例如：符合上方加分提示的具體執行內容、特殊工法說明、跨局處協調事項等。")
+    overflow_note = st.session_state.get("overflow_category_note", "").strip()
+    if overflow_note and not st.session_state.get("overflow_note_injected", False) and not st.session_state.get("user_note", "").strip():
+        st.session_state.user_note = f"【超出三類補充脈絡】{overflow_note}"
+        st.session_state.overflow_note_injected = True
+    if overflow_note:
+        st.caption("ℹ️ 已帶入「超出三類補充脈絡」到本欄位，您可於送出前再調整內容。")
+    user_note = st.text_area(
+        "補充說明",
+        value=st.session_state.get("user_note", ""),
+        placeholder="例：本案護岸工程規劃採用砌石護岸（自然解方），並預計在施工期間取用附近污水廠放流水作為工程用水……",
+        height=100,
+        label_visibility="collapsed",
+        key="user_note_input",
+    )
+    st.session_state.user_note = user_note
 
     # Export section
     st.markdown("---")

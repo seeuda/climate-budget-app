@@ -2957,9 +2957,7 @@ with st.sidebar:
     st.markdown(
         "[👉 115年彰化縣媽祖淨零友善地圖](https://lihi1.me/7ge4G)"
     )
-    st.markdown("---")
     st.markdown("## 🌿 氣候預算自評系統")
-    st.markdown("---")
     st.markdown("**系統說明**")
     st.markdown("""
 此工具協助彰化縣各局處承辦人，透過直覺式流程判定計畫與氣候預算的關聯性。

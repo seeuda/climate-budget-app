@@ -888,17 +888,17 @@
     },
     {
       "keyword": "BERS",
-      "suggested_item": "智慧能源管理系統（BEMS）",
-      "code": "住商-5",
-      "category_id": "E",
-      "sub_id": "E1",
+      "suggested_item": "取得綠建築或建築能效(BERS)標章",
+      "code": "住商-1",
+      "category_id": "A",
+      "sub_id": "A1",
       "_match_type": "exact",
       "weight": 1.0,
       "purity_hint": "P1_HIGH_PURITY",
       "anti_pattern_ids": [],
       "synonyms": [],
       "negative_context": [],
-      "learning_tip": "",
+      "learning_tip": "BERS 為建築能效標章（Building Energy Rating System），與 BEMS（建築能源管理系統）不同，請確認本案是否具備申請或取得 BERS 標章之計畫。",
       "trigger_id": "KW_049"
     },
     {
@@ -1165,7 +1165,7 @@
     },
     {
       "keyword": "石籠",
-      "suggested_item": "採用砌石、石籠等自然材料工法（減少混凝土）",
+      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法（減少或取代混凝土）",
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
@@ -1173,14 +1173,20 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "砌石",
+        "木排樁",
+        "生態工法",
+        "自然工法",
+        "NBS"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_067"
     },
     {
       "keyword": "砌石",
-      "suggested_item": "採用砌石、石籠等自然材料工法（減少混凝土）",
+      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法（減少或取代混凝土）",
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
@@ -1188,7 +1194,12 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "石籠",
+        "木排樁",
+        "生態工法",
+        "自然工法"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_068"
@@ -1324,7 +1335,7 @@
     },
     {
       "keyword": "木排樁",
-      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法",
+      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法（減少或取代混凝土）",
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
@@ -1332,7 +1343,12 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "石籠",
+        "砌石",
+        "木材樁",
+        "竹樁"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_077"

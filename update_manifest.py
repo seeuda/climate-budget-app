@@ -918,6 +918,29 @@ def detect_keywords(text):
         matches.append(hit)
         seen.add(keyword)
 
+    # 若同一句同時命中「長詞」與其子字串（例如：堤岸道路 / 堤岸），
+    # 會造成同概念被重複計數而高估信心；此處優先保留較長詞。
+    deduped_matches = []
+    for hit in sorted(matches, key=lambda item: len(item.get("matched_term", "")), reverse=True):
+        matched_term = hit.get("matched_term", "")
+        if not matched_term:
+            deduped_matches.append(hit)
+            continue
+
+        is_overlapped = any(
+            matched_term != kept.get("matched_term", "")
+            and matched_term in kept.get("matched_term", "")
+            and hit.get("category_id") == kept.get("category_id")
+            and hit.get("sub_id") == kept.get("sub_id")
+            and hit.get("code") == kept.get("code")
+            and hit.get("match_type", "strong_trigger") == kept.get("match_type", "strong_trigger")
+            for kept in deduped_matches
+        )
+        if not is_overlapped:
+            deduped_matches.append(hit)
+
+    matches = deduped_matches
+
     for rule in KWDICT.get("keyword_logic", []):
         triggers = rule.get("triggers", [])
         if not triggers:

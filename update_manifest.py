@@ -4620,7 +4620,7 @@ elif st.session_state.step == 4:
                 st.markdown(f"{idx}. {file_meta.get('original_name', file_meta.get('name', '未命名檔案'))}｜{size_mb:.2f} MB｜{uploaded_at}")
 
     # ── 補充說明（選填，同步至試算表 備註欄）
-    st.markdown("**📝 補充說明（選填）**")
+    st.markdown("**📝 提送自評結果前補充說明（選填）**")
     st.caption("可填入表單無法正確量化、需額外說明的事項，例如：符合上方加分提示的具體執行內容、特殊工法說明、跨局處協調事項等。")
     overflow_note = st.session_state.get("overflow_category_note", "").strip()
     if overflow_note and not st.session_state.get("overflow_note_injected", False) and not st.session_state.get("user_note", "").strip():

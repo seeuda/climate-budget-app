@@ -1392,7 +1392,7 @@
           "examples": "如：砌石石籠護岸、野溪復育、農塘調適設施",
           "items": [
             {
-              "label": "採用砌石、石籠等自然材料工法（減少混凝土）",
+              "label": "採用砌石、石籠、木排樁等自然材料工法（減少或取代混凝土）",
               "mitigation_codes": [
                 "農業-生態"
               ],
@@ -1453,25 +1453,6 @@
               "anti_pattern_ref": [],
               "budget_hint": "",
               "item_id": "ITEM_D3_04",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "採用砌石、石籠、木排樁等自然材料工法（取代混凝土）",
-              "mitigation_codes": [
-                "農業-生態"
-              ],
-              "adaptation_codes": [
-                "調適-生態"
-              ],
-              "policy": "水保指引：低碳材料與NBS自然解方",
-              "alert": "",
-              "green_spending_type": "綠色材料",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D3_05",
               "count_in_budget_total": false,
               "display_section": "non_budget_benefits"
             }

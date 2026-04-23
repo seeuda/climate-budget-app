@@ -761,6 +761,26 @@
       "trigger_id": "KW_042"
     },
     {
+      "keyword": "堤岸道路",
+      "suggested_item": "自然水岸與堤岸生態化工程",
+      "code": "調適-水",
+      "category_id": "B",
+      "sub_id": "B1",
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [
+        7
+      ],
+      "synonyms": [
+        "堤防道路",
+        "堤岸道路改善"
+      ],
+      "negative_context": [],
+      "learning_tip": "堤岸道路案件常同時包含道路改善、防洪與生態營造；建議拆分具氣候效益工項，不宜整案全列。",
+      "trigger_id": "KW_143"
+    },
+    {
       "keyword": "抽水",
       "suggested_item": "滯洪池、抽水站建置與防洪改善",
       "code": "調適-水",

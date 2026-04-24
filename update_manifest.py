@@ -813,6 +813,23 @@ button[kind="primary"] {
     color: #ffffff !important;
 }
 
+/* Highlight the sync submission button to prevent accidental skip */
+div.st-key-sync_submit_button button[kind="primary"] {
+    background: linear-gradient(135deg, #e85d04, #d00000) !important;
+    border: 1px solid #9d0208 !important;
+    box-shadow: 0 4px 10px rgba(208, 0, 0, 0.28) !important;
+}
+
+div.st-key-sync_submit_button button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #f48c06, #dc2f02) !important;
+    border-color: #9d0208 !important;
+}
+
+div.st-key-sync_submit_button button[kind="primary"]:focus-visible {
+    outline: 3px solid rgba(255, 186, 8, 0.55) !important;
+    outline-offset: 1px !important;
+}
+
 button[kind="secondary"] {
     background: #e9f3ec !important;
     color: #1a4731 !important;
@@ -4679,7 +4696,7 @@ elif st.session_state.step == 4:
     if not webhook_ready:
         st.warning("⚠️ 尚未完成 Google 試算表同步設定（需 webhook 或 gcp_service_account + google_sheet_id），目前僅可下載本地報告。")
         st.session_state.sync_done = True
-    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready):
+    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready, key="sync_submit_button"):
         ok, msg = sync_to_google_sheet(export_data)
         st.session_state.sync_done = ok
         st.session_state.sync_message = msg

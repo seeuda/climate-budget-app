@@ -4807,7 +4807,7 @@ elif st.session_state.step == 4:
         if st.button("← 返回修改", use_container_width=True):
             go_to_step(3)
     with col_r:
-        if st.button("🔄 評估新案件", use_container_width=True, type="primary"):
+        if st.session_state.sync_done and st.button("🔄 評估新案件", use_container_width=True, type="primary"):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()

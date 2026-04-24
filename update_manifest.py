@@ -1,7 +1,7 @@
 """
 彰化縣氣候預算導引式判讀系統
 Climate Budget Assessment Tool for Changhua County Government
-v1.2 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
+v1.4 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
         resolve_header_key強化、init_state型別穩定化、
         anti_pattern_check骨幹、manifest版本管控
 """
@@ -17,12 +17,17 @@ import random
 import string
 import re
 from urllib import request, error
+from urllib.parse import urlencode
+import mimetypes
 import hashlib
 import gspread
 from google.oauth2.service_account import Credentials
+from google.auth.transport.requests import Request
 
 PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
 PRESET_SHEET_GID = "0"
+DEFAULT_DRIVE_UPLOAD_FOLDER_ID = "1uMGEVB7bZahPCigXtdMlmBhcdHfczFpW"
+MAX_SUPPORTING_FILE_MB = 200
 
 # ── Google Sheet 同步：輸出欄位定義 ───────────────────────────────────────────
 # 分兩組：計算資料（budget_summary）與解讀資料（interpretation_summary）
@@ -59,6 +64,12 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "潛在調適/韌性亮點 (實務細節 - Action B)",
     "防呆提醒",
     "補充說明",
+    "細項分類明細",           # 細項代碼 + 中文 + 金額/比例（保留相容舊版）
+    "氣候工項（預算型）明細",  # 工項代碼 + 中文 + 金額/比例（保留相容舊版）
+    "非預算型效益明細",        # 工項代碼 + 中文 + 備註（保留相容舊版）
+    "細項分類明細(JSON)",
+    "氣候工項明細(JSON)",
+    "非預算型效益明細(JSON)",
 ]
 
 DEFAULT_SYNC_HEADERS = BUDGET_SUMMARY_HEADERS + INTERPRETATION_SUMMARY_HEADERS
@@ -80,12 +91,15 @@ HEADER_ALIAS_MAP = {
     "氣候預算比例%"     : ["氣候預算比例%", "氣候預算比例", "氣候比例"],
     "計畫類別"          : ["計畫類別", "判讀主類別", "主類別"],
     "細項分類"          : ["細項分類", "判讀子類別", "子類別"],
-    "氣候工項（預算型）": ["氣候工項（預算型）", "氣候工項", "工項清單", "預算型工項"],
+    "氣候工項（預算型）": ["氣候工項（預算型）", "氣候工項(預算型)", "氣候工項", "工項清單", "預算型工項"],
     "關鍵字信心"        : ["關鍵字信心", "判讀信心", "信心等級"],
     "命中關鍵字"        : ["命中關鍵字", "觸發關鍵字", "命中詞彙"],
     "規則版本"          : ["規則版本", "config_version", "data_version"],
     # ── 解讀資料欄位 ────────────────────────────────────────────────────────
     "非預算型效益"      : ["非預算型效益", "設計型效益", "管理型效益", "效益補充"],
+    "細項分類明細"      : ["細項分類明細"],
+    "氣候工項（預算型）明細": ["氣候工項（預算型）明細", "氣候工項(預算型)明細", "氣候工項明細"],
+    "非預算型效益明細"  : ["非預算型效益明細", "非預算型效益與減量明細"],
     "工項相關性摘要"    : ["工項相關性摘要", "純度摘要", "相關性標記"],
     "anti_pattern命中" : ["anti_pattern命中", "誤判提示", "反例命中"],
     "減量資訊完整度"    : ["減量資訊完整度", "減量完整度", "工程減量完整度"],
@@ -97,6 +111,14 @@ HEADER_ALIAS_MAP = {
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
+    "細項分類明細(JSON)" : ["細項分類明細(JSON)", "細項分類明細（JSON）", "sub_categories_json"],
+    "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "氣候工項明細（JSON）", "counted_items_json"],
+    "非預算型效益明細(JSON)" : [
+        "非預算型效益明細(JSON)",
+        "非預算型效益明細（JSON）",
+        "非預算型效益與減量明細(JSON)",
+        "非預算型效益與減量明細（JSON）",
+    ],
 }
 
 PRESET_REFERENCE_COLUMNS = {
@@ -127,9 +149,147 @@ PRESET_REFERENCE_COLUMNS = {
 }
 
 
+def normalize_brackets(text: str) -> str:
+    """Normalize full-width brackets to half-width brackets."""
+    return str(text or "").translate(str.maketrans({
+        "（": "(",
+        "）": ")",
+    }))
+
+
 def normalize_text_key(text: str) -> str:
     """Normalize text for resilient column-name matching."""
-    return re.sub(r"\s+", "", str(text or "")).lower()
+    normalized = normalize_brackets(text)
+    normalized = normalized.translate(str.maketrans({
+        "％": "%",
+        "：": ":",
+        "；": ";",
+        "，": ",",
+        "。": ".",
+        "／": "/",
+        "－": "-",
+        "＋": "+",
+        "＝": "=",
+        "　": " ",
+    }))
+    return re.sub(r"[\s\n\r\t]+", "", normalized).lower()
+
+
+def _is_json_header_label(header_name: str) -> bool:
+    return "json" in normalize_text_key(header_name)
+
+
+def _header_key_pool(is_json_header: bool) -> dict:
+    return {
+        std_key: aliases
+        for std_key, aliases in HEADER_ALIAS_MAP.items()
+        if _is_json_header_label(std_key) == is_json_header
+    }
+
+
+def _resolve_header_key_with_meta(col_name: str) -> tuple[str | None, str]:
+    normalized_col = normalize_text_key(col_name)
+    if not normalized_col:
+        return None, "none"
+
+    is_json_header = _is_json_header_label(normalized_col)
+    key_pool = _header_key_pool(is_json_header)
+
+    # 1) exact key
+    for std_key in key_pool.keys():
+        if normalize_text_key(std_key) == normalized_col:
+            return std_key, "exact_key"
+
+    # 2) exact alias
+    for std_key, aliases in key_pool.items():
+        for alias in aliases:
+            if normalize_text_key(alias) == normalized_col:
+                return std_key, "exact_alias"
+
+    # 3) contains alias
+    contains_alias_candidates = []
+    for std_key, aliases in key_pool.items():
+        if any(
+            normalize_text_key(alias) and normalize_text_key(alias) in normalized_col
+            for alias in aliases
+        ):
+            contains_alias_candidates.append(std_key)
+    if len(contains_alias_candidates) == 1:
+        return contains_alias_candidates[0], "contains_alias"
+    if len(contains_alias_candidates) > 1:
+        import logging
+        logging.warning(
+            "[resolve_header_key] 欄位「%s」(normalized=%s) 模糊 alias 比對到多個 key: %s，略過（填空白）",
+            col_name, normalized_col, contains_alias_candidates
+        )
+        return None, "none"
+
+    # 4) contains key
+    contains_key_candidates = [
+        std_key for std_key in key_pool.keys()
+        if normalize_text_key(std_key) in normalized_col
+    ]
+    if len(contains_key_candidates) == 1:
+        return contains_key_candidates[0], "contains_key"
+    if len(contains_key_candidates) > 1:
+        import logging
+        logging.warning(
+            "[resolve_header_key] 欄位「%s」(normalized=%s) 模糊 key 比對到多個 key: %s，略過（填空白）",
+            col_name, normalized_col, contains_key_candidates
+        )
+        return None, "none"
+
+    return None, "none"
+
+
+def validate_header_alias_map() -> None:
+    """Validate normalized alias uniqueness and warn/raise on conflicts."""
+    normalized_alias_owner = {}
+    conflict_map = {}
+    for std_key, aliases in HEADER_ALIAS_MAP.items():
+        for alias in aliases:
+            normalized_alias = normalize_text_key(alias)
+            if not normalized_alias:
+                continue
+            owner = normalized_alias_owner.get(normalized_alias)
+            if owner and owner != std_key:
+                conflict_map.setdefault(normalized_alias, {owner}).add(std_key)
+            else:
+                normalized_alias_owner[normalized_alias] = std_key
+
+    if conflict_map:
+        rendered = ", ".join(
+            f"{alias} -> {sorted(list(keys))}"
+            for alias, keys in sorted(conflict_map.items())
+        )
+        raise ValueError(f"HEADER_ALIAS_MAP alias 衝突：{rendered}")
+
+
+def diagnose_sheet_headers(headers: list[str]) -> list[dict]:
+    """Diagnose sheet header resolution and matching behavior."""
+    diagnostics = []
+    for header in headers:
+        resolved_key, matched_by = _resolve_header_key_with_meta(header)
+        diagnostics.append({
+            "original_header": header,
+            "normalized_header": normalize_text_key(header),
+            "resolved_key": resolved_key,
+            "is_json_header": _is_json_header_label(header),
+            "matched_by": matched_by,
+        })
+    return diagnostics
+
+
+validate_header_alias_map()
+
+
+DETAIL_ENTRY_SEPARATOR = "；"
+
+
+def join_detail_entries(entries: list[str]) -> str:
+    """Join multi-value detail entries with a consistent separator for sheet display."""
+    clean_entries = [str(e).strip() for e in entries if str(e).strip()]
+    return DETAIL_ENTRY_SEPARATOR.join(clean_entries)
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -195,6 +355,12 @@ CONFIG_VERSION      = _sv.get("config_version", "unknown")
 DATA_VERSION        = _sv.get("data_version", "unknown")
 KD_VERSION          = _mf.get("keyword_dictionary_version", "unknown")
 LM_VERSION          = _mf.get("logic_mapping_version", "unknown")
+
+# App 與規則採雙軌版控：
+# - APP_VERSION：程式功能版本（UI/流程/整合能力；前台僅顯示此版號）
+# - CONFIG_VERSION：規則/判讀字典版本（來自 data/config.json；保留於匯出 metadata）
+APP_VERSION = "1.4.0"
+DISPLAY_VERSION_BADGE = f"v{APP_VERSION}"
 
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -490,6 +656,22 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] button span {
     color: #ffffff !important;
 }
+
+/* Sidebar strategy reminder */
+.sidebar-strategy-note {
+    background: rgba(32, 116, 126, 0.35);
+    border: 1px solid rgba(144, 215, 222, 0.35);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    margin: 0.75rem 0 0.25rem;
+    line-height: 1.55;
+    color: #e9f9f8 !important;
+}
+
+.sidebar-strategy-note .strategy-highlight {
+    color: #fff0a8 !important;
+    font-weight: 700;
+}
 /* Section headers */
 .section-title {
     font-size: 1.05rem;
@@ -651,6 +833,32 @@ button[kind="secondary"] {
     background-color: #f3f9f4 !important;
     border: 1px solid #b7d3be !important;
 }
+
+/* Supporting document uploader */
+[data-testid="stFileUploader"] {
+    background: #f6fbf7 !important;
+    border: 2px dashed #7fb38d !important;
+    border-radius: 14px !important;
+    padding: 1rem 1rem 0.75rem 1rem !important;
+    margin: 0.75rem 0 1rem 0 !important;
+}
+
+[data-testid="stFileUploader"]:hover {
+    background: #eef8f0 !important;
+    border-color: #2d6a4f !important;
+}
+
+[data-testid="stFileUploader"] section {
+    padding: 0.5rem 0 !important;
+}
+
+[data-testid="stFileUploader"] small {
+    color: #456b52 !important;
+}
+
+[data-testid="stFileUploader"] button {
+    border-radius: 8px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -709,6 +917,29 @@ def detect_keywords(text):
         hit.setdefault("match_type", "strong_trigger")
         matches.append(hit)
         seen.add(keyword)
+
+    # 若同一句同時命中「長詞」與其子字串（例如：堤岸道路 / 堤岸），
+    # 會造成同概念被重複計數而高估信心；此處優先保留較長詞。
+    deduped_matches = []
+    for hit in sorted(matches, key=lambda item: len(item.get("matched_term", "")), reverse=True):
+        matched_term = hit.get("matched_term", "")
+        if not matched_term:
+            deduped_matches.append(hit)
+            continue
+
+        is_overlapped = any(
+            matched_term != kept.get("matched_term", "")
+            and matched_term in kept.get("matched_term", "")
+            and hit.get("category_id") == kept.get("category_id")
+            and hit.get("sub_id") == kept.get("sub_id")
+            and hit.get("code") == kept.get("code")
+            and hit.get("match_type", "strong_trigger") == kept.get("match_type", "strong_trigger")
+            for kept in deduped_matches
+        )
+        if not is_overlapped:
+            deduped_matches.append(hit)
+
+    matches = deduped_matches
 
     for rule in KWDICT.get("keyword_logic", []):
         triggers = rule.get("triggers", [])
@@ -1158,6 +1389,32 @@ def format_category_labels(category_ids):
         cat["label"] for cat in get_taxonomies_by_ids(category_ids)
     )
 
+def format_category_labels_for_sheet(category_ids, fallback_labels_text: str = ""):
+    """以編號與分號格式化計畫類別，並保留舊資料可追溯性。"""
+    fallback_labels = [
+        p.strip() for p in re.split(r"[、；;]", str(fallback_labels_text or "")) if p.strip()
+    ]
+    resolved_categories = get_taxonomies_by_ids(category_ids)
+    id_to_label = {cat.get("id", ""): cat.get("label", "") for cat in resolved_categories}
+
+    entries = []
+    for idx, cat_id in enumerate(category_ids, start=1):
+        label = id_to_label.get(cat_id) or (
+            fallback_labels[idx - 1] if idx - 1 < len(fallback_labels) else str(cat_id).strip()
+        )
+        if label:
+            entries.append(f"{idx}. {label}")
+
+    if not entries and fallback_labels:
+        entries = [f"{idx}. {label}" for idx, label in enumerate(fallback_labels, start=1)]
+    elif len(fallback_labels) > len(entries):
+        entries.extend(
+            f"{idx}. {label}"
+            for idx, label in enumerate(fallback_labels[len(entries):], start=len(entries) + 1)
+        )
+
+    return join_detail_entries(entries)
+
 def format_sub_category_labels(sub_ids):
     labels = []
     for sub_id in sub_ids:
@@ -1402,6 +1659,9 @@ def generate_export_json(state):
             entry += f"：{note}"
         non_budget_parts.append(entry)
     non_budget_text = "；".join(non_budget_parts)
+    other_benefit_note = str((state.get("physical_reductions", {}) or {}).get("other_benefit_note", "")).strip()
+    if other_benefit_note:
+        non_budget_text = "；".join([p for p in [non_budget_text, f"【其他效益】{other_benefit_note}"] if p])
 
     # anti_pattern 命中記錄（Phase 1B 由 anti_pattern_check() 寫入 state）
     ap_hits = state.get("anti_pattern_hits", [])
@@ -1469,7 +1729,16 @@ def generate_export_json(state):
                     "note":         ib.get("note", ""),
                 }
                 for ib in non_budget_items
-            ],
+            ] + (
+                [{
+                    "label": "其他未呈現於預算的效益說明",
+                    "item_id": "",
+                    "benefit_type": "other",
+                    "note": other_benefit_note,
+                }]
+                if other_benefit_note
+                else []
+            ),
             "anti_pattern_hits":       ap_hits,
             "anti_pattern_hits_text":  ap_hits_text,
             "has_low_relevance_items": any(
@@ -1521,13 +1790,16 @@ def generate_export_json(state):
         "assessment_metadata": {
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "user_note":     state.get("user_note", ""),
+            "work_item_description": state.get("work_item_description", ""),
             "management_adaptation_prompt": {
                 "triggered": heat_safety_prompt_triggered,
                 "response": heat_safety_response,
                 "note": heat_safety_note,
             },
             "preset_reference": state.get("preset_reference", {}),
-            "system_version": "1.2",
+            "uploaded_supporting_files": state.get("uploaded_supporting_files", []),
+            "system_version": APP_VERSION,
+            "rules_version": CONFIG_VERSION,
         },
     }
     return result
@@ -1568,6 +1840,22 @@ def get_google_sheet_target():
         "worksheet_name": st.secrets.get("google_sheet_worksheet")
         or CONFIG.get("integrations", {}).get("google_sheet_worksheet", "工作表1"),
     }
+
+
+def _to_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def is_google_sheet_sync_debug_enabled() -> bool:
+    """Read debug flag from secrets/config for sheet-header diagnostics."""
+    secret_flag = st.secrets.get("google_sheet_sync_debug")
+    if secret_flag is not None:
+        return _to_bool(secret_flag)
+    return _to_bool(CONFIG.get("integrations", {}).get("google_sheet_sync_debug"))
 
 
 def get_department_options() -> list[str]:
@@ -1662,16 +1950,17 @@ def fetch_update_log():
         return []
 
 
-def get_google_sheet_client():
-    """Create Google Sheets client from Streamlit secrets service account."""
+def get_google_service_account_credentials(scopes: list[str] | None = None):
+    """Create service account credentials from Streamlit secrets."""
     service_account_info = st.secrets.get("gcp_service_account")
     if not service_account_info:
         return None, "尚未設定 gcp_service_account（service account 金鑰）"
 
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
+    if not scopes:
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ]
 
     try:
         service_account_dict = dict(service_account_info)
@@ -1683,61 +1972,206 @@ def get_google_sheet_client():
             service_account_dict,
             scopes=scopes,
         )
-        return gspread.authorize(creds), ""
+        return creds, ""
     except Exception as e:
         return None, f"service account 驗證失敗：{e}"
+
+
+def get_google_sheet_client():
+    """Create Google Sheets client from Streamlit secrets service account."""
+    creds, err = get_google_service_account_credentials()
+    if err:
+        return None, err
+    try:
+        return gspread.authorize(creds), ""
+    except Exception as e:
+        return None, f"Google Sheet client 建立失敗：{e}"
+
+
+def get_drive_upload_folder_id() -> str:
+    """Get target Google Drive folder id for supporting document uploads."""
+    candidate_keys = [
+        "google_drive_upload_folder_id",
+        "drive_upload_folder_id",
+        "supporting_docs_drive_folder_id",
+    ]
+    for key in candidate_keys:
+        value = st.secrets.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+
+    integrations = CONFIG.get("integrations", {}) if isinstance(CONFIG, dict) else {}
+    for key in candidate_keys:
+        value = integrations.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+
+    return DEFAULT_DRIVE_UPLOAD_FOLDER_ID
+
+
+def _build_drive_upload_filename(case_name: str, original_name: str, file_bytes: bytes) -> str:
+    """Build a stable, traceable filename for uploaded supporting documents."""
+    safe_case_name = re.sub(r'[\/:*?"<>|]+', '_', str(case_name or '').strip())[:40]
+    timestamp = datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d-%H%M%S')
+    short_hash = hashlib.md5(file_bytes).hexdigest()[:6].upper()
+    if safe_case_name:
+        return f"{timestamp}_{safe_case_name}_{short_hash}_{original_name}"
+    return f"{timestamp}_{short_hash}_{original_name}"
+
+
+def get_google_drive_oauth_settings() -> tuple[dict, str]:
+    """Read OAuth settings for Google Drive uploads from Streamlit secrets."""
+    required_keys = [
+        "google_oauth_client_id",
+        "google_oauth_client_secret",
+        "google_oauth_refresh_token",
+    ]
+    settings = {}
+    missing = []
+    for key in required_keys:
+        value = st.secrets.get(key)
+        if value is None or not str(value).strip():
+            missing.append(key)
+        else:
+            settings[key] = str(value).strip()
+
+    if missing:
+        return {}, "尚未完成 Google Drive OAuth 設定，缺少 secrets：" + "、".join(missing)
+
+    settings["google_drive_upload_owner"] = str(st.secrets.get("google_drive_upload_owner", "")).strip()
+    return settings, ""
+
+
+def get_google_drive_oauth_access_token() -> tuple[str, str]:
+    """Exchange refresh token for an access token used by Google Drive uploads."""
+    settings, err = get_google_drive_oauth_settings()
+    if err:
+        return "", err
+
+    token_payload = urlencode({
+        "client_id": settings["google_oauth_client_id"],
+        "client_secret": settings["google_oauth_client_secret"],
+        "refresh_token": settings["google_oauth_refresh_token"],
+        "grant_type": "refresh_token",
+    }).encode("utf-8")
+
+    req = request.Request(
+        "https://oauth2.googleapis.com/token",
+        data=token_payload,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+
+    try:
+        with request.urlopen(req, timeout=60) as resp:
+            resp_body = resp.read().decode("utf-8")
+            result = json.loads(resp_body) if resp_body else {}
+    except error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="ignore")
+        return "", f"Google OAuth 驗證失敗（HTTP {e.code}）：{detail or e.reason}"
+    except Exception as e:
+        return "", f"Google OAuth 驗證失敗：{e}"
+
+    access_token = str(result.get("access_token", "")).strip()
+    if not access_token:
+        return "", "Google OAuth 驗證失敗：未取得 access token"
+    return access_token, ""
+
+
+def upload_supporting_file_to_drive(uploaded_file, *, case_name: str = "", folder_id: str = "") -> tuple[bool, dict | str]:
+    """Upload one supporting document to Google Drive private folder via OAuth user delegation."""
+    folder_id = str(folder_id or get_drive_upload_folder_id()).strip()
+    if not folder_id:
+        return False, "尚未設定 Google Drive 上傳資料夾 ID"
+
+    access_token, err = get_google_drive_oauth_access_token()
+    if err:
+        return False, err
+
+    file_bytes = uploaded_file.getvalue()
+    if not file_bytes:
+        return False, f"檔案 {uploaded_file.name} 內容為空，無法上傳"
+
+    mime_type = uploaded_file.type or mimetypes.guess_type(uploaded_file.name)[0] or "application/octet-stream"
+    upload_name = _build_drive_upload_filename(case_name, uploaded_file.name, file_bytes)
+
+    metadata = json.dumps({
+        "name": upload_name,
+        "parents": [folder_id],
+        "description": f"彰化縣氣候預算判讀系統補充文件；原始檔名：{uploaded_file.name}",
+    }, ensure_ascii=False).encode("utf-8")
+
+    boundary = "===============" + hashlib.md5((upload_name + str(datetime.now())).encode("utf-8")).hexdigest()
+    crlf = b"\r\n"
+    body = (
+        b"--" + boundary.encode("utf-8") + crlf
+        + b"Content-Type: application/json; charset=UTF-8" + crlf + crlf
+        + metadata + crlf
+        + b"--" + boundary.encode("utf-8") + crlf
+        + f"Content-Type: {mime_type}".encode("utf-8") + crlf + crlf
+        + file_bytes + crlf
+        + b"--" + boundary.encode("utf-8") + b"--" + crlf
+    )
+
+    query = urlencode({
+        "uploadType": "multipart",
+        "supportsAllDrives": "true",
+        "fields": "id,name,size,createdTime,webViewLink,owners",
+    })
+    req = request.Request(
+        f"https://www.googleapis.com/upload/drive/v3/files?{query}",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": f"multipart/related; boundary={boundary}",
+            "Content-Length": str(len(body)),
+        },
+        method="POST",
+    )
+
+    try:
+        with request.urlopen(req, timeout=120) as resp:
+            resp_body = resp.read().decode("utf-8")
+            result = json.loads(resp_body) if resp_body else {}
+    except error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="ignore")
+        return False, f"Google Drive 上傳失敗（HTTP {e.code}）：{detail or e.reason}"
+    except Exception as e:
+        return False, f"Google Drive 上傳失敗：{e}"
+
+    owner_email = ""
+    owners = result.get("owners") or []
+    if owners and isinstance(owners, list):
+        owner_email = str((owners[0] or {}).get("emailAddress", "")).strip()
+
+    return True, {
+        "file_id": result.get("id", ""),
+        "name": result.get("name") or upload_name,
+        "original_name": uploaded_file.name,
+        "mime_type": mime_type,
+        "size_bytes": int(result.get("size") or len(file_bytes)),
+        "created_time": result.get("createdTime", ""),
+        "web_view_link": result.get("webViewLink", ""),
+        "folder_id": folder_id,
+        "owner_email": owner_email,
+        "uploaded_at": datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
+        "md5": hashlib.md5(file_bytes).hexdigest(),
+    }
 
 
 def resolve_header_key(col_name: str) -> str | None:
     """
     試算表欄位名稱 → 標準資料 key。
 
-    比對順序（Phase 1A 強化版）：
-      1. 精確相等：col_name == 標準 key
-      2. alias 白名單精確比對：col_name == 某個 alias（完全相等）
-      3. alias 白名單包含比對：alias in col_name（alias 是 col_name 的子字串）
-         — 僅在步驟 1/2 都失敗時才嘗試，且同一 col_name 只能命中一個 key
-         — 若多個 key 的 alias 都能匹配，視為不唯一，回傳 None 並記 log
-      4. 找不到 → 回傳 None（該欄填空白）
-
-    與舊版差異：
-      - 舊版同時做「alias in col」和「col in alias」雙向包含，容易誤配
-      - 新版只做單向（alias in col），且步驟 2 精確比對先行
-      - 不唯一時明確拒絕（不猜），讓 unmatched_log 記錄供日後維護
+    比對順序（Phase 1A+ 強化版）：
+      1. 先 normalize（大小寫、空白、全半形括號/符號）
+      2. 先判斷輸入欄位是否屬於 JSON 欄
+      3. JSON 欄僅在 JSON key 池內比對；非 JSON 欄僅在非 JSON key 池內比對
+      4. 比對序：exact_key → exact_alias → contains_alias → contains_key
+      5. 若有歧義（命中多個 key）或找不到，回傳 None
     """
-    col_stripped = col_name.strip()
-    if not col_stripped:
-        return None
-
-    # 步驟 1：精確相等
-    if col_stripped in HEADER_ALIAS_MAP:
-        return col_stripped
-
-    # 步驟 2：alias 白名單精確比對
-    for std_key, aliases in HEADER_ALIAS_MAP.items():
-        if col_stripped in aliases:
-            return std_key
-
-    # 步驟 3：alias 白名單包含比對（單向，不唯一時拒絕）
-    candidates = []
-    for std_key, aliases in HEADER_ALIAS_MAP.items():
-        for alias in aliases:
-            if alias in col_stripped:
-                candidates.append(std_key)
-                break  # 同一 std_key 只算一次
-
-    if len(candidates) == 1:
-        return candidates[0]
-    elif len(candidates) > 1:
-        # 不唯一：記錄但不配對
-        import logging
-        logging.warning(
-            f"[resolve_header_key] 欄位「{col_stripped}」模糊比對到多個 key: "
-            f"{candidates}，略過（填空白）"
-        )
-        return None
-
-    return None
+    resolved_key, _ = _resolve_header_key_with_meta(col_name)
+    return resolved_key
 
 
 def build_sync_row_dict(payload):
@@ -1771,20 +2205,32 @@ def build_sync_row_dict(payload):
         else ""
     )
 
+    def format_item_text(item: dict) -> str:
+        label = str(item.get("label", "")).strip()
+        item_id = str(item.get("item_id", "")).strip()
+        if label and item_id:
+            return f"{label}（{item_id}）"
+        return label or item_id
+
+    def format_item_label(item: dict) -> str:
+        label = str(item.get("label", "")).strip()
+        return label
+
     # 工項文字
     if bs:
         items_text = "、".join(
-            i.get("label", "") for i in bs.get("counted_items", []) if i.get("label")
+            t for t in (format_item_label(i) for i in bs.get("counted_items", [])) if t
         )
         cat_labels = bs.get("category_labels", "")
+        cat_ids = bs.get("categories", []) or []
         sub_labels = bs.get("sub_category_labels", "")
     else:
         old_assessment = payload.get("climate_assessment", {})
         items_text = "、".join(
-            i.get("label", "") for i in old_assessment.get("selected_items", [])
-            if i.get("label")
+            t for t in (format_item_label(i) for i in old_assessment.get("selected_items", [])) if t
         )
         cat_labels = old_assessment.get("category_labels", "")
+        cat_ids = old_assessment.get("categories", []) or []
         sub_labels = old_assessment.get("sub_category_labels", "")
 
     # 量體縮減摘要
@@ -1798,6 +2244,18 @@ def build_sync_row_dict(payload):
     if phys.get("other_benefit_note", ""):
         phys_parts.append(phys["other_benefit_note"])
     phys_text = "；".join(phys_parts)
+    phys_detail_entries = []
+    if phys.get("soil_reduction_ton", 0):
+        phys_detail_entries.append(f"減少土方購置量：{phys['soil_reduction_ton']} 公噸")
+    if phys.get("waste_reduction_ton", 0):
+        phys_detail_entries.append(f"減少廢棄物外運處理量：{phys['waste_reduction_ton']} 公噸")
+    if phys.get("cement_reduction_ton", 0):
+        phys_detail_entries.append(f"減少水泥等建材使用量：{phys['cement_reduction_ton']} 公噸")
+    if phys.get("other_benefit_note", ""):
+        phys_detail_entries.append(f"其他未呈現於預算之效益說明：{phys['other_benefit_note']}")
+    phys_detail_text = join_detail_entries(
+        [f"{idx}. {entry}" for idx, entry in enumerate(phys_detail_entries, start=1)]
+    )
 
     # 規則版本字串
     rv = metadata.get("rule_versions", {})
@@ -1807,7 +2265,122 @@ def build_sync_row_dict(payload):
         f"lm={rv.get('lm_version','?')}"
     ) if rv else ""
     preset_ref = ameta.get("preset_reference", {}) or {}
+    sub_categories = bs.get("sub_categories", []) if bs else payload.get("climate_assessment", {}).get("sub_categories", [])
+    counted_items = bs.get("counted_items", []) if bs else payload.get("climate_assessment", {}).get("selected_items", [])
+    non_budget_items_detail = is_.get("non_budget_items_detail", []) if is_ else []
 
+    # 建立 item -> sub 對照，供「各細項金額」彙整使用
+    item_to_sub_map = {}
+    label_to_sub_map = {}
+    for cat in LOGIC.get("taxonomy", []):
+        for sub in cat.get("sub_categories", []):
+            sub_id = sub.get("id", "")
+            sub_label = sub.get("label", "")
+            for item in sub.get("items", []):
+                item_id = item.get("item_id", "")
+                item_label = item.get("label", "")
+                if item_id:
+                    item_to_sub_map[item_id] = {"sub_id": sub_id, "sub_label": sub_label}
+                if item_label:
+                    label_to_sub_map[item_label] = {"sub_id": sub_id, "sub_label": sub_label}
+
+    sub_amounts = {}
+    for entry in counted_items:
+        item_id = entry.get("item_id", "")
+        item_label = entry.get("label", "")
+        amount = float(entry.get("amount", 0) or 0)
+        mapped = item_to_sub_map.get(item_id) or label_to_sub_map.get(item_label) or {}
+        sub_id = mapped.get("sub_id", "UNMAPPED")
+        sub_label = mapped.get("sub_label", "未對應細項")
+        key = (sub_id, sub_label)
+        sub_amounts[key] = sub_amounts.get(key, 0.0) + amount
+
+    sub_amount_breakdown = []
+    for (sub_id, sub_label), amount in sub_amounts.items():
+        sub_amount_breakdown.append({
+            "sub_id": sub_id,
+            "sub_label": sub_label,
+            "amount": int(round(amount)),
+            "ratio": round((amount / climate_total * 100), 1) if climate_total else 0.0,
+        })
+
+    sub_category_json = json.dumps(
+        {
+            "selected_sub_categories": sub_categories,
+            "amount_breakdown": sub_amount_breakdown,
+        },
+        ensure_ascii=False,
+    )
+    counted_items_json = json.dumps(
+        counted_items,
+        ensure_ascii=False,
+    )
+
+    sub_category_label_parts = [
+        p.strip() for p in re.split(r"[、；;]", str(sub_labels or "")) if p.strip()
+    ]
+    if sub_amount_breakdown:
+        sub_category_entries = [
+            f"{idx}. {row['sub_label']}：{row['amount']:,} 元（{row['ratio']:.1f}%）"
+            for idx, row in enumerate(sub_amount_breakdown, start=1)
+        ]
+    else:
+        sub_category_entries = [
+            f"{idx}. {sub_category_label_parts[idx-1]}"
+            if idx - 1 < len(sub_category_label_parts)
+            else (
+                f"{idx}. {resolved_sub.get('label')}"
+                if (resolved_sub := get_sub_by_id_global(sid)[1]) and resolved_sub.get("label")
+                else f"{idx}. 細項代碼 {sid}"
+            )
+            for idx, sid in enumerate(sub_categories, start=1)
+        ]
+    sub_category_details_text = join_detail_entries(sub_category_entries)
+    category_details_text = format_category_labels_for_sheet(cat_ids, cat_labels) or cat_labels
+
+    counted_item_amount_entries = [
+        f"{idx}. {format_item_text(item)}：{int(item.get('amount', 0) or 0):,} 元"
+        f"（{float(item.get('ratio', 0) or 0):.1f}%）"
+        for idx, item in enumerate(counted_items, start=1)
+        if format_item_text(item)
+    ]
+    counted_items_amount_detail_text = join_detail_entries(counted_item_amount_entries)
+
+    benefit_type_label_map = {"design": "設計型", "management": "管理型", "other": "其他效益"}
+    non_budget_item_entries = [
+        f"{idx}. 【{benefit_type_label_map.get(item.get('benefit_type', ''), item.get('benefit_type', ''))}】"
+        f"{format_item_text(item)}"
+        + (f"：{item.get('note', '')}" if item.get("note") else "")
+        for idx, item in enumerate(non_budget_items_detail, start=1)
+        if format_item_text(item)
+    ]
+    non_budget_items_detail_text = join_detail_entries(non_budget_item_entries)
+    management_adaptation_prompt = ameta.get("management_adaptation_prompt", {}) or {}
+    heat_prompt_triggered = bool(management_adaptation_prompt.get("triggered", False))
+    heat_prompt_response = str(management_adaptation_prompt.get("response", "") or "").strip()
+    heat_prompt_note = str(management_adaptation_prompt.get("note", "") or "").strip()
+    heat_prompt_text = ""
+    if heat_prompt_triggered and heat_prompt_response and heat_prompt_response != "不適用":
+        heat_prompt_text = f"🌡️ 高溫作業調適提醒回應：{heat_prompt_response}"
+        if heat_prompt_note:
+            heat_prompt_text += f"；{heat_prompt_note}"
+
+    combined_non_budget_entries = []
+    if non_budget_items_detail_text:
+        combined_non_budget_entries.append(f"非預算型工項：{non_budget_items_detail_text}")
+    if heat_prompt_text:
+        combined_non_budget_entries.append(heat_prompt_text)
+    if phys_detail_text:
+        combined_non_budget_entries.append(f"工程量體縮減與其他效益：{phys_detail_text}")
+    combined_non_budget_text = join_detail_entries(combined_non_budget_entries)
+    combined_non_budget_json = json.dumps(
+        {
+            "non_budget_items_detail": non_budget_items_detail,
+            "management_adaptation_prompt": management_adaptation_prompt,
+            "physical_reductions": phys,
+        },
+        ensure_ascii=False,
+    )
     return {
         # ── 計算資料 ──────────────────────────────────────────────────
         "填報日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
@@ -1817,15 +2390,24 @@ def build_sync_row_dict(payload):
         "決標金額"          : total_budget,
         "氣候預算"          : climate_total,
         "氣候預算比例%"     : climate_ratio_decimal,
-        "計畫類別"          : cat_labels,
-        "細項分類"          : sub_labels,
-        "氣候工項（預算型）": items_text,
+        "計畫類別"          : category_details_text,
+        "細項分類"          : sub_category_details_text or sub_labels,
+        "氣候工項（預算型）": counted_items_amount_detail_text or items_text,
         "關鍵字信心"        : conf.get("label", ""),
         "命中關鍵字"        : "、".join(payload.get("matched_keywords", [])),
         "規則版本"          : rule_ver_text,
         # ── 解讀資料 ──────────────────────────────────────────────────
         "工項相關性摘要"    : is_.get("item_relevance_text", "") if is_ else "",
-        "非預算型效益"      : is_.get("non_budget_benefits", "") if is_ else "",
+        "非預算型效益"      : "；".join(
+            p for p in [
+                (is_.get("non_budget_benefits", "") if is_ else ""),
+                heat_prompt_text,
+                phys_text,
+            ] if p
+        ),
+        "細項分類明細"      : sub_category_details_text,
+        "氣候工項（預算型）明細": counted_items_amount_detail_text,
+        "非預算型效益明細"  : combined_non_budget_text,
         "anti_pattern命中"  : is_.get("anti_pattern_hits_text", "") if is_ else "",
         "減量資訊完整度"    : (payload.get("reduction_completeness") or {}).get("label", ""),
         "工程量體縮減效益"  : phys_text,
@@ -1836,6 +2418,9 @@ def build_sync_row_dict(payload):
         "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
         "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
         "補充說明"          : ameta.get("user_note", ""),
+        "細項分類明細(JSON)" : sub_category_json,
+        "氣候工項明細(JSON)" : counted_items_json,
+        "非預算型效益明細(JSON)" : combined_non_budget_json,
     }
 
 
@@ -1886,14 +2471,28 @@ def sync_to_google_sheet_direct(payload):
         except Exception as e:
             return False, f"初始化試算表表頭失敗：{e}"
 
+    # ── 可控表頭診斷（預設關閉）
+    header_diagnostics = diagnose_sheet_headers(headers)
+    debug_enabled = is_google_sheet_sync_debug_enabled()
+    if debug_enabled:
+        print("[google_sheet_sync_debug] header_diagnostics:")
+        for diag in header_diagnostics:
+            print(diag)
+
     # ── 組資料字典（以標準 key 為索引）
     row_dict = build_sync_row_dict(payload)
 
     # ── 依試算表表頭順序，模糊比對填入每欄值
     row = []
-    for col_name in headers:
-        std_key = resolve_header_key(col_name)
+    for col_name, diag in zip(headers, header_diagnostics):
+        std_key = diag.get("resolved_key")
         row.append(row_dict.get(std_key, "") if std_key else "")
+        if not std_key and debug_enabled:
+            print(
+                f"[google_sheet_sync_debug] unresolved header: "
+                f"original={diag.get('original_header')}, "
+                f"normalized={diag.get('normalized_header')}"
+            )
 
     # ── 寫入
     try:
@@ -1901,8 +2500,8 @@ def sync_to_google_sheet_direct(payload):
     except Exception as e:
         return False, f"寫入試算表失敗：{e}"
 
-    matched = sum(1 for col in headers if resolve_header_key(col))
-    unmatched = [col for col in headers if not resolve_header_key(col)]
+    matched = sum(1 for d in header_diagnostics if d.get("resolved_key"))
+    unmatched = [d.get("original_header", "") for d in header_diagnostics if not d.get("resolved_key")]
     msg = f"已寫入試算表 {spreadsheet_id}（{matched}/{len(headers)} 欄比對成功）"
     if unmatched:
         msg += f"，未比對欄位留空：{'、'.join(unmatched)}"
@@ -2048,11 +2647,12 @@ def extract_preset_reference(raw_row: pd.Series | dict | None) -> dict:
 
 def sync_to_google_sheet(payload):
     """Send assessment payload to Google Sheet webhook."""
+    sync_payload = dict(payload)
+
     webhook_url = get_google_sheet_webhook_url()
     if not webhook_url:
-        return sync_to_google_sheet_direct(payload)
+        return sync_to_google_sheet_direct(sync_payload)
 
-    sync_payload = dict(payload)
     sync_payload["google_sheet_target"] = get_google_sheet_target()
 
     req = request.Request(
@@ -2067,13 +2667,40 @@ def sync_to_google_sheet(payload):
             status_code = resp.getcode()
             body = resp.read().decode("utf-8", errors="ignore")
             if 200 <= status_code < 300:
-                return True, body or "同步成功"
+                normalized_body = (body or "").strip()
+                if not normalized_body:
+                    return True, "同步成功"
+                return True, normalized_body
             return False, f"同步失敗（HTTP {status_code}）：{body}"
     except error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
         return False, f"同步失敗（HTTP {e.code}）：{body}"
     except error.URLError as e:
         return False, f"同步失敗（連線錯誤）：{e.reason}"
+
+
+def build_user_sync_success_message(sync_message: str, spreadsheet_id: str) -> str:
+    """建立給一般使用者看的同步成功訊息。"""
+    sheet_link = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+    msg = (
+        "✅ 已完成同步：已直接寫入"
+        f"[試算表]({sheet_link})"
+    )
+
+    matched = re.search(r"（(\d+)/(\d+)\s*欄比對成功）", str(sync_message or ""))
+    if matched:
+        matched_count, total_count = matched.groups()
+        if matched_count == total_count:
+            msg += "，系統自動檢核比對成功。可點擊連結查看上傳結果。"
+            return msg
+        msg += (
+            f"，系統已完成同步，但欄位對應僅成功 {matched_count}/{total_count}，"
+            "請回報客服人員檢查試算表欄位名稱設定。"
+        )
+        return msg
+
+    msg += "，系統比對中；可點擊連結查看上傳結果，如未查得資料，請重新送出同步或聯絡客服人員。"
+    return msg
 
 # ── Session state init ────────────────────────────────────────────────────────
 
@@ -2082,7 +2709,7 @@ def init_state():
     初始化 session state。
 
     型別規範（Phase 1A 強化）：
-      str   : case_name, dept, agency_name, unit_name, dept_other,
+      str   : case_name, work_item_description, dept, agency_name, unit_name, dept_other,
               engineering_guideline_type, user_note,
               sync_message, sync_signature, selection_warning,
               dept_hint,                 # Phase 1B：局處提示文字
@@ -2109,6 +2736,7 @@ def init_state():
         "scroll_to_top":            False,
         # ── 案件基本資訊 ──────────────────────────────────────────────
         "case_name":                "",
+        "work_item_description":    "",
         "dept":                     "",
         "agency_name":              "",
         "unit_name":                "",
@@ -2127,10 +2755,16 @@ def init_state():
         "qualitative_factors":      [],      # list[str]
         "physical_reductions":      {},      # dict
         "user_note":                "",
+        "uploaded_supporting_files": [],
+        "uploaded_supporting_file_signatures": [],
+        "upload_message":           "",
+        "upload_error_message":     "",
         "heat_safety_prompt_triggered": False,
         "heat_safety_response":     "",
         "heat_safety_note":         "",
         "selection_warning":        "",
+        "overflow_category_note":   "",
+        "overflow_note_injected":   False,
         "negative_filter_override": False,
         # ── 同步狀態 ──────────────────────────────────────────────────
         "sync_done":                False,
@@ -2257,11 +2891,73 @@ def go_to_step(target_step: int, *, unlock: bool = False, enforce_transition: bo
         st.rerun()
     return True
 
+
+def trigger_scroll_to_top() -> None:
+    """在步驟切換後強制將頁面滾動回最上方。"""
+    components.html(
+        """
+        <script>
+        (function () {
+          var selectors = [
+            ".main",
+            "section.main",
+            "[data-testid='stAppViewContainer']",
+            "[data-testid='stAppScrollToTopContainer']",
+            "[data-testid='stMain']",
+            ".stApp",
+            "body",
+          ];
+
+          function forceTopInDoc(doc) {
+            if (!doc) return;
+            try {
+              if (doc.documentElement) doc.documentElement.scrollTop = 0;
+              if (doc.body) doc.body.scrollTop = 0;
+              selectors.forEach(function (sel) {
+                try {
+                  doc.querySelectorAll(sel).forEach(function (el) {
+                    el.scrollTop = 0;
+                    el.scrollIntoView && el.scrollIntoView({ block: "start", behavior: "instant" });
+                  });
+                } catch (e) {}
+              });
+            } catch (e) {}
+          }
+
+          function forceTop(targetWindow) {
+            if (!targetWindow) return;
+            try { targetWindow.scrollTo({ top: 0, behavior: "instant" }); } catch (e) {}
+            try { forceTopInDoc(targetWindow.document); } catch (e) {}
+          }
+
+          // 連續多次觸發（含較長延遲），確保重內容頁面 DOM 完全重建後仍能捲回頂部
+          [0, 50, 150, 300, 500, 800, 1200].forEach(function (delay) {
+            setTimeout(function () {
+              forceTop(window);
+              try { forceTop(window.parent); } catch (e) {}
+              // 針對 Streamlit Cloud iframe 結構，嘗試找真正的捲動容器
+              try {
+                var frames = window.parent.document.querySelectorAll("iframe");
+                frames.forEach(function(f) {
+                  try { forceTopInDoc(f.contentDocument || f.contentWindow.document); } catch(e) {}
+                });
+              } catch(e) {}
+            }, delay);
+          });
+        })();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
+    st.markdown(
+        "[👉 115年彰化縣媽祖淨零友善地圖](https://lihi1.me/7ge4G)"
+    )
     st.markdown("## 🌿 氣候預算自評系統")
-    st.markdown("---")
     st.markdown("**系統說明**")
     st.markdown("""
 此工具協助彰化縣各局處承辦人，透過直覺式流程判定計畫與氣候預算的關聯性。
@@ -2274,6 +2970,16 @@ with st.sidebar:
 5. 填寫各工項預算
 6. 確認並匯出評估報告
     """)
+    st.markdown(
+        """
+<div class="sidebar-strategy-note">
+🧭 <strong>填寫策略提醒：</strong>前半段（步驟二、三）先勾選「看似相關/可能相關」項目即可，
+先勾選較寬鬆不影響結果；金額以步驟四由您自行填寫為準，不會因前段誤判直接造成錯誤。
+<span class="strategy-highlight">送出前的步驟五也提供「自由補充說明（選填）」可再註記。</span>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown("---")
     # ── 系統更新日誌 ──────────────────────────────────
     with st.expander("📋 系統更新紀錄", expanded=False):
@@ -2308,10 +3014,10 @@ with st.sidebar:
 
 # ── Header ────────────────────────────────────────────────────────────────────
 
-st.markdown("""
+st.markdown(f"""
 <div class="main-header">
     <h1>🌿 彰化縣氣候預算導引式判讀系統</h1>
-    <p>Changhua County · Climate Budget Assessment Tool · v1.2</p>
+    <p>Changhua County · Climate Budget Assessment Tool · {DISPLAY_VERSION_BADGE}</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -2347,15 +3053,7 @@ for i, col in enumerate(step_nav_cols):
             go_to_step(i, enforce_transition=True)
 
 if st.session_state.get("scroll_to_top", False):
-    components.html(
-        """
-        <script>
-        window.parent.scrollTo({top: 0, behavior: "instant"});
-        </script>
-        """,
-        height=0,
-        width=0,
-    )
+    trigger_scroll_to_top()
     st.session_state.scroll_to_top = False
 
 # Breadcrumb
@@ -2410,6 +3108,7 @@ if st.session_state.step == 0:
         agency = "（請選擇）"
         unit = "（請選擇）"
         case_name = st.session_state.case_name
+        work_item_description = st.session_state.work_item_description
         dept_other = st.session_state.dept_other
 
         if not use_manual_case_input:
@@ -2459,6 +3158,8 @@ if st.session_state.step == 0:
                 else:
                     case_name = ""
                     st.session_state.case_name = ""
+                    work_item_description = ""
+                    st.session_state.work_item_description = ""
                     st.session_state.budget = 0
                     st.session_state.dept = ""
                     st.session_state.preset_reference = {}
@@ -2471,6 +3172,13 @@ if st.session_state.step == 0:
                 placeholder="例：彰化縣○○公園綠美化工程",
                 help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
             )
+            work_item_description = st.text_area(
+                "📝 計畫補充敘述（選填，僅供關鍵字補充辨識）",
+                value=st.session_state.work_item_description,
+                placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
+                help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
+            ).strip()
+            st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
 
             departments = get_department_options()
             dept_options = ["（請選擇）"] + departments + ["其他"]
@@ -2505,6 +3213,13 @@ if st.session_state.step == 0:
             if auto_selected is not None:
                 st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
             st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
+            work_item_description = st.text_area(
+                "📝 計畫補充敘述（選填，僅供關鍵字補充辨識）",
+                value=st.session_state.work_item_description,
+                placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
+                help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
+            ).strip()
+            st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
             st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
             budget_input = st.text_input(
                 "💰 決標金額或預計金額（元）",
@@ -2525,8 +3240,9 @@ if st.session_state.step == 0:
 
     with col2:
         # Keyword detection live preview
-        kw_matches = detect_keywords(case_name)
-        if case_name and kw_matches:
+        keyword_source_text = " ".join([case_name.strip(), work_item_description.strip()]).strip()
+        kw_matches = detect_keywords(keyword_source_text)
+        if keyword_source_text and kw_matches:
             strong_matches, concept_matches, logic_matches = split_keyword_matches(kw_matches)
             st.markdown("**🔍 偵測到的氣候關鍵字**")
             kw_html = '<div class="kw-suggestion">'
@@ -2547,12 +3263,12 @@ if st.session_state.step == 0:
                 kw_html += f'<div style="margin-top:0.25rem;color:#1a4731;">🧩 組合條件命中：{logic_names}</div>'
             kw_html += "</div>"
             st.markdown(kw_html, unsafe_allow_html=True)
-        elif case_name:
+        elif keyword_source_text:
             st.info("📋 未偵測到特定氣候關鍵字，請繼續手動選擇工項類別。")
 
         optimized = CONFIG.get("optimized_parameters", {})
-        high_risk_hits = detect_text_keywords(case_name, optimized.get("high_risk_keywords", []))
-        adaptation_hits = detect_text_keywords(case_name, optimized.get("adaptation_keywords", []))
+        high_risk_hits = detect_text_keywords(keyword_source_text, optimized.get("high_risk_keywords", []))
+        adaptation_hits = detect_text_keywords(keyword_source_text, optimized.get("adaptation_keywords", []))
 
         if high_risk_hits:
             st.markdown(
@@ -2599,7 +3315,7 @@ if st.session_state.step == 0:
     if below_threshold:
         st.markdown(f'<div class="alert-yellow">⚠️ {UI["exclusion_warning"]}</div>', unsafe_allow_html=True)
         optimized = CONFIG.get("optimized_parameters", {})
-        low_budget_hits = detect_text_keywords(case_name, optimized.get("adaptation_keywords", []))
+        low_budget_hits = detect_text_keywords(keyword_source_text, optimized.get("adaptation_keywords", []))
         if low_budget_hits:
             hint_text = UI.get("manual_override_hint_text", optimized.get("manual_override_hints", ""))
             st.markdown(f'<div class="alert-green">📝 {hint_text}</div>', unsafe_allow_html=True)
@@ -2646,7 +3362,7 @@ if st.session_state.step == 0:
     high_budget_forced_review = (
         budget_val >= forced_review_threshold and case_name and not kw_matches
     )
-    exclusion_hits = detect_text_keywords(case_name, KWDICT.get("exclusion_keywords", []))
+    exclusion_hits = detect_text_keywords(keyword_source_text, KWDICT.get("exclusion_keywords", []))
 
     if high_budget_forced_review:
         st.markdown(
@@ -2676,6 +3392,7 @@ if st.session_state.step == 0:
 
     if st.button("下一步：選擇計畫及工項類別 →", disabled=not can_proceed, type="primary", use_container_width=True):
         st.session_state.case_name = case_name
+        st.session_state.work_item_description = work_item_description
         st.session_state.dept = selected_dept
         st.session_state.dept_other = dept_other
         st.session_state.budget = budget_val
@@ -2702,6 +3419,7 @@ if st.session_state.step == 0:
 elif st.session_state.step == 1:
     st.markdown('<div class="section-title">步驟二：複選計畫類別（最多 3 項）</div>', unsafe_allow_html=True)
     st.caption("可先選最接近者，再補選其他相關類別；補選類別或細項時，不會直接清空既有工項。")
+    st.caption("若實際工項跨越超過 3 個類別，請先選最核心的 3 類（通常以經費占比/主要成果判斷），其餘脈絡可在本步驟下方或步驟五補充說明。")
 
     # 顯示前一步產生的警告（例如超過 3 項的提示）
     if st.session_state.selection_warning:
@@ -2980,6 +3698,20 @@ elif st.session_state.step == 1:
                     st.session_state.selected_categories = updated_categories
                 st.rerun()
 
+    if len(st.session_state.selected_categories) >= 3:
+        st.info(
+            "📌 已達類別上限（3 項）。如工項涵蓋類別超過 3 類，建議先保留最核心 3 類，"
+            "並把其餘跨類別工項脈絡寫在下方補充，系統會在步驟五供您確認後一併送出。"
+        )
+        overflow_note = st.text_area(
+            "🗒️ 超出三類的補充脈絡（選填）",
+            value=st.session_state.get("overflow_category_note", ""),
+            placeholder="例：另涉及 G 類社區韌性宣導與 F 類監測研究，但本案主要經費仍以 A/B/C 三類為主。",
+            height=90,
+            key="overflow_category_note_input",
+        ).strip()
+        st.session_state.overflow_category_note = overflow_note
+
     # Sub-category selection
     if st.session_state.selected_categories:
         st.markdown("---")
@@ -3180,10 +3912,7 @@ elif st.session_state.step == 2:
         for entry in item_source_entries:
             cat = entry["category"]
             sub = entry["sub"]
-            # 判斷這條細項是來自真實選取，還是 _NONE 展開
-            is_from_none = cat in none_cats and sub["id"] not in real_sub_ids
-            marker = "（全部展開）" if is_from_none else ""
-            lines.append(f"{cat['icon']} {cat['label']} › {sub['label']}{marker}")
+            lines.append(f"{cat['icon']} {cat['label']} › {sub['label']}")
         # 去重保持順序
         seen = set(); deduped = []
         for l in lines:
@@ -3701,6 +4430,11 @@ elif st.session_state.step == 4:
         # 補充說明
         if state.get("user_note", ""):
             st.markdown(f"**📝 補充說明：** {state.user_note}")
+        if state.get("uploaded_supporting_files"):
+            st.markdown("**📎 已上傳工作內容說明文件：**")
+            for file_meta in state.get("uploaded_supporting_files", []):
+                size_mb = (file_meta.get("size_bytes", 0) or 0) / (1024 * 1024)
+                st.markdown(f"- {file_meta.get('original_name', file_meta.get('name', '未命名檔案'))}（{size_mb:.2f} MB）")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -3804,9 +4538,94 @@ elif st.session_state.step == 4:
             for gopt in green_options:
                 st.markdown(f"- {gopt}")
 
+    st.markdown("**📎 建議上傳工作內容說明文件，將用於程式開發優化及回饋使用者意見**")
+    st.markdown("""
+    <div style="
+        background:#eef8f0;
+        border-left:4px solid #2d6a4f;
+        padding:0.8rem 1rem;
+        border-radius:0 8px 8px 0;
+        margin:0.5rem 0 0.75rem 0;
+        color:#1f4d36;
+        font-size:0.92rem;
+    ">
+    📎 可直接將檔案拖曳到下方區域，或點擊區塊選取檔案。支援多檔上傳，例如：招標規範、工作計畫書、經費概算表等。
+    </div>
+    """, unsafe_allow_html=True)
+    drive_folder_id = get_drive_upload_folder_id()
+    if not drive_folder_id:
+        st.warning("⚠️ 上傳資料夾重新設定中，暫無法上傳補充文件。")
+    else:
+        uploaded_docs = st.file_uploader(
+            "上傳工作內容說明文件（可拖曳多個檔案到此處）",
+            accept_multiple_files=True,
+            key="supporting_docs_uploader",
+            help="支援多檔上傳，可拖曳或點擊選檔。",
+        )
+
+        if st.session_state.get("upload_message"):
+            st.success(st.session_state.upload_message)
+        if st.session_state.get("upload_error_message"):
+            st.error(st.session_state.upload_error_message)
+
+        if uploaded_docs:
+            st.caption(f"已選取 {len(uploaded_docs)} 個檔案。點擊下方按鈕後才會正式上傳。")
+            if st.button("📤 上傳補充文件", use_container_width=True, key="upload_supporting_docs_btn"):
+                success_items = []
+                skipped_names = []
+                error_messages = []
+                existing_signatures = set(st.session_state.get("uploaded_supporting_file_signatures", []))
+                for uploaded_file in uploaded_docs:
+                    file_bytes = uploaded_file.getvalue()
+                    size_mb = len(file_bytes) / (1024 * 1024) if file_bytes else 0
+                    if size_mb > MAX_SUPPORTING_FILE_MB:
+                        error_messages.append(f"{uploaded_file.name} 超過 {MAX_SUPPORTING_FILE_MB} MB 上限，未上傳。")
+                        continue
+                    signature = hashlib.md5((uploaded_file.name + str(len(file_bytes)) + hashlib.md5(file_bytes).hexdigest()).encode("utf-8")).hexdigest()
+                    if signature in existing_signatures:
+                        skipped_names.append(uploaded_file.name)
+                        continue
+                    ok, result = upload_supporting_file_to_drive(
+                        uploaded_file,
+                        case_name=st.session_state.get("case_name", ""),
+                        folder_id=drive_folder_id,
+                    )
+                    if ok:
+                        success_items.append(result)
+                        existing_signatures.add(signature)
+                        st.session_state.uploaded_supporting_file_signatures = list(existing_signatures)
+                    else:
+                        error_messages.append(str(result))
+
+                if success_items:
+                    st.session_state.uploaded_supporting_files = st.session_state.get("uploaded_supporting_files", []) + success_items
+                    uploaded_names = "、".join(item.get("original_name", item.get("name", "未命名檔案")) for item in success_items)
+                    msg = f"✅ 已成功上傳 {len(success_items)} 個檔案：{uploaded_names}"
+                    if skipped_names:
+                        msg += f"；略過已上傳檔案：{'、'.join(skipped_names)}"
+                    st.session_state.upload_message = msg
+                else:
+                    st.session_state.upload_message = ""
+                st.session_state.upload_error_message = "\n".join(error_messages)
+                st.rerun()
+
+        uploaded_files = st.session_state.get("uploaded_supporting_files", [])
+        if uploaded_files:
+            st.markdown("**目前已上傳文件**")
+            for idx, file_meta in enumerate(uploaded_files, start=1):
+                size_mb = (file_meta.get("size_bytes", 0) or 0) / (1024 * 1024)
+                uploaded_at = file_meta.get("uploaded_at", "")
+                st.markdown(f"{idx}. {file_meta.get('original_name', file_meta.get('name', '未命名檔案'))}｜{size_mb:.2f} MB｜{uploaded_at}")
+
     # ── 補充說明（選填，同步至試算表 備註欄）
-    st.markdown("**📝 補充說明（選填）**")
+    st.markdown("**📝 提送自評結果前補充說明（選填）**")
     st.caption("可填入表單無法正確量化、需額外說明的事項，例如：符合上方加分提示的具體執行內容、特殊工法說明、跨局處協調事項等。")
+    overflow_note = st.session_state.get("overflow_category_note", "").strip()
+    if overflow_note and not st.session_state.get("overflow_note_injected", False) and not st.session_state.get("user_note", "").strip():
+        st.session_state.user_note = f"【超出三類補充脈絡】{overflow_note}"
+        st.session_state.overflow_note_injected = True
+    if overflow_note:
+        st.caption("ℹ️ 已帶入「超出三類補充脈絡」到本欄位，您可於送出前再調整內容。")
     user_note = st.text_area(
         "補充說明",
         value=st.session_state.get("user_note", ""),
@@ -3833,6 +4652,7 @@ elif st.session_state.step == 4:
         "engineering_guideline_type": state.engineering_guideline_type,
         "physical_reductions": state.get("physical_reductions", {}),
         "user_note": state.get("user_note", ""),
+        "uploaded_supporting_files": state.get("uploaded_supporting_files", []),
         "heat_safety_prompt_triggered": state.get("heat_safety_prompt_triggered", False),
         "heat_safety_response": state.get("heat_safety_response", ""),
         "heat_safety_note": state.get("heat_safety_note", ""),
@@ -3868,10 +4688,14 @@ elif st.session_state.step == 4:
         if st.session_state.sync_done:
             if sheet_target.get("spreadsheet_id"):
                 st.markdown(
-                    f"✅ 已完成同步：已直接寫入[試算表](https://docs.google.com/spreadsheets/d/{sheet_target['spreadsheet_id']}/edit)"
+                    build_user_sync_success_message(
+                        st.session_state.sync_message,
+                        sheet_target["spreadsheet_id"],
+                    )
                 )
             else:
                 st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
+            st.caption("建議：下載 JSON 報告留存（含完整欄位）以利後續稽核追蹤。")
         else:
             st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
 
@@ -3967,8 +4791,8 @@ elif st.session_state.step == 4:
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown(
-    '<p style="text-align:center;color:#888;font-size:0.78rem;">'
-    '彰化縣氣候預算導引式判讀系統 v1.2 · Phase 1 更新：判讀理由面板 · 信心分數 · UID 強化 ｜ 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引、國家氣候變遷調適行動計畫'
+    f'<p style="text-align:center;color:#888;font-size:0.78rem;">'
+    f'彰化縣氣候預算導引式判讀系統 {DISPLAY_VERSION_BADGE} ｜ 參考資料源：國家第三期溫室氣體階段管制目標與各部門行動方案、工程減碳參考作業指引、國家氣候變遷調適行動計畫'
     '</p>',
     unsafe_allow_html=True
 )

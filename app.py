@@ -12,6 +12,9 @@ from pathlib import Path
 import runpy
 
 import streamlit as st
+
+# st.write("DEBUG:", list(st.secrets.keys()))
+
 from packaging.requirements import InvalidRequirement, Requirement
 
 REPO = Path(__file__).resolve().parent

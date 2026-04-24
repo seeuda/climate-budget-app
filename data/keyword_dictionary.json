@@ -761,6 +761,26 @@
       "trigger_id": "KW_042"
     },
     {
+      "keyword": "堤岸道路",
+      "suggested_item": "堤岸道路韌性改善（維生基礎設施）",
+      "code": "調適-水",
+      "category_id": "B",
+      "sub_id": "B1",
+      "_match_type": "exact",
+      "weight": 1.0,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [
+        7
+      ],
+      "synonyms": [
+        "堤防道路",
+        "堤岸道路改善"
+      ],
+      "negative_context": [],
+      "learning_tip": "堤岸道路案件雖併入排水分工，但效益應優先說明維生基礎設施韌性（如防災通行、緊急救援可達性）；排水效益可另以水利工項補充。",
+      "trigger_id": "KW_143"
+    },
+    {
       "keyword": "抽水",
       "suggested_item": "滯洪池、抽水站建置與防洪改善",
       "code": "調適-水",
@@ -868,17 +888,17 @@
     },
     {
       "keyword": "BERS",
-      "suggested_item": "智慧能源管理系統（BEMS）",
-      "code": "住商-5",
-      "category_id": "E",
-      "sub_id": "E1",
+      "suggested_item": "取得綠建築或建築能效(BERS)標章",
+      "code": "住商-1",
+      "category_id": "A",
+      "sub_id": "A1",
       "_match_type": "exact",
       "weight": 1.0,
       "purity_hint": "P1_HIGH_PURITY",
       "anti_pattern_ids": [],
       "synonyms": [],
       "negative_context": [],
-      "learning_tip": "",
+      "learning_tip": "BERS 為建築能效標章（Building Energy Rating System），與 BEMS（建築能源管理系統）不同，請確認本案是否具備申請或取得 BERS 標章之計畫。",
       "trigger_id": "KW_049"
     },
     {
@@ -1145,7 +1165,7 @@
     },
     {
       "keyword": "石籠",
-      "suggested_item": "採用砌石、石籠等自然材料工法（減少混凝土）",
+      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法（減少或取代混凝土）",
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
@@ -1153,14 +1173,20 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "砌石",
+        "木排樁",
+        "生態工法",
+        "自然工法",
+        "NBS"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_067"
     },
     {
       "keyword": "砌石",
-      "suggested_item": "採用砌石、石籠等自然材料工法（減少混凝土）",
+      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法（減少或取代混凝土）",
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
@@ -1168,7 +1194,12 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "石籠",
+        "木排樁",
+        "生態工法",
+        "自然工法"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_068"
@@ -1304,7 +1335,7 @@
     },
     {
       "keyword": "木排樁",
-      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法",
+      "suggested_item": "採用砌石、石籠、木排樁等自然材料工法（減少或取代混凝土）",
       "code": "農業-生態",
       "category_id": "D",
       "sub_id": "D3",
@@ -1312,7 +1343,12 @@
       "weight": 0.8,
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "石籠",
+        "砌石",
+        "木材樁",
+        "竹樁"
+      ],
       "negative_context": [],
       "learning_tip": "",
       "trigger_id": "KW_077"
@@ -1372,7 +1408,9 @@
       "purity_hint": "P2_HIGH_RELEVANCE",
       "anti_pattern_ids": [],
       "synonyms": [
-        "GHG"
+        "GHG",
+        "減量",
+        "減緩"
       ],
       "negative_context": [
         "宣導"
@@ -2237,6 +2275,25 @@
       "learning_tip": "地方創生屬廣義治理詞，需檢核是否納入淨零/調適元素才建議計入。",
       "trigger_id": "KW_141",
       "match_type": "concept_trigger"
+    },
+    {
+      "keyword": "減量執行方案",
+      "suggested_item": "組織碳盤查或碳足跡評估",
+      "code": "淨零教育-2",
+      "category_id": "F",
+      "sub_id": "F1",
+      "_match_type": "exact",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "減量方案",
+        "減緩執行方案"
+      ],
+      "negative_context": [],
+      "learning_tip": "若案名聚焦減量執行方案，通常涉及盤查、策略執行或減量管理機制，可優先導向 F1 規劃研究類工項。",
+      "trigger_id": "KW_142",
+      "match_type": "strong"
     }
   ],
   "exclusion_keywords": [
@@ -2436,6 +2493,21 @@
       "purity_hint": "P3_PARTIAL",
       "anti_pattern_ids": [],
       "trigger_id": "KWL_12"
+    },
+    {
+      "triggers": [
+        "氣候變遷",
+        "推動"
+      ],
+      "suggested_item": "縣市層級淨零/氣候調適計畫研擬",
+      "category_id": "F",
+      "sub_id": "F1",
+      "_match_type": "logic",
+      "note": "需同時出現：氣候變遷＋推動",
+      "weight": 0.8,
+      "purity_hint": "P2_HIGH_RELEVANCE",
+      "anti_pattern_ids": [],
+      "trigger_id": "KWL_13"
     }
   ]
 }

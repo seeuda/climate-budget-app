@@ -439,14 +439,14 @@
     },
     {
       "id": "B",
-      "label": "排水／水利／抽水站／污水工程",
+      "label": "排水（含堤岸道路）／水利／抽水站／污水工程",
       "icon": "💧",
       "description": "包含防洪排水、滯洪設施、污水處理等水利工程；亦適用補助農業/畜牧業沼氣回收或廢水處理改善之獎補助業務",
       "sub_categories": [
         {
           "id": "B1",
           "label": "防洪排水與滯洪設施",
-          "examples": "如：排水幹線改善、滯洪池、抽水站",
+          "examples": "如：排水幹線改善（調適-水）、堤岸道路韌性改善（調適-設施）、滯洪池、抽水站",
           "items": [
             {
               "label": "滯洪池、抽水站建置與防洪改善",
@@ -509,6 +509,24 @@
               "anti_pattern_ref": [],
               "budget_hint": "",
               "item_id": "ITEM_B1_03",
+              "count_in_budget_total": true,
+              "display_section": "budget_items"
+            },
+            {
+              "label": "堤岸道路韌性改善（維生基礎設施）",
+              "mitigation_codes": [],
+              "adaptation_codes": [
+                "調適-設施"
+              ],
+              "policy": "維生基礎設施韌性強化",
+              "alert": "應補充交通維持、緊急通行或防災動線等維生功能效益",
+              "default_purity": "P2_HIGH_RELEVANCE",
+              "benefit_type": "budget",
+              "anti_pattern_ref": [
+                1
+              ],
+              "budget_hint": "",
+              "item_id": "ITEM_B1_11",
               "count_in_budget_total": true,
               "display_section": "budget_items"
             },
@@ -864,7 +882,7 @@
       "id": "C",
       "label": "交通改善／綠色運輸／智慧運輸",
       "icon": "🚌",
-      "description": "包含道路交通設施、大眾運輸、電動化等；亦適用補助民眾或鄉鎮購置低碳運具（自行車、電動機車等）之獎補助業務",
+      "description": "包含交通設施、大眾運輸、電動化等；亦適用補助民眾或鄉鎮購置低碳運具（自行車、電動機車等）之獎補助業務",
       "sub_categories": [
         {
           "id": "C1",
@@ -1374,7 +1392,7 @@
           "examples": "如：砌石石籠護岸、野溪復育、農塘調適設施",
           "items": [
             {
-              "label": "採用砌石、石籠等自然材料工法（減少混凝土）",
+              "label": "採用砌石、石籠、木排樁等自然材料工法（減少或取代混凝土）",
               "mitigation_codes": [
                 "農業-生態"
               ],
@@ -1435,25 +1453,6 @@
               "anti_pattern_ref": [],
               "budget_hint": "",
               "item_id": "ITEM_D3_04",
-              "count_in_budget_total": false,
-              "display_section": "non_budget_benefits"
-            },
-            {
-              "label": "採用砌石、石籠、木排樁等自然材料工法（取代混凝土）",
-              "mitigation_codes": [
-                "農業-生態"
-              ],
-              "adaptation_codes": [
-                "調適-生態"
-              ],
-              "policy": "水保指引：低碳材料與NBS自然解方",
-              "alert": "",
-              "green_spending_type": "綠色材料",
-              "default_purity": "P2_HIGH_RELEVANCE",
-              "benefit_type": "design",
-              "anti_pattern_ref": [],
-              "budget_hint": "",
-              "item_id": "ITEM_D3_05",
               "count_in_budget_total": false,
               "display_section": "non_budget_benefits"
             }

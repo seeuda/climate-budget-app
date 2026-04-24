@@ -2699,25 +2699,32 @@ def sync_to_google_sheet(payload):
 def build_user_sync_success_message(sync_message: str, spreadsheet_id: str) -> str:
     """建立給一般使用者看的同步成功訊息。"""
     sheet_link = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
-    msg = (
-        "✅ 已完成同步：已直接寫入"
-        f"[試算表]({sheet_link})"
-    )
+    msg = "✅ 已完成填報！可點擊" f"[試算表]({sheet_link})" "查看上傳結果。"
 
     matched = re.search(r"（(\d+)/(\d+)\s*欄比對成功）", str(sync_message or ""))
     if matched:
         matched_count, total_count = matched.groups()
         if matched_count == total_count:
-            msg += "，系統自動檢核比對成功。可點擊連結查看上傳結果。"
             return msg
         msg += (
-            f"，系統已完成同步，但欄位對應僅成功 {matched_count}/{total_count}，"
+            f"（欄位對應 {matched_count}/{total_count}）"
+            f"；系統已完成同步，但欄位對應僅成功 {matched_count}/{total_count}，"
             "請回報客服人員檢查試算表欄位名稱設定。"
         )
         return msg
 
-    msg += "，系統比對中；可點擊連結查看上傳結果，如未查得資料，請重新送出同步或聯絡客服人員。"
+    msg += " 如未查得資料，請重新送出同步或聯絡客服人員。"
     return msg
+
+
+def build_user_sync_failure_message(sync_message: str) -> str:
+    """建立給一般使用者看的同步失敗訊息。"""
+    raw_msg = str(sync_message or "").strip()
+    if "HTTP" in raw_msg:
+        return "❌ 同步失敗：系統傳輸異常，請稍後重新送出；若持續失敗請聯絡客服人員。"
+    if "連線錯誤" in raw_msg:
+        return "❌ 同步失敗：目前無法連線到同步服務，請確認網路後稍後再試。"
+    return f"❌ 同步失敗：{raw_msg or '請稍後重新送出；若持續失敗請聯絡客服人員。'}"
 
 # ── Session state init ────────────────────────────────────────────────────────
 
@@ -4714,7 +4721,7 @@ elif st.session_state.step == 4:
                 st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
             st.caption("建議：下載 JSON 報告留存（含完整欄位）以利後續稽核追蹤。")
         else:
-            st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
+            st.error(build_user_sync_failure_message(st.session_state.sync_message))
 
     st.markdown("**步驟 2：同步成功後可下載報告**")
 

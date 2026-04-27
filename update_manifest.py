@@ -63,6 +63,7 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "潛在減緩/減碳亮點 (實務細節 - Action A)",
     "潛在調適/韌性亮點 (實務細節 - Action B)",
     "防呆提醒",
+    "使用者補充關鍵字",
     "補充說明",
     "細項分類明細",           # 細項代碼 + 中文 + 金額/比例（保留相容舊版）
     "氣候工項（預算型）明細",  # 工項代碼 + 中文 + 金額/比例（保留相容舊版）
@@ -72,7 +73,31 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "非預算型效益明細(JSON)",
 ]
 
-DEFAULT_SYNC_HEADERS = BUDGET_SUMMARY_HEADERS + INTERPRETATION_SUMMARY_HEADERS
+# 目前雲端試算表預設欄位（若工作表為空會自動寫入此順序）
+DEFAULT_SYNC_HEADERS = [
+    "填報日期",
+    "案件編號",
+    "標案名稱",
+    "主辦單位",
+    "決標金額或計畫金額",
+    "氣候預算合計",
+    "氣候預算比例%",
+    "計畫類別",
+    "細項分類明細",
+    "氣候工項（預算型）明細",
+    "非預算型效益明細",
+    "補充說明（選填）",
+    "使用者補充關鍵字",
+    "國家關鍵戰略 (戰略層面 - Why)",
+    "計畫工法類別 (技術層面 - What)",
+    "氣候屬性 (功能層面 - How)",
+    "潛在減緩/減碳亮點 (實務細節 - Action A)",
+    "潛在調適/韌性亮點 (實務細節 - Action B)",
+    "防呆提醒",
+    "細項分類明細(JSON)",
+    "氣候工項明細(JSON)",
+    "非預算型效益明細(JSON)",
+]
 
 # ── HEADER_ALIAS_MAP：精準比對優先，模糊比對白名單 ─────────────────────────────
 # 設計原則（Phase 1A 強化）：
@@ -86,6 +111,7 @@ HEADER_ALIAS_MAP = {
     "案件編號"          : ["案件編號", "案號", "uid", "UID"],
     "標案名稱"          : ["標案名稱", "計畫名稱", "案件名稱"],
     "主辦單位"          : ["主辦單位", "主辦局處", "局處名稱", "承辦單位"],
+    # 「決標金額或計畫金額」即使未列 alias，也可由 contains_key（含「決標金額」）自動對應。
     "決標金額"          : ["決標金額", "預算金額", "計畫金額"],
     "氣候預算"          : ["氣候預算", "氣候預算合計", "氣候相關經費", "氣候經費"],
     "氣候預算比例%"     : ["氣候預算比例%", "氣候預算比例", "氣候比例"],
@@ -110,6 +136,7 @@ HEADER_ALIAS_MAP = {
     "潛在減緩/減碳亮點 (實務細節 - Action A)": ["潛在減緩/減碳亮點 (實務細節 - Action A)", "潛在減緩/減碳亮點", "Action A"],
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
+    "使用者補充關鍵字": ["使用者補充關鍵字", "補充關鍵字", "關鍵字補充", "計畫補充敘述"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
     "細項分類明細(JSON)" : ["細項分類明細(JSON)", "細項分類明細（JSON）", "sub_categories_json"],
     "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "氣候工項明細（JSON）", "counted_items_json"],
@@ -2434,6 +2461,7 @@ def build_sync_row_dict(payload):
         "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
         "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
         "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
+        "使用者補充關鍵字"  : ameta.get("work_item_description", ""),
         "補充說明"          : ameta.get("user_note", ""),
         "細項分類明細(JSON)" : sub_category_json,
         "氣候工項明細(JSON)" : counted_items_json,
@@ -3197,10 +3225,10 @@ if st.session_state.step == 0:
                 help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
             )
             work_item_description = st.text_area(
-                "📝 計畫補充敘述（選填，僅供關鍵字補充辨識）",
+                "🏷️ 使用者補充關鍵字（選填）",
                 value=st.session_state.work_item_description,
                 placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
-                help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
+                help="可填入計畫名稱外的補充關鍵字，作為步驟一即時判讀與雲端同步欄位；不會新增自訂氣候工項。"
             ).strip()
             st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
 
@@ -3238,10 +3266,10 @@ if st.session_state.step == 0:
                 st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
             st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
             work_item_description = st.text_area(
-                "📝 計畫補充敘述（選填，僅供關鍵字補充辨識）",
+                "🏷️ 使用者補充關鍵字（選填）",
                 value=st.session_state.work_item_description,
                 placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
-                help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
+                help="可填入計畫名稱外的補充關鍵字，作為步驟一即時判讀與雲端同步欄位；不會新增自訂氣候工項。"
             ).strip()
             st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
             st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)

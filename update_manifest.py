@@ -4605,24 +4605,8 @@ elif st.session_state.step == 4:
 
         if uploaded_docs:
             st.caption(f"已選取 {len(uploaded_docs)} 個檔案。點擊下方按鈕後才會正式上傳。")
-            st.markdown("""
-            <style>
-            div[data-testid="stButton"] > button {
-                background-color: #f77f00 !important;
-                color: white !important;
-                font-weight: 700 !important;
-                border: none !important;
-                border-radius: 8px !important;
-                padding: 0.6rem 1rem !important;
-            }
-
-            div[data-testid="stButton"] > button:hover {
-                background-color: #d96c00 !important;
-                color: white !important;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            if st.button("📤 上傳補充文件", use_container_width=True, key="upload_supporting_docs_btn"):
+            
+            if st.button("📤 上傳補充文件", use_container_width=True, type="primary", key="upload_supporting_docs_btn"):
                 success_items = []
                 skipped_names = []
                 error_messages = []

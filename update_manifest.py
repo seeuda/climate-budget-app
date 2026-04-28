@@ -4605,6 +4605,7 @@ elif st.session_state.step == 4:
 
         if uploaded_docs:
             st.caption(f"已選取 {len(uploaded_docs)} 個檔案。
+            st.markdown("""
             <span style="color:#f77f00; font-weight:700;">
             點擊下方按鈕後才會正式上傳
             </span>

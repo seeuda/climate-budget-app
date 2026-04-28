@@ -4580,7 +4580,11 @@ elif st.session_state.step == 4:
         color:#1f4d36;
         font-size:0.92rem;
     ">
-    📎 可直接將檔案拖曳到下方區域，或點擊區塊選取檔案。支援多檔上傳，例如：招標規範、工作計畫書、經費概算表等。
+    📎 可直接將檔案拖曳到下方區域，或點擊區塊選取檔案。支援多檔上傳，例如：
+    <span style="color:#f77f00; font-weight:700;">
+招標規範、工作計畫書、經費概算表
+</span>
+等。
     </div>
     """, unsafe_allow_html=True)
     drive_folder_id = get_drive_upload_folder_id()

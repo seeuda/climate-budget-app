@@ -1,7 +1,7 @@
 """
 彰化縣氣候預算導引式判讀系統
 Climate Budget Assessment Tool for Changhua County Government
-v1.4 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
+v1.5.0 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
         resolve_header_key強化、init_state型別穩定化、
         anti_pattern_check骨幹、manifest版本管控
 """
@@ -364,7 +364,7 @@ LM_VERSION          = _mf.get("logic_mapping_version", "unknown")
 # App 與規則採雙軌版控：
 # - APP_VERSION：程式功能版本（UI/流程/整合能力；前台僅顯示此版號）
 # - CONFIG_VERSION：規則/判讀字典版本（來自 data/config.json；保留於匯出 metadata）
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 DISPLAY_VERSION_BADGE = f"v{APP_VERSION}"
 
 # ── Custom CSS ─────────────────────────────────────────────────────────────────

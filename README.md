@@ -7,12 +7,14 @@
 - 產出可追溯的判讀結果（包含規則版本、命中理由、明細資料）
 - 視需要將結果同步到 Google 試算表
 
-目前系統程式已更新至 **v1.4.0**（功能層），規則資料仍沿用 **v1.3.7**（`data/config.json` 的 `config_version`）。
+目前系統程式已更新至 **v1.5.0**（功能層），規則資料版本為 **v1.3.7**（`data/config.json` 的 `config_version`）。
 
-本次 v1.4 版本重點包含：
+本次 v1.5 版本重點包含：
 - 新增「補充文件上傳」流程（可多檔拖曳上傳至 Google Drive 私有資料夾）
 - 匯出/狀態資料加入已上傳文件清單，提升案件追溯能力
 - 強化欄位對應、明細輸出格式與 anti-pattern 診斷骨幹
+- 強化同步流程 UX（僅於同步完成後顯示後續操作、調整成功/失敗訊息、保留無 webhook 時本地下載流程）
+- 補強版本治理與文件維護（App/Rules 版本對齊、重要改版紀錄集中）
 
 ---
 
@@ -25,16 +27,23 @@
 - **版本可追溯**
   - 規則與資料版本集中於 `data/config.json` 的 `schema_version` / `manifest`。
   - 程式功能版本（`update_manifest.py`）與規則版本（`config_version`）可分層管理。
-  - 前台建議僅顯示 App 版號（例如 `v1.4.0`）以降低使用者混淆；Rules 版號保留於匯出 JSON / 管理資訊。
+  - 前台建議僅顯示 App 版號（例如 `v1.5.0`）以降低使用者混淆；Rules 版號保留於匯出 JSON / 管理資訊。
   - 同步輸出可附帶規則版本資訊，方便稽核與回溯。
 
-- **v1.4 新增補充文件上傳**
+- **v1.4+ 新增補充文件上傳**
   - 在結果頁可上傳「工作內容說明文件」（支援多檔拖曳）。
   - 單檔上限 200MB，會自動略過重複上傳檔案。
   - 上傳成功後會在畫面顯示文件名稱、大小與上傳時間。
 
 - **部署導向健檢**
   - 針對常見部署失敗（如 requirements 格式錯誤、入口檔異常、設定檔不可解析）提供可視化檢查頁。
+
+- **重要改版紀錄**
+  - **App v1.5.0（2026-04）**：版本對齊與文件整備，補強版本治理可追溯性。
+  - **App v1.4.1（2026-04）**：同步送出流程 UX 調整（提交後顯示邏輯、回應文案、下載區顯示時機優化）。
+  - **App v1.4.0（2026-04）**：新增補充文件上傳到 Google Drive、匯出 payload 納入 `uploaded_supporting_files`。
+  - **Rules v1.3.7（2026-03-31）**：收斂概念詞與誤判語境，提升規則穩定性。
+  - **Rules hotfix（2026-04-23）**：修正 D3 同質工項重複（`FIXES_2026-04-23.md`）。
 
 ---
 
@@ -43,7 +52,7 @@
 ```text
 .
 ├─ app.py                       # Streamlit 入口（主程式 + health check）
-├─ update_manifest.py           # 主要判讀流程（含 v1.4 補充文件上傳）與報告/同步整合邏輯
+├─ update_manifest.py           # 主要判讀流程（含補充文件上傳）與報告/同步整合邏輯
 ├─ data/
 │  └─ config.json               # 規則設定、版本資訊、系統參數
 ├─ requirements.txt             # Python 相依套件
@@ -51,8 +60,12 @@
 ├─ scripts/
 │  ├─ check_duplicate_ids.py    # trigger_id 重複檢查工具（可執行版）
 │  └─ test_keyword_regression.py# 關鍵字回歸測試腳本（可執行版）
-├─ check_duplicate_ids.py       # 舊版/歷史檔（非主要執行入口）
-└─ test_keyword_regression.py   # 舊版/歷史檔（非主要執行入口）
+├─ archive/                     # 歷史/封存檔（非主要執行入口）
+│  ├─ check_duplicate_ids.py
+│  ├─ config.json
+│  ├─ config.toml
+│  └─ test_keyword_regression.py
+└─ FIXES_2026-04-23.md          # 規則重複項修正紀錄
 ```
 
 ---
@@ -97,16 +110,16 @@ http://localhost:8501/?health_check=1
 
 建議採 **雙軌 SemVer**（語意化版本）：
 
-- **App Version（程式功能層）**：例如 `1.4.0`
+- **App Version（程式功能層）**：例如 `1.5.0`
   - **Major（X.0.0）**：不相容改動（流程、欄位結構、整合介面大幅調整）
   - **Minor（1.X.0）**：新增功能且向下相容（如新增上傳、匯出能力）
-  - **Patch（1.4.X）**：修正 bug、UI 微調、效能與穩定性改善
+  - **Patch（1.5.X）**：修正 bug、UI 微調、效能與穩定性改善
 - **Rules Version（規則層）**：例如 `1.3.7`（`data/config.json` 的 `config_version`）
   - 專注在關鍵字、邏輯映射、誤判防呆等判讀規則變更
 
 ### 版本顯示建議（避免混淆）
 
-- **前台（主畫面／頁尾）建議僅顯示 App 版號**：例如 `v1.4.0`。
+- **前台（主畫面／頁尾）建議僅顯示 App 版號**：例如 `v1.5.0`。
 - **Rules 版號保留在匯出與管理資訊**：例如 JSON metadata 的 `rules_version`、`rule_versions.config_version`，以維持稽核追溯能力。
 - 若只有規則調整且程式未改，可只升 `Rules patch`；若程式流程改動，至少升 `App minor/patch` 並在 release note 說明相依的 Rules 最低版本。
 
@@ -134,7 +147,7 @@ python scripts/check_duplicate_ids.py
 
 ---
 
-## 7. v1.4 補充文件上傳設定（Google Drive）
+## 7. v1.4+ 補充文件上傳設定（Google Drive）
 
 若要啟用「補充文件上傳」功能，部署環境需提供下列資訊：
 

@@ -4732,7 +4732,8 @@ elif st.session_state.step == 4:
         else:
             st.error(build_user_sync_failure_message(st.session_state.sync_message))
 
-    if st.session_state.sync_submitted:
+    show_download_step = st.session_state.sync_submitted or (not webhook_ready)
+    if show_download_step:
         st.markdown("**步驟 2：同步成功後可下載報告**")
 
         json_str = json.dumps(export_data, ensure_ascii=False, indent=2)

@@ -2798,6 +2798,7 @@ def init_state():
         "negative_filter_override": False,
         # ── 同步狀態 ──────────────────────────────────────────────────
         "sync_done":                False,
+        "sync_submitted":           False,
         "sync_message":             "",
         "sync_signature":           "",
         # ── Phase 1A 新增：anti_pattern 命中記錄 ──────────────────────
@@ -4696,6 +4697,7 @@ elif st.session_state.step == 4:
     ).hexdigest()
     if st.session_state.sync_signature != export_signature:
         st.session_state.sync_done = False
+        st.session_state.sync_submitted = False
         st.session_state.sync_message = ""
         st.session_state.sync_signature = export_signature
 
@@ -4710,6 +4712,7 @@ elif st.session_state.step == 4:
         st.warning("⚠️ 尚未完成 Google 試算表同步設定（需 webhook 或 gcp_service_account + google_sheet_id），目前僅可下載本地報告。")
         st.session_state.sync_done = True
     if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready, key="sync_submit_button"):
+        st.session_state.sync_submitted = True
         ok, msg = sync_to_google_sheet(export_data)
         st.session_state.sync_done = ok
         st.session_state.sync_message = msg
@@ -4729,84 +4732,85 @@ elif st.session_state.step == 4:
         else:
             st.error(build_user_sync_failure_message(st.session_state.sync_message))
 
-    st.markdown("**步驟 2：同步成功後可下載報告**")
+    if st.session_state.sync_submitted:
+        st.markdown("**步驟 2：同步成功後可下載報告**")
 
-    json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
+        json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
 
-    rows = []
-    category_labels = format_category_labels(state.selected_categories)
-    sub_category_labels = format_sub_category_labels(state.selected_sub_categories)
-    phys = state.get("physical_reductions", {})
-    preset_ref = state.get("preset_reference", {})
-    phys_parts = []
-    if phys.get("soil_reduction_ton", 0):
-        phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
-    if phys.get("waste_reduction_ton", 0):
-        phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
-    if phys.get("cement_reduction_ton", 0):
-        phys_parts.append(f"減少水泥等建材 {phys['cement_reduction_ton']} 公噸")
-    if phys.get("other_benefit_note", ""):
-        phys_parts.append(phys["other_benefit_note"])
-    phys_text = "；".join(phys_parts)
+        rows = []
+        category_labels = format_category_labels(state.selected_categories)
+        sub_category_labels = format_sub_category_labels(state.selected_sub_categories)
+        phys = state.get("physical_reductions", {})
+        preset_ref = state.get("preset_reference", {})
+        phys_parts = []
+        if phys.get("soil_reduction_ton", 0):
+            phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
+        if phys.get("waste_reduction_ton", 0):
+            phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
+        if phys.get("cement_reduction_ton", 0):
+            phys_parts.append(f"減少水泥等建材 {phys['cement_reduction_ton']} 公噸")
+        if phys.get("other_benefit_note", ""):
+            phys_parts.append(phys["other_benefit_note"])
+        phys_text = "；".join(phys_parts)
 
-    for ib in state.item_budgets:
-        item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
-        rows.append({
-            "評估日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d"),
-            "案件編號"          : export_data["project_metadata"]["uid"],
-            "標案名稱"          : state.case_name,
-            "主辦單位"          : state.dept,
-            "決標金額"          : state.budget,
-            "氣候預算合計"      : climate_total,
-            "氣候預算比例%"     : round(climate_ratio, 1),
-            "計畫類別"          : category_labels,
-            "細項分類"          : sub_category_labels,
-            "氣候工項"          : ib["label"],
-            "工項金額"          : ib["amount"],
-            "工項佔總預算%"     : item_ratio,
-            "關鍵字信心"        : export_data.get("confidence", {}).get("label", ""),
-            "減量資訊完整度"    : (export_data.get("reduction_completeness") or {}).get("label", ""),
-            "命中關鍵字"        : "、".join(export_data.get("matched_keywords", [])),
-            "工程量體縮減效益"  : phys_text,
-            "國家關鍵戰略 (戰略層面 - Why)": preset_ref.get("national_strategy_why", ""),
-            "計畫工法類別 (技術層面 - What)": preset_ref.get("methodology_what", ""),
-            "氣候屬性 (功能層面 - How)": preset_ref.get("climate_attribute_how", ""),
-            "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
-            "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
-            "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
-            "補充說明"          : state.get("user_note", ""),
-        })
+        for ib in state.item_budgets:
+            item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
+            rows.append({
+                "評估日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d"),
+                "案件編號"          : export_data["project_metadata"]["uid"],
+                "標案名稱"          : state.case_name,
+                "主辦單位"          : state.dept,
+                "決標金額"          : state.budget,
+                "氣候預算合計"      : climate_total,
+                "氣候預算比例%"     : round(climate_ratio, 1),
+                "計畫類別"          : category_labels,
+                "細項分類"          : sub_category_labels,
+                "氣候工項"          : ib["label"],
+                "工項金額"          : ib["amount"],
+                "工項佔總預算%"     : item_ratio,
+                "關鍵字信心"        : export_data.get("confidence", {}).get("label", ""),
+                "減量資訊完整度"    : (export_data.get("reduction_completeness") or {}).get("label", ""),
+                "命中關鍵字"        : "、".join(export_data.get("matched_keywords", [])),
+                "工程量體縮減效益"  : phys_text,
+                "國家關鍵戰略 (戰略層面 - Why)": preset_ref.get("national_strategy_why", ""),
+                "計畫工法類別 (技術層面 - What)": preset_ref.get("methodology_what", ""),
+                "氣候屬性 (功能層面 - How)": preset_ref.get("climate_attribute_how", ""),
+                "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
+                "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
+                "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
+                "補充說明"          : state.get("user_note", ""),
+            })
 
-    csv_df = pd.DataFrame(rows)
-    csv_bytes = csv_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+        csv_df = pd.DataFrame(rows)
+        csv_bytes = csv_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
 
-    col_j, col_c = st.columns(2)
+        col_j, col_c = st.columns(2)
 
-    with col_j:
-        st.markdown("**📄 JSON 格式（供系統串接）**")
-        st.download_button(
-            label="⬇️ 下載 JSON 報告",
-            data=json_str.encode("utf-8"),
-            file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.json",
-            mime="application/json",
-            use_container_width=True,
-            disabled=not st.session_state.sync_done,
-        )
-        with st.expander("預覽 JSON 內容"):
-            st.code(json_str, language="json")
+        with col_j:
+            st.markdown("**📄 JSON 格式（供系統串接）**")
+            st.download_button(
+                label="⬇️ 下載 JSON 報告",
+                data=json_str.encode("utf-8"),
+                file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.json",
+                mime="application/json",
+                use_container_width=True,
+                disabled=not st.session_state.sync_done,
+            )
+            with st.expander("預覽 JSON 內容"):
+                st.code(json_str, language="json")
 
-    with col_c:
-        st.markdown("**📊 CSV 格式（供 Excel 分析）**")
-        st.download_button(
-            label="⬇️ 下載 CSV 報告",
-            data=csv_bytes,
-            file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=not st.session_state.sync_done,
-        )
-        with st.expander("預覽 CSV 內容"):
-            st.dataframe(csv_df, use_container_width=True)
+        with col_c:
+            st.markdown("**📊 CSV 格式（供 Excel 分析）**")
+            st.download_button(
+                label="⬇️ 下載 CSV 報告",
+                data=csv_bytes,
+                file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                disabled=not st.session_state.sync_done,
+            )
+            with st.expander("預覽 CSV 內容"):
+                st.dataframe(csv_df, use_container_width=True)
     st.markdown("---")
     col_b, col_r = st.columns([1, 3])
     with col_b:

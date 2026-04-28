@@ -4370,7 +4370,7 @@ elif st.session_state.step == 3:
             go_to_step(2)
     with col_next:
         can_next = all_set and not over_budget
-        if st.button("下一步：確認並匯出報告 →", disabled=not can_next, type="primary", use_container_width=True):
+        if st.button("到下一頁確認填報結果 →", disabled=not can_next, type="primary", use_container_width=True):
             go_to_step(4, unlock=True)
         if not can_next:
             if over_budget:

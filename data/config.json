@@ -29,7 +29,7 @@
   },
   "ui_text": {
     "app_title": "彰化縣氣候預算導引式判讀系統",
-    "app_subtitle": "Climate Budget Assessment Tool v1.1",
+    "app_subtitle": "Climate Budget Assessment Tool v1.5.0",
     "exclusion_warning": "⚠️ 本案經費未達建議評估門檻（300萬元），建議挑選其他計畫進行評估。",
     "manual_override_label": "本案經費未達建議評估門檻，但業務單位認為與氣候變遷高度相關，勾選後繼續評估作業。",
     "extreme_alert_warning": "🔴 本案經費達1億元以上，屬重大公共建設，強烈建議檢核淨零與氣候韌性指標。",
@@ -975,7 +975,7 @@
   },
   "manifest": {
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
-    "config_version": "1.2.3",
+    "config_version": "1.3.7",
     "data_version": "1.0.0",
     "keyword_dictionary_version": "1.0.6",
     "logic_mapping_version": "1.0.1",

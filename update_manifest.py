@@ -1,7 +1,7 @@
 """
 彰化縣氣候預算導引式判讀系統
 Climate Budget Assessment Tool for Changhua County Government
-v1.4 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
+v1.5.0 — Phase 1A: JSON框架擴充、purity_codes查表、export結構分層、
         resolve_header_key強化、init_state型別穩定化、
         anti_pattern_check骨幹、manifest版本管控
 """
@@ -63,6 +63,7 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "潛在減緩/減碳亮點 (實務細節 - Action A)",
     "潛在調適/韌性亮點 (實務細節 - Action B)",
     "防呆提醒",
+    "使用者補充關鍵字",
     "補充說明",
     "細項分類明細",           # 細項代碼 + 中文 + 金額/比例（保留相容舊版）
     "氣候工項（預算型）明細",  # 工項代碼 + 中文 + 金額/比例（保留相容舊版）
@@ -72,6 +73,8 @@ INTERPRETATION_SUMMARY_HEADERS = [
     "非預算型效益明細(JSON)",
 ]
 
+# 目前雲端試算表預設欄位（若工作表為空會自動寫入此順序）
+# 注意：預設表頭需保留稽核/追溯欄位（如關鍵字信心、命中關鍵字、規則版本、anti_pattern命中）。
 DEFAULT_SYNC_HEADERS = BUDGET_SUMMARY_HEADERS + INTERPRETATION_SUMMARY_HEADERS
 
 # ── HEADER_ALIAS_MAP：精準比對優先，模糊比對白名單 ─────────────────────────────
@@ -86,6 +89,7 @@ HEADER_ALIAS_MAP = {
     "案件編號"          : ["案件編號", "案號", "uid", "UID"],
     "標案名稱"          : ["標案名稱", "計畫名稱", "案件名稱"],
     "主辦單位"          : ["主辦單位", "主辦局處", "局處名稱", "承辦單位"],
+    # 「決標金額或計畫金額」即使未列 alias，也可由 contains_key（含「決標金額」）自動對應。
     "決標金額"          : ["決標金額", "預算金額", "計畫金額"],
     "氣候預算"          : ["氣候預算", "氣候預算合計", "氣候相關經費", "氣候經費"],
     "氣候預算比例%"     : ["氣候預算比例%", "氣候預算比例", "氣候比例"],
@@ -110,6 +114,7 @@ HEADER_ALIAS_MAP = {
     "潛在減緩/減碳亮點 (實務細節 - Action A)": ["潛在減緩/減碳亮點 (實務細節 - Action A)", "潛在減緩/減碳亮點", "Action A"],
     "潛在調適/韌性亮點 (實務細節 - Action B)": ["潛在調適/韌性亮點 (實務細節 - Action B)", "潛在調適/韌性亮點", "Action B"],
     "防呆提醒"          : ["防呆提醒", "防呆", "提醒"],
+    "使用者補充關鍵字": ["使用者補充關鍵字", "補充關鍵字", "關鍵字補充", "計畫補充敘述"],
     "補充說明"          : ["補充說明", "補充說明（選填）", "備註說明", "承辦人備註"],
     "細項分類明細(JSON)" : ["細項分類明細(JSON)", "細項分類明細（JSON）", "sub_categories_json"],
     "氣候工項明細(JSON)" : ["氣候工項明細(JSON)", "氣候工項明細（JSON）", "counted_items_json"],
@@ -359,7 +364,7 @@ LM_VERSION          = _mf.get("logic_mapping_version", "unknown")
 # App 與規則採雙軌版控：
 # - APP_VERSION：程式功能版本（UI/流程/整合能力；前台僅顯示此版號）
 # - CONFIG_VERSION：規則/判讀字典版本（來自 data/config.json；保留於匯出 metadata）
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 DISPLAY_VERSION_BADGE = f"v{APP_VERSION}"
 
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
@@ -811,6 +816,23 @@ button[kind="primary"] {
     background: #2d6a4f !important;
     border: none !important;
     color: #ffffff !important;
+}
+
+/* Highlight the sync submission button to prevent accidental skip */
+div.st-key-sync_submit_button button[kind="primary"] {
+    background: linear-gradient(135deg, #e85d04, #d00000) !important;
+    border: 1px solid #9d0208 !important;
+    box-shadow: 0 4px 10px rgba(208, 0, 0, 0.28) !important;
+}
+
+div.st-key-sync_submit_button button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #f48c06, #dc2f02) !important;
+    border-color: #9d0208 !important;
+}
+
+div.st-key-sync_submit_button button[kind="primary"]:focus-visible {
+    outline: 3px solid rgba(255, 186, 8, 0.55) !important;
+    outline-offset: 1px !important;
 }
 
 button[kind="secondary"] {
@@ -2417,6 +2439,7 @@ def build_sync_row_dict(payload):
         "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
         "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
         "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
+        "使用者補充關鍵字"  : ameta.get("work_item_description", ""),
         "補充說明"          : ameta.get("user_note", ""),
         "細項分類明細(JSON)" : sub_category_json,
         "氣候工項明細(JSON)" : counted_items_json,
@@ -2682,25 +2705,32 @@ def sync_to_google_sheet(payload):
 def build_user_sync_success_message(sync_message: str, spreadsheet_id: str) -> str:
     """建立給一般使用者看的同步成功訊息。"""
     sheet_link = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
-    msg = (
-        "✅ 已完成同步：已直接寫入"
-        f"[試算表]({sheet_link})"
-    )
+    msg = "✅ 已完成填報！可點擊" f"[試算表]({sheet_link})" "查看上傳結果。"
 
     matched = re.search(r"（(\d+)/(\d+)\s*欄比對成功）", str(sync_message or ""))
     if matched:
         matched_count, total_count = matched.groups()
         if matched_count == total_count:
-            msg += "，系統自動檢核比對成功。可點擊連結查看上傳結果。"
             return msg
         msg += (
-            f"，系統已完成同步，但欄位對應僅成功 {matched_count}/{total_count}，"
+            f"（欄位對應 {matched_count}/{total_count}）"
+            f"；系統已完成同步，但欄位對應僅成功 {matched_count}/{total_count}，"
             "請回報客服人員檢查試算表欄位名稱設定。"
         )
         return msg
 
-    msg += "，系統比對中；可點擊連結查看上傳結果，如未查得資料，請重新送出同步或聯絡客服人員。"
+    msg += " 如未查得資料，請重新送出同步或聯絡客服人員。"
     return msg
+
+
+def build_user_sync_failure_message(sync_message: str) -> str:
+    """建立給一般使用者看的同步失敗訊息。"""
+    raw_msg = str(sync_message or "").strip()
+    if "HTTP" in raw_msg:
+        return "❌ 同步失敗：系統傳輸異常，請稍後重新送出；若持續失敗請聯絡客服人員。"
+    if "連線錯誤" in raw_msg:
+        return "❌ 同步失敗：目前無法連線到同步服務，請確認網路後稍後再試。"
+    return f"❌ 同步失敗：{raw_msg or '請稍後重新送出；若持續失敗請聯絡客服人員。'}"
 
 # ── Session state init ────────────────────────────────────────────────────────
 
@@ -2768,6 +2798,7 @@ def init_state():
         "negative_filter_override": False,
         # ── 同步狀態 ──────────────────────────────────────────────────
         "sync_done":                False,
+        "sync_submitted":           False,
         "sync_message":             "",
         "sync_signature":           "",
         # ── Phase 1A 新增：anti_pattern 命中記錄 ──────────────────────
@@ -3078,7 +3109,7 @@ if selected_sub_labels:
     bc_parts.append(sub_summary[:18])
 st.markdown(f'<div class="breadcrumb">📍 {"  ›  ".join(bc_parts)}</div>', unsafe_allow_html=True)
 
-st.markdown("📌 操作說明、各單位填寫情形、客服聯絡資訊：https://reurl.cc/ppWKm8      📌 說明影片：https://youtu.be/nABPUrgEgwo")
+st.markdown("📌 操作說明、各單位填寫情形、客服聯絡資訊：https://reurl.cc/ppWKm8      📌 說明影片：【快速概覽】https://youtu.be/706gbhXqbUM   【詳細說明】：https://youtu.be/nABPUrgEgwo")
 
 # ═══════════════════════════════════════════════════════════════════
 # STEP 0 — 計畫基本資訊
@@ -3173,10 +3204,10 @@ if st.session_state.step == 0:
                 help="請輸入公文中的完整標案名稱，系統將自動偵測氣候關鍵字"
             )
             work_item_description = st.text_area(
-                "📝 計畫補充敘述（選填，僅供關鍵字補充辨識）",
+                "🏷️ 使用者補充關鍵字（選填）",
                 value=st.session_state.work_item_description,
                 placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
-                help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
+                help="可填入計畫名稱外的補充關鍵字，作為步驟一即時判讀與雲端同步欄位；不會新增自訂氣候工項。"
             ).strip()
             st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
 
@@ -3214,10 +3245,10 @@ if st.session_state.step == 0:
                 st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
             st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
             work_item_description = st.text_area(
-                "📝 計畫補充敘述（選填，僅供關鍵字補充辨識）",
+                "🏷️ 使用者補充關鍵字（選填）",
                 value=st.session_state.work_item_description,
                 placeholder="例：辦理脆弱度分析、風險評估與調適策略研擬",
-                help="這是輔助關鍵字判讀的文字欄位，不會新增自訂氣候工項；實際工項仍以步驟二、步驟三選擇為準。"
+                help="可填入計畫名稱外的補充關鍵字，作為步驟一即時判讀與雲端同步欄位；不會新增自訂氣候工項。"
             ).strip()
             st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
             st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
@@ -4666,6 +4697,7 @@ elif st.session_state.step == 4:
     ).hexdigest()
     if st.session_state.sync_signature != export_signature:
         st.session_state.sync_done = False
+        st.session_state.sync_submitted = False
         st.session_state.sync_message = ""
         st.session_state.sync_signature = export_signature
 
@@ -4679,7 +4711,8 @@ elif st.session_state.step == 4:
     if not webhook_ready:
         st.warning("⚠️ 尚未完成 Google 試算表同步設定（需 webhook 或 gcp_service_account + google_sheet_id），目前僅可下載本地報告。")
         st.session_state.sync_done = True
-    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready):
+    if st.button("☁️ 送出結果並同步 Google 試算表", use_container_width=True, type="primary", disabled=not webhook_ready, key="sync_submit_button"):
+        st.session_state.sync_submitted = True
         ok, msg = sync_to_google_sheet(export_data)
         st.session_state.sync_done = ok
         st.session_state.sync_message = msg
@@ -4697,93 +4730,95 @@ elif st.session_state.step == 4:
                 st.success(f"✅ 已完成同步：{st.session_state.sync_message}")
             st.caption("建議：下載 JSON 報告留存（含完整欄位）以利後續稽核追蹤。")
         else:
-            st.error(f"❌ 同步失敗：{st.session_state.sync_message}")
+            st.error(build_user_sync_failure_message(st.session_state.sync_message))
 
-    st.markdown("**步驟 2：同步成功後可下載報告**")
+    show_download_step = st.session_state.sync_submitted or (not webhook_ready)
+    if show_download_step:
+        st.markdown("**步驟 2：同步成功後可下載報告**")
 
-    json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
+        json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
 
-    rows = []
-    category_labels = format_category_labels(state.selected_categories)
-    sub_category_labels = format_sub_category_labels(state.selected_sub_categories)
-    phys = state.get("physical_reductions", {})
-    preset_ref = state.get("preset_reference", {})
-    phys_parts = []
-    if phys.get("soil_reduction_ton", 0):
-        phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
-    if phys.get("waste_reduction_ton", 0):
-        phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
-    if phys.get("cement_reduction_ton", 0):
-        phys_parts.append(f"減少水泥等建材 {phys['cement_reduction_ton']} 公噸")
-    if phys.get("other_benefit_note", ""):
-        phys_parts.append(phys["other_benefit_note"])
-    phys_text = "；".join(phys_parts)
+        rows = []
+        category_labels = format_category_labels(state.selected_categories)
+        sub_category_labels = format_sub_category_labels(state.selected_sub_categories)
+        phys = state.get("physical_reductions", {})
+        preset_ref = state.get("preset_reference", {})
+        phys_parts = []
+        if phys.get("soil_reduction_ton", 0):
+            phys_parts.append(f"減少土方購置 {phys['soil_reduction_ton']} 公噸")
+        if phys.get("waste_reduction_ton", 0):
+            phys_parts.append(f"減少廢棄物外運 {phys['waste_reduction_ton']} 公噸")
+        if phys.get("cement_reduction_ton", 0):
+            phys_parts.append(f"減少水泥等建材 {phys['cement_reduction_ton']} 公噸")
+        if phys.get("other_benefit_note", ""):
+            phys_parts.append(phys["other_benefit_note"])
+        phys_text = "；".join(phys_parts)
 
-    for ib in state.item_budgets:
-        item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
-        rows.append({
-            "評估日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d"),
-            "案件編號"          : export_data["project_metadata"]["uid"],
-            "標案名稱"          : state.case_name,
-            "主辦單位"          : state.dept,
-            "決標金額"          : state.budget,
-            "氣候預算合計"      : climate_total,
-            "氣候預算比例%"     : round(climate_ratio, 1),
-            "計畫類別"          : category_labels,
-            "細項分類"          : sub_category_labels,
-            "氣候工項"          : ib["label"],
-            "工項金額"          : ib["amount"],
-            "工項佔總預算%"     : item_ratio,
-            "關鍵字信心"        : export_data.get("confidence", {}).get("label", ""),
-            "減量資訊完整度"    : (export_data.get("reduction_completeness") or {}).get("label", ""),
-            "命中關鍵字"        : "、".join(export_data.get("matched_keywords", [])),
-            "工程量體縮減效益"  : phys_text,
-            "國家關鍵戰略 (戰略層面 - Why)": preset_ref.get("national_strategy_why", ""),
-            "計畫工法類別 (技術層面 - What)": preset_ref.get("methodology_what", ""),
-            "氣候屬性 (功能層面 - How)": preset_ref.get("climate_attribute_how", ""),
-            "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
-            "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
-            "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
-            "補充說明"          : state.get("user_note", ""),
-        })
+        for ib in state.item_budgets:
+            item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
+            rows.append({
+                "評估日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d"),
+                "案件編號"          : export_data["project_metadata"]["uid"],
+                "標案名稱"          : state.case_name,
+                "主辦單位"          : state.dept,
+                "決標金額"          : state.budget,
+                "氣候預算合計"      : climate_total,
+                "氣候預算比例%"     : round(climate_ratio, 1),
+                "計畫類別"          : category_labels,
+                "細項分類"          : sub_category_labels,
+                "氣候工項"          : ib["label"],
+                "工項金額"          : ib["amount"],
+                "工項佔總預算%"     : item_ratio,
+                "關鍵字信心"        : export_data.get("confidence", {}).get("label", ""),
+                "減量資訊完整度"    : (export_data.get("reduction_completeness") or {}).get("label", ""),
+                "命中關鍵字"        : "、".join(export_data.get("matched_keywords", [])),
+                "工程量體縮減效益"  : phys_text,
+                "國家關鍵戰略 (戰略層面 - Why)": preset_ref.get("national_strategy_why", ""),
+                "計畫工法類別 (技術層面 - What)": preset_ref.get("methodology_what", ""),
+                "氣候屬性 (功能層面 - How)": preset_ref.get("climate_attribute_how", ""),
+                "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
+                "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
+                "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
+                "補充說明"          : state.get("user_note", ""),
+            })
 
-    csv_df = pd.DataFrame(rows)
-    csv_bytes = csv_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+        csv_df = pd.DataFrame(rows)
+        csv_bytes = csv_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
 
-    col_j, col_c = st.columns(2)
+        col_j, col_c = st.columns(2)
 
-    with col_j:
-        st.markdown("**📄 JSON 格式（供系統串接）**")
-        st.download_button(
-            label="⬇️ 下載 JSON 報告",
-            data=json_str.encode("utf-8"),
-            file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.json",
-            mime="application/json",
-            use_container_width=True,
-            disabled=not st.session_state.sync_done,
-        )
-        with st.expander("預覽 JSON 內容"):
-            st.code(json_str, language="json")
+        with col_j:
+            st.markdown("**📄 JSON 格式（供系統串接）**")
+            st.download_button(
+                label="⬇️ 下載 JSON 報告",
+                data=json_str.encode("utf-8"),
+                file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.json",
+                mime="application/json",
+                use_container_width=True,
+                disabled=not st.session_state.sync_done,
+            )
+            with st.expander("預覽 JSON 內容"):
+                st.code(json_str, language="json")
 
-    with col_c:
-        st.markdown("**📊 CSV 格式（供 Excel 分析）**")
-        st.download_button(
-            label="⬇️ 下載 CSV 報告",
-            data=csv_bytes,
-            file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=not st.session_state.sync_done,
-        )
-        with st.expander("預覽 CSV 內容"):
-            st.dataframe(csv_df, use_container_width=True)
+        with col_c:
+            st.markdown("**📊 CSV 格式（供 Excel 分析）**")
+            st.download_button(
+                label="⬇️ 下載 CSV 報告",
+                data=csv_bytes,
+                file_name=f"climate_budget_{datetime.now(tz=TZ_TAIPEI).strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                disabled=not st.session_state.sync_done,
+            )
+            with st.expander("預覽 CSV 內容"):
+                st.dataframe(csv_df, use_container_width=True)
     st.markdown("---")
     col_b, col_r = st.columns([1, 3])
     with col_b:
         if st.button("← 返回修改", use_container_width=True):
             go_to_step(3)
     with col_r:
-        if st.button("🔄 評估新案件", use_container_width=True, type="primary"):
+        if st.session_state.sync_done and st.button("🔄 評估新案件", use_container_width=True, type="primary"):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()

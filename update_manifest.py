@@ -4608,8 +4608,7 @@ elif st.session_state.step == 4:
             st.markdown("""
             <span style="color:#f77f00; font-weight:700;">
             點擊下方按鈕後才會正式上傳
-            </span>
-            。")
+            </span>。
             """, unsafe_allow_html=True)
             if st.button("📤 上傳補充文件", use_container_width=True, type="primary", key="upload_supporting_docs_btn"):
                 success_items = []

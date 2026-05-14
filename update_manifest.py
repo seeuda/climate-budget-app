@@ -3180,7 +3180,7 @@ if st.session_state.step == 0:
                 agency_options = ["（請選擇）"] + list(dict.fromkeys(case_df["機關名稱"].tolist()))  # 維持試算表原始順序
                 default_agency = st.session_state.agency_name if st.session_state.agency_name in agency_options else "（請選擇）"
                 agency = st.selectbox(
-                    "🏛️ 機關名稱",
+                    "🏛️ 機關名稱(或115年方案執行局處名稱)",
                     options=agency_options,
                     index=agency_options.index(default_agency),
                 )
@@ -3189,7 +3189,7 @@ if st.session_state.step == 0:
                 unit_options = ["（請選擇）"] + list(dict.fromkeys(unit_pool["單位名稱"].tolist())) if not unit_pool.empty else ["（請選擇）"]  # 維持試算表原始順序
                 default_unit = st.session_state.unit_name if st.session_state.unit_name in unit_options else "（請選擇）"
                 unit = st.selectbox(
-                    "🏢 單位名稱",
+                    "🏢 單位名稱(或115年方案執行科室名稱)",
                     options=unit_options,
                     index=unit_options.index(default_unit),
                     disabled=agency == "（請選擇）",
@@ -3199,7 +3199,7 @@ if st.session_state.step == 0:
                 case_options = ["（請選擇）"] + list(dict.fromkeys(case_pool["標案名稱"].tolist())) if not case_pool.empty else ["（請選擇）"]  # 維持試算表原始順序
                 selected_case = case_name if case_name in case_options else "（請選擇）"
                 selected_case = st.selectbox(
-                    "📌 標案名稱",
+                    "📌 標案名稱(或115年方案名稱)",
                     options=case_options,
                     index=case_options.index(selected_case),
                     disabled=unit == "（請選擇）",
@@ -3263,7 +3263,7 @@ if st.session_state.step == 0:
                 ).strip()
 
             budget_input = st.text_input(
-                "💰 決標金額或預計金額（元）",
+                "💰 決標金額或預計金額（元）- 該方案所屬計畫的總金額，如非委辦計畫可填業務費",
                 value=str(int(st.session_state.budget)) if st.session_state.budget else "",
                 placeholder="例：15000000",
                 help="請輸入決標金額或預計金額（純數字，不含逗號）"

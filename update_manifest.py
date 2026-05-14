@@ -3136,7 +3136,7 @@ if st.session_state.step == 0:
         help="如非屬預載計畫，勾選後可改為手動填寫標案名稱、主辦局處與決標金額；亦可填寫獎補助業務等非採購案資訊(例如補助購買自行車、電動機車/補助減緩或調適措施)。"
     )
     use_115_plan_input = st.checkbox(
-        "115年方案",
+        "依115年第1次氣候變遷因應推動會會議紀錄辦理-115年度方案評估",
         value=st.session_state.use_115_plan_input and not use_manual_case_input,
         disabled=use_manual_case_input,
         help="勾選後改讀同一份 Google 試算表的「115年方案」分頁；標案/業務資訊由清單帶入，金額欄位改由使用者自行填寫。"

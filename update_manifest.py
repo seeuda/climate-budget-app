@@ -17,7 +17,7 @@ import random
 import string
 import re
 from urllib import request, error
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 import mimetypes
 import hashlib
 import gspread
@@ -26,6 +26,7 @@ from google.auth.transport.requests import Request
 
 PRESET_SHEET_ID = "1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow"
 PRESET_SHEET_GID = "0"
+PLAN_115_SHEET_NAME = "115年方案"
 DEFAULT_DRIVE_UPLOAD_FOLDER_ID = "1uMGEVB7bZahPCigXtdMlmBhcdHfczFpW"
 MAX_SUPPORTING_FILE_MB = 200
 
@@ -2532,12 +2533,23 @@ def sync_to_google_sheet_direct(payload):
 
 
 @st.cache_data(ttl=600)
-def load_registered_cases():
-    """Load pre-registered case list from public Google Sheet."""
-    csv_url = (
-        f"https://docs.google.com/spreadsheets/d/{PRESET_SHEET_ID}/"
-        f"export?format=csv&gid={PRESET_SHEET_GID}"
-    )
+def load_registered_cases(sheet_name: str = ""):
+    """Load pre-registered case list from the public Google Sheet.
+
+    Args:
+        sheet_name: Optional worksheet title. When blank, the default gid-based
+            preloaded worksheet is used for backwards compatibility.
+    """
+    if sheet_name:
+        csv_url = (
+            f"https://docs.google.com/spreadsheets/d/{PRESET_SHEET_ID}/"
+            f"gviz/tq?tqx=out:csv&sheet={quote(sheet_name)}"
+        )
+    else:
+        csv_url = (
+            f"https://docs.google.com/spreadsheets/d/{PRESET_SHEET_ID}/"
+            f"export?format=csv&gid={PRESET_SHEET_GID}"
+        )
 
     req = request.Request(
         csv_url,
@@ -2812,6 +2824,7 @@ def init_state():
         # ── Phase 1B 預留：公文摘要 ───────────────────────────────────
         "public_summary_text":       "",     # str：三層公文摘要組裝結果
         "preset_reference":          {},     # dict：步驟一預載清單補充參考資訊
+        "use_115_plan_input":        False,  # bool：是否改用 115年方案分頁
         # ── 快速入口導引（Step2 我不知道選哪個）─────────────────────────
         "quick_guide_hint":          "",     # str：導引說明文字
         "quick_guide_cats":          [],     # list[str]：導引建議高亮類別
@@ -3117,20 +3130,36 @@ st.markdown("📌 操作說明、各單位填寫情形、客服聯絡資訊：ht
 if st.session_state.step == 0:
     st.markdown('<div class="section-title">步驟一：帶入計畫基本資訊(依<a href="https://docs.google.com/spreadsheets/d/1jnAL5LCetC_wBvbAzBqVRD3RPV-KU94xn7MJFX8rVow/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" style="color: #1a237e; text-decoration: underline;">預載清單</a>)</div>', unsafe_allow_html=True)
 
-    case_df, case_error = load_registered_cases()
     use_manual_case_input = st.checkbox(
         "自行輸入計畫資訊、或非採購案類型的業務資訊",
         value=st.session_state.use_manual_case_input,
         help="如非屬預載計畫，勾選後可改為手動填寫標案名稱、主辦局處與決標金額；亦可填寫獎補助業務等非採購案資訊(例如補助購買自行車、電動機車/補助減緩或調適措施)。"
     )
+    use_115_plan_input = st.checkbox(
+        "115年方案",
+        value=st.session_state.use_115_plan_input and not use_manual_case_input,
+        disabled=use_manual_case_input,
+        help="勾選後改讀同一份 Google 試算表的「115年方案」分頁；標案/業務資訊由清單帶入，金額欄位改由使用者自行填寫。"
+    )
+
+    if use_manual_case_input:
+        use_115_plan_input = False
 
     if st.session_state.use_manual_case_input != use_manual_case_input:
         st.session_state.use_manual_case_input = use_manual_case_input
+    if st.session_state.use_115_plan_input != use_115_plan_input:
+        st.session_state.use_115_plan_input = use_115_plan_input
+        st.session_state.case_name = ""
+        st.session_state.agency_name = ""
+        st.session_state.unit_name = ""
+        st.session_state.dept = ""
+        st.session_state.budget = 0
+        st.session_state.preset_reference = {}
 
     case_df = pd.DataFrame()
     case_error = ""
     if not use_manual_case_input:
-        case_df, case_error = load_registered_cases()
+        case_df, case_error = load_registered_cases(PLAN_115_SHEET_NAME if use_115_plan_input else "")
 
     col1, col2 = st.columns([3, 2])
 
@@ -3241,7 +3270,7 @@ if st.session_state.step == 0:
             )
         else:
             selected_dept = unit if unit != "（請選擇）" else "（請選擇）"
-            if auto_selected is not None:
+            if auto_selected is not None and not use_115_plan_input:
                 st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
             st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
             work_item_description = st.text_area(
@@ -3255,8 +3284,13 @@ if st.session_state.step == 0:
             budget_input = st.text_input(
                 "💰 決標金額或預計金額（元）",
                 value=str(int(st.session_state.budget)) if st.session_state.budget else "",
-                disabled=True,
-                help="此欄位由雲端試算表自動帶入"
+                placeholder="例：15000000" if use_115_plan_input else "",
+                disabled=not use_115_plan_input,
+                help=(
+                    "115年方案請自行填寫決標金額或預計金額（純數字，不含逗號）"
+                    if use_115_plan_input
+                    else "此欄位由雲端試算表自動帶入"
+                )
             )
             dept = selected_dept
             preset_reference = st.session_state.get("preset_reference", {})

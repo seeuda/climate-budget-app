@@ -3412,6 +3412,10 @@ if st.session_state.step == 0:
         elif budget_val >= PARAMS["min_threshold"]:
             st.markdown(f'<div class="alert-green">{UI["threshold_pass_warning"]}</div>', unsafe_allow_html=True)
 
+    # 暫時關閉未達 300 萬門檻提醒與覆核機制
+    below_threshold = False
+    manual_override = False
+    
     # Below threshold
     #below_threshold = budget_val > 0 and budget_val < PARAMS["min_threshold"]
     #if below_threshold:

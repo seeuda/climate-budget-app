@@ -2949,56 +2949,42 @@ def go_to_step(target_step: int, *, unlock: bool = False, enforce_transition: bo
 
 
 def trigger_scroll_to_top() -> None:
-    """在步驟切換後強制將頁面滾動回最上方。"""
+    """在步驟切換後輕量捲回頁首，避免長時間 DOM 操作吃掉後續點擊。"""
     components.html(
         """
         <script>
         (function () {
-          var selectors = [
-            ".main",
-            "section.main",
-            "[data-testid='stAppViewContainer']",
-            "[data-testid='stAppScrollToTopContainer']",
-            "[data-testid='stMain']",
-            ".stApp",
-            "body",
-          ];
-
-          function forceTopInDoc(doc) {
+          function setTop(doc) {
             if (!doc) return;
+            try { if (doc.documentElement) doc.documentElement.scrollTop = 0; } catch (e) {}
+            try { if (doc.body) doc.body.scrollTop = 0; } catch (e) {}
+            [
+              "[data-testid='stAppViewContainer']",
+              "[data-testid='stMain']",
+              "section.main",
+              ".main"
+            ].forEach(function (sel) {
+              try {
+                var el = doc.querySelector(sel);
+                if (el) el.scrollTop = 0;
+              } catch (e) {}
+            });
+          }
+
+          function scrollTopOnce() {
+            try { window.scrollTo(0, 0); } catch (e) {}
+            try { setTop(window.document); } catch (e) {}
             try {
-              if (doc.documentElement) doc.documentElement.scrollTop = 0;
-              if (doc.body) doc.body.scrollTop = 0;
-              selectors.forEach(function (sel) {
-                try {
-                  doc.querySelectorAll(sel).forEach(function (el) {
-                    el.scrollTop = 0;
-                    el.scrollIntoView && el.scrollIntoView({ block: "start", behavior: "instant" });
-                  });
-                } catch (e) {}
-              });
+              if (window.parent && window.parent !== window) {
+                window.parent.scrollTo(0, 0);
+                setTop(window.parent.document);
+              }
             } catch (e) {}
           }
 
-          function forceTop(targetWindow) {
-            if (!targetWindow) return;
-            try { targetWindow.scrollTo({ top: 0, behavior: "instant" }); } catch (e) {}
-            try { forceTopInDoc(targetWindow.document); } catch (e) {}
-          }
-
-          // 連續多次觸發（含較長延遲），確保重內容頁面 DOM 完全重建後仍能捲回頂部
-          [0, 50, 150, 300, 500, 800, 1200].forEach(function (delay) {
-            setTimeout(function () {
-              forceTop(window);
-              try { forceTop(window.parent); } catch (e) {}
-              // 針對 Streamlit Cloud iframe 結構，嘗試找真正的捲動容器
-              try {
-                var frames = window.parent.document.querySelectorAll("iframe");
-                frames.forEach(function(f) {
-                  try { forceTopInDoc(f.contentDocument || f.contentWindow.document); } catch(e) {}
-                });
-              } catch(e) {}
-            }, delay);
+          // 只在步驟切換後短暫補捲；避免 1 秒以上的 layout thrash 讓下一次點擊失效。
+          [0, 80, 180].forEach(function (delay) {
+            setTimeout(scrollTopOnce, delay);
           });
         })();
         </script>
@@ -3673,6 +3659,66 @@ elif st.session_state.step == 1:
             st.session_state.selected_sub_categories,
         )
 
+    def select_quick_guide(entry_key: str) -> None:
+        """Update quick-guide hints in the widget callback to avoid an extra rerun."""
+        entry = QUICK_GUIDE_ENTRY_MAP.get(entry_key, {})
+        st.session_state.quick_guide_hint = entry.get("hint", "")
+        st.session_state.quick_guide_cats = refine_quick_guide_cats(
+            entry.get("cats", []),
+            suggested_cats,
+            st.session_state.selected_categories,
+        )
+        st.session_state.quick_guide_subs = refine_quick_guide_subs(
+            entry.get("subs", []),
+            st.session_state.selected_categories,
+            st.session_state.selected_sub_categories,
+        )
+        st.session_state.quick_guide_selected_key = entry_key
+
+    def clear_quick_guide() -> None:
+        """Clear quick-guide state in one normal Streamlit rerun."""
+        st.session_state.quick_guide_hint = ""
+        st.session_state.quick_guide_cats = []
+        st.session_state.quick_guide_subs = []
+        st.session_state.quick_guide_selected_key = ""
+
+    def toggle_category_selection(cat_id: str) -> None:
+        """Toggle category selection before render; avoids button-click double reruns."""
+        updated_categories = list(st.session_state.selected_categories)
+        if cat_id in updated_categories:
+            updated_categories.remove(cat_id)
+            valid_sub_ids = {entry["sub"]["id"] for entry in get_available_sub_entries(updated_categories)}
+            st.session_state.selected_sub_categories = [
+                sub_id for sub_id in st.session_state.selected_sub_categories
+                if sub_id in valid_sub_ids
+            ]
+            if "A" not in updated_categories:
+                st.session_state.engineering_guideline_type = ""
+        elif len(updated_categories) >= 3:
+            st.session_state.selection_warning = "⚠️ 計畫類別最多可選 3 項，請先取消其中一項再補選。"
+            return
+        else:
+            updated_categories.append(cat_id)
+        st.session_state.selected_categories = updated_categories
+
+    def toggle_sub_category_selection(sub_id: str, category_real_sub_ids: list[str] | None = None) -> None:
+        """Toggle sub-category selection before render; supports the _NONE fallback option."""
+        updated_sub = list(st.session_state.selected_sub_categories)
+        if sub_id in updated_sub:
+            updated_sub.remove(sub_id)
+        else:
+            if sub_id.endswith("_NONE"):
+                for real_sub_id in category_real_sub_ids or []:
+                    if real_sub_id in updated_sub:
+                        updated_sub.remove(real_sub_id)
+            updated_sub.append(sub_id)
+        st.session_state.selected_sub_categories = updated_sub
+        st.session_state.quick_guide_subs = refine_quick_guide_subs(
+            st.session_state.get("quick_guide_subs", []),
+            st.session_state.selected_categories,
+            updated_sub,
+        )
+
     st.markdown(
         """
         <style>
@@ -3698,25 +3744,14 @@ elif st.session_state.step == 1:
                 with (qg_col1 if qi % 2 == 0 else qg_col2):
                     is_active_quick_guide = st.session_state.quick_guide_selected_key == entry["key"]
                     quick_guide_label = f"✅ {entry['label']}" if is_active_quick_guide else entry["label"]
-                    if st.button(
+                    st.button(
                         quick_guide_label,
                         key=entry["key"],
                         use_container_width=True,
-                        type="primary" if is_active_quick_guide else "secondary"
-                    ):
-                        st.session_state.quick_guide_hint = entry["hint"]
-                        st.session_state.quick_guide_cats = refine_quick_guide_cats(
-                            entry["cats"],
-                            suggested_cats,
-                            st.session_state.selected_categories,
-                        )
-                        st.session_state.quick_guide_subs = refine_quick_guide_subs(
-                            entry.get("subs", []),
-                            st.session_state.selected_categories,
-                            st.session_state.selected_sub_categories,
-                        )
-                        st.session_state.quick_guide_selected_key = entry["key"]
-                        st.rerun()
+                        type="primary" if is_active_quick_guide else "secondary",
+                        on_click=select_quick_guide,
+                        args=(entry["key"],),
+                    )
             if st.session_state.quick_guide_hint:
                 st.markdown(
                     f'<div style="background:#fff8e1;border-left:4px solid #f9a825;'
@@ -3728,12 +3763,12 @@ elif st.session_state.step == 1:
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-                if st.button("✖ 清除導引提示", key="qg_clear", use_container_width=False):
-                    st.session_state.quick_guide_hint = ""
-                    st.session_state.quick_guide_cats = []
-                    st.session_state.quick_guide_subs = []
-                    st.session_state.quick_guide_selected_key = ""
-                    st.rerun()
+                st.button(
+                    "✖ 清除導引提示",
+                    key="qg_clear",
+                    use_container_width=False,
+                    on_click=clear_quick_guide,
+                )
     # ── 快速入口結束 ──────────────────────────────────────────────
 
     # Category cards — 2 columns
@@ -3779,30 +3814,14 @@ elif st.session_state.step == 1:
                 suggested_variant=suggested_variant,
             )
 
-            if st.button(
+            st.button(
                 f"{selected_mark}{cat['icon']} {cat['label']}\n{badge}（{cat['description'][:20]}…）",
                 key=button_key,
                 use_container_width=True,
-                type="secondary"
-            ):
-                updated_categories = list(st.session_state.selected_categories)
-                if cat["id"] in updated_categories:
-                    # 取消選取：同時清除不再有效的細項
-                    updated_categories.remove(cat["id"])
-                    valid_sub_ids = {entry["sub"]["id"] for entry in get_available_sub_entries(updated_categories)}
-                    st.session_state.selected_sub_categories = [
-                        sub_id for sub_id in st.session_state.selected_sub_categories
-                        if sub_id in valid_sub_ids
-                    ]
-                    st.session_state.selected_categories = updated_categories
-                    if "A" not in updated_categories:
-                        st.session_state.engineering_guideline_type = ""
-                elif len(updated_categories) >= 3:
-                    st.session_state.selection_warning = "⚠️ 計畫類別最多可選 3 項，請先取消其中一項再補選。"
-                else:
-                    updated_categories.append(cat["id"])
-                    st.session_state.selected_categories = updated_categories
-                st.rerun()
+                type="secondary",
+                on_click=toggle_category_selection,
+                args=(cat["id"],),
+            )
 
     if len(st.session_state.selected_categories) >= 3:
         st.info(
@@ -3902,25 +3921,15 @@ elif st.session_state.step == 1:
                         is_suggested=(is_sub_suggested or is_sub_quick_guide) and not is_sub_selected and not force_disabled,
                         suggested_variant="quick_guide" if is_sub_quick_guide else "keyword",
                     )
-                    if st.button(
+                    st.button(
                         f"{selected_mark}{badge}{grp_cat['icon']} {sub['label']}\n📌 {sub['examples'][:28]}",
                         key=button_key,
                         use_container_width=True,
                         type="secondary",
                         disabled=force_disabled,
-                    ):
-                        updated_sub = list(st.session_state.selected_sub_categories)
-                        if sub["id"] in updated_sub:
-                            updated_sub.remove(sub["id"])
-                        else:
-                            updated_sub.append(sub["id"])
-                        st.session_state.selected_sub_categories = updated_sub
-                        st.session_state.quick_guide_subs = refine_quick_guide_subs(
-                            st.session_state.get("quick_guide_subs", []),
-                            st.session_state.selected_categories,
-                            updated_sub,
-                        )
-                        st.rerun()
+                        on_click=toggle_sub_category_selection,
+                        args=(sub["id"],),
+                    )
 
             # ── 逃生出口按鈕（各類別末尾，整列單獨一行）──
             none_key = f"sub_{none_id}"
@@ -3928,25 +3937,16 @@ elif st.session_state.step == 1:
             # 若本類別已有其他細項被勾選，_NONE 不可點
             none_disabled = len(cat_real_selected) > 0
             inject_button_style(none_key, is_selected=none_is_selected)
-            if st.button(
+            st.button(
                 f"{'✅ ' if none_is_selected else ''}⬜ 不確定適合項目，在下一頁展開氣候工項檢查",
                 key=none_key,
                 use_container_width=True,
                 type="secondary",
                 disabled=none_disabled,
                 help="已點選其他細項時此按鈕不可用；若本類別確實沒有合適細項，點選此項即可繼續。",
-            ):
-                updated_sub = list(st.session_state.selected_sub_categories)
-                if none_id in updated_sub:
-                    updated_sub.remove(none_id)
-                else:
-                    # 清除本類別其他細項（理論上此時 cat_real_selected 已為空，雙重保險）
-                    for sid in cat_real_selected:
-                        if sid in updated_sub:
-                            updated_sub.remove(sid)
-                    updated_sub.append(none_id)
-                st.session_state.selected_sub_categories = updated_sub
-                st.rerun()
+                on_click=toggle_sub_category_selection,
+                args=(none_id, list(cat_real_selected)),
+            )
 
         selected_cat_labels = "、".join(cat["label"] for cat in selected_categories)
         st.info(f"已選計畫類別（{len(selected_categories)}/3）：{selected_cat_labels}")
@@ -4038,6 +4038,15 @@ elif st.session_state.step == 2:
         if lbl:
             item_trigger_map.setdefault(lbl, []).append(kw["keyword"])
 
+    def toggle_climate_item_selection(item_label: str) -> None:
+        """Toggle climate item selection in one normal Streamlit rerun."""
+        updated_items = list(st.session_state.selected_items)
+        if item_label in updated_items:
+            updated_items.remove(item_label)
+        else:
+            updated_items.append(item_label)
+        st.session_state.selected_items = updated_items
+
     st.markdown("**請勾選本案中包含的氣候相關工項（可複選）：**")
 
     selected_items = list(st.session_state.selected_items)
@@ -4104,13 +4113,14 @@ elif st.session_state.step == 2:
                     f"{codes_str}{alert_txt}\n"
                     f"📋 {item['policy'][:36]}{'…' if len(item['policy']) > 36 else ''}"
                 )
-                if st.button(btn_label, key=item_key, use_container_width=True, type="secondary"):
-                    if item["label"] in selected_items:
-                        selected_items.remove(item["label"])
-                    else:
-                        selected_items.append(item["label"])
-                    st.session_state.selected_items = selected_items
-                    st.rerun()
+                st.button(
+                    btn_label,
+                    key=item_key,
+                    use_container_width=True,
+                    type="secondary",
+                    on_click=toggle_climate_item_selection,
+                    args=(item["label"],),
+                )
 
                 # ── Phase 1：顯示觸發來源（關鍵字說明）─────────────
                 if is_suggested and item["label"] in item_trigger_map:
@@ -4764,6 +4774,7 @@ elif st.session_state.step == 4:
         "dept": state.dept,
         "budget": state.budget,
         "manual_override": state.manual_override,
+        "work_item_description": state.get("work_item_description", ""),
         "kw_matches": state.kw_matches,
         "selected_categories": state.selected_categories,
         "selected_sub_categories": state.selected_sub_categories,
@@ -4868,6 +4879,7 @@ elif st.session_state.step == 4:
                 "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
                 "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
                 "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
+                "使用者補充關鍵字"  : state.get("work_item_description", ""),
                 "補充說明"          : state.get("user_note", ""),
             })
 

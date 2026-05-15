@@ -3537,8 +3537,8 @@ if st.session_state.step == 0:
             st.markdown(f'<div class="alert-red">{UI["high_alert_warning"]}</div>', unsafe_allow_html=True)
         elif budget_val >= PARAMS["medium_alert_threshold"]:
             st.markdown(f'<div class="alert-yellow">{UI["medium_alert_warning"]}</div>', unsafe_allow_html=True)
-        elif budget_val >= PARAMS["min_threshold"]:
-            st.markdown(f'<div class="alert-green">{UI["threshold_pass_warning"]}</div>', unsafe_allow_html=True)
+        #關閉 elif budget_val >= PARAMS["min_threshold"]:
+        #關閉     st.markdown(f'<div class="alert-green">{UI["threshold_pass_warning"]}</div>', unsafe_allow_html=True)
 
     # 暫時關閉未達 300 萬門檻提醒與覆核機制
     below_threshold = False

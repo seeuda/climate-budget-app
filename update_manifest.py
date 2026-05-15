@@ -3413,17 +3413,17 @@ if st.session_state.step == 0:
             st.markdown(f'<div class="alert-green">{UI["threshold_pass_warning"]}</div>', unsafe_allow_html=True)
 
     # Below threshold
-    below_threshold = budget_val > 0 and budget_val < PARAMS["min_threshold"]
-    if below_threshold:
-        st.markdown(f'<div class="alert-yellow">⚠️ {UI["exclusion_warning"]}</div>', unsafe_allow_html=True)
-        optimized = CONFIG.get("optimized_parameters", {})
-        low_budget_hits = detect_text_keywords(keyword_source_text, optimized.get("adaptation_keywords", []))
-        if low_budget_hits:
-            hint_text = UI.get("manual_override_hint_text", optimized.get("manual_override_hints", ""))
-            st.markdown(f'<div class="alert-green">📝 {hint_text}</div>', unsafe_allow_html=True)
-        manual_override = st.checkbox(UI["manual_override_label"], value=st.session_state.manual_override)
-    else:
-        manual_override = False
+    #below_threshold = budget_val > 0 and budget_val < PARAMS["min_threshold"]
+    #if below_threshold:
+    #    st.markdown(f'<div class="alert-yellow">⚠️ {UI["exclusion_warning"]}</div>', unsafe_allow_html=True)
+    #    optimized = CONFIG.get("optimized_parameters", {})
+    #    low_budget_hits = detect_text_keywords(keyword_source_text, optimized.get("adaptation_keywords", []))
+    #    if low_budget_hits:
+    #        hint_text = UI.get("manual_override_hint_text", optimized.get("manual_override_hints", ""))
+    #        st.markdown(f'<div class="alert-green">📝 {hint_text}</div>', unsafe_allow_html=True)
+    #    manual_override = st.checkbox(UI["manual_override_label"], value=st.session_state.manual_override)
+    #else:
+    #    manual_override = False
 
     # Exclusion guidelines — 改版：分「明確排除」vs「需再判斷」兩段
     #st.caption(EXPANDER_HINT_TEXT)

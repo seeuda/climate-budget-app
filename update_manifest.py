@@ -588,6 +588,19 @@ html, body, [class*="css"] {
     font-size: 0.85rem;
 }
 
+/* Slightly separate the 115-plan related-plan picker from the main form. */
+div.st-key-related_115_plan_panel {
+    background: #f7fbf8;
+    border: 1px solid #d8eadc;
+    border-radius: 12px;
+    padding: 0.85rem 1rem 0.75rem;
+    margin: 0.75rem 0 1rem;
+}
+
+div.st-key-related_115_plan_panel [data-testid="stMarkdownContainer"] p {
+    margin-bottom: 0.25rem;
+}
+
 .kw-tag {
     display: inline-block;
     background: #f39c12;
@@ -3308,42 +3321,43 @@ if st.session_state.step == 0:
                             if plan_name in related_plan_options
                         ]
                         st.session_state.related_115_plan_names = current_related_plans
-                        st.markdown("**同計畫方案複選**")
-                        st.caption(
-                            "請點選下方方案按鈕，勾選同一個主辦單位下，"
-                            "與本次填報方案屬於同一計畫脈絡的其他115年方案。"
-                        )
+                        with st.container(key="related_115_plan_panel"):
+                            st.markdown("**同計畫方案複選**")
+                            st.caption(
+                                "請點選下方方案按鈕，勾選同一個主辦單位下，"
+                                "與本次填報方案屬於同一計畫脈絡的其他115年方案。"
+                            )
 
-                        if related_plan_options:
-                            def toggle_related_115_plan_selection(plan_name: str) -> None:
-                                """Toggle one related 115 plan selection from the expanded button list."""
-                                selected_plans = list(st.session_state.get("related_115_plan_names", []))
-                                if plan_name in selected_plans:
-                                    selected_plans.remove(plan_name)
-                                else:
-                                    selected_plans.append(plan_name)
-                                st.session_state.related_115_plan_names = [
-                                    option for option in related_plan_options if option in selected_plans
-                                ]
+                            if related_plan_options:
+                                def toggle_related_115_plan_selection(plan_name: str) -> None:
+                                    """Toggle one related 115 plan selection from the expanded button list."""
+                                    selected_plans = list(st.session_state.get("related_115_plan_names", []))
+                                    if plan_name in selected_plans:
+                                        selected_plans.remove(plan_name)
+                                    else:
+                                        selected_plans.append(plan_name)
+                                    st.session_state.related_115_plan_names = [
+                                        option for option in related_plan_options if option in selected_plans
+                                    ]
 
-                            for idx, plan_name in enumerate(related_plan_options):
-                                is_selected = plan_name in st.session_state.related_115_plan_names
-                                button_key = f"related_115_plan_{idx}_{safe_key(plan_name)}"
-                                inject_button_style(button_key, is_selected=is_selected)
-                                st.button(
-                                    f"{'✅ ' if is_selected else ''}{plan_name}",
-                                    key=button_key,
-                                    use_container_width=True,
-                                    on_click=toggle_related_115_plan_selection,
-                                    args=(plan_name,),
-                                )
-                            flush_button_styles()
-                        else:
-                            st.caption("此科室目前沒有其他可複選的115年方案。")
+                                for idx, plan_name in enumerate(related_plan_options):
+                                    is_selected = plan_name in st.session_state.related_115_plan_names
+                                    button_key = f"related_115_plan_{idx}_{safe_key(plan_name)}"
+                                    inject_button_style(button_key, is_selected=is_selected)
+                                    st.button(
+                                        f"{'✅ ' if is_selected else ''}{plan_name}",
+                                        key=button_key,
+                                        use_container_width=True,
+                                        on_click=toggle_related_115_plan_selection,
+                                        args=(plan_name,),
+                                    )
+                                flush_button_styles()
+                            else:
+                                st.caption("此科室目前沒有其他可複選的115年方案。")
 
-                        related_115_plan_names = st.session_state.related_115_plan_names
-                        if related_115_plan_names:
-                            st.caption("已選取同計畫方案：" + "、".join(related_115_plan_names))
+                            related_115_plan_names = st.session_state.related_115_plan_names
+                            if related_115_plan_names:
+                                st.caption("已選取同計畫方案：" + "、".join(related_115_plan_names))
                     else:
                         st.session_state.official_tender_name = ""
                         official_tender_name = ""
@@ -3410,7 +3424,8 @@ if st.session_state.step == 0:
             selected_dept = unit if unit != "（請選擇）" else "（請選擇）"
             if auto_selected is not None and not use_115_plan_input:
                 st.session_state.budget = parse_budget_from_sheet(auto_selected.get("決標金額", ""))
-            st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
+            if not use_115_plan_input:
+                st.text_input("📌 標案或業務名稱", value=case_name, disabled=True)
             work_item_description = st.text_area(
                 "🏷️ 使用者補充關鍵字（選填）",
                 value=st.session_state.work_item_description,
@@ -3418,7 +3433,8 @@ if st.session_state.step == 0:
                 help="可填入計畫名稱外的補充關鍵字，作為步驟一即時判讀與雲端同步欄位；不會新增自訂氣候工項。"
             ).strip()
             st.caption("ℹ️ 此欄位僅用於補充關鍵字辨識，不會新增或改寫步驟二／步驟三的工項架構。")
-            st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
+            if not use_115_plan_input:
+                st.text_input("🏛️ 主辦局處", value=selected_dept if selected_dept != "（請選擇）" else "", disabled=True)
             budget_input = st.text_input(
                 "💰 決標金額或預計金額（元）",
                 value=str(int(st.session_state.budget)) if st.session_state.budget else "",

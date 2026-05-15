@@ -1820,6 +1820,7 @@ def generate_export_json(state):
                 "note": heat_safety_note,
             },
             "preset_reference": state.get("preset_reference", {}),
+            "related_115_plan_names": state.get("related_115_plan_names", []),
             "uploaded_supporting_files": state.get("uploaded_supporting_files", []),
             "system_version": APP_VERSION,
             "rules_version": CONFIG_VERSION,
@@ -2288,6 +2289,16 @@ def build_sync_row_dict(payload):
         f"lm={rv.get('lm_version','?')}"
     ) if rv else ""
     preset_ref = ameta.get("preset_reference", {}) or {}
+    related_115_plan_names = [
+        str(plan_name).strip()
+        for plan_name in ameta.get("related_115_plan_names", [])
+        if str(plan_name).strip()
+    ]
+    related_115_plan_note = "、".join(related_115_plan_names)
+    user_note_parts = [ameta.get("user_note", "")]
+    if related_115_plan_note:
+        user_note_parts.append(f"【同計畫方案】{related_115_plan_note}")
+    user_note_with_related_plans = "；".join(str(part).strip() for part in user_note_parts if str(part).strip())
     sub_categories = bs.get("sub_categories", []) if bs else payload.get("climate_assessment", {}).get("sub_categories", [])
     counted_items = bs.get("counted_items", []) if bs else payload.get("climate_assessment", {}).get("selected_items", [])
     non_budget_items_detail = is_.get("non_budget_items_detail", []) if is_ else []
@@ -2441,7 +2452,7 @@ def build_sync_row_dict(payload):
         "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
         "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
         "使用者補充關鍵字"  : ameta.get("work_item_description", ""),
-        "補充說明"          : ameta.get("user_note", ""),
+        "補充說明"          : user_note_with_related_plans,
         "細項分類明細(JSON)" : sub_category_json,
         "氣候工項明細(JSON)" : counted_items_json,
         "非預算型效益明細(JSON)" : combined_non_budget_json,
@@ -2825,6 +2836,7 @@ def init_state():
         "public_summary_text":       "",     # str：三層公文摘要組裝結果
         "preset_reference":          {},     # dict：步驟一預載清單補充參考資訊
         "use_115_plan_input":        False,  # bool：是否改用 115年方案分頁
+        "related_115_plan_names":    [],     # list[str]：115年方案同主辦單位複選方案
         # ── 快速入口導引（Step2 我不知道選哪個）─────────────────────────
         "quick_guide_hint":          "",     # str：導引說明文字
         "quick_guide_cats":          [],     # list[str]：導引建議高亮類別
@@ -3155,6 +3167,7 @@ if st.session_state.step == 0:
         st.session_state.dept = ""
         st.session_state.budget = 0
         st.session_state.preset_reference = {}
+        st.session_state.related_115_plan_names = []
 
     case_df = pd.DataFrame()
     case_error = ""
@@ -3215,6 +3228,28 @@ if st.session_state.step == 0:
                         st.session_state.unit_name = str(auto_selected["單位名稱"]).strip()
                         st.session_state.dept = st.session_state.unit_name
                         st.session_state.preset_reference = extract_preset_reference(auto_selected)
+
+                    if use_115_plan_input:
+                        related_plan_options = [
+                            str(plan_name).strip()
+                            for plan_name in case_pool["標案名稱"].tolist()
+                            if str(plan_name).strip() and str(plan_name).strip() != selected_case
+                        ]
+                        related_plan_options = list(dict.fromkeys(related_plan_options))
+                        current_related_plans = [
+                            plan_name
+                            for plan_name in st.session_state.get("related_115_plan_names", [])
+                            if plan_name in related_plan_options
+                        ]
+                        related_115_plan_names = st.multiselect(
+                            "同計畫方案複選",
+                            options=related_plan_options,
+                            default=current_related_plans,
+                            help="可勾選同一個主辦單位下，與本次填報方案屬於同一計畫脈絡的其他115年方案。",
+                        )
+                        st.session_state.related_115_plan_names = related_115_plan_names
+                        if related_115_plan_names:
+                            st.caption("已選取同計畫方案：" + "、".join(related_115_plan_names))
                 else:
                     case_name = ""
                     st.session_state.case_name = ""
@@ -3223,9 +3258,11 @@ if st.session_state.step == 0:
                     st.session_state.budget = 0
                     st.session_state.dept = ""
                     st.session_state.preset_reference = {}
+                    st.session_state.related_115_plan_names = []
 
         if use_manual_case_input:
             st.session_state.preset_reference = {}
+            st.session_state.related_115_plan_names = []
             case_name = st.text_input(
                 "📌 標案或業務名稱",
                 value=st.session_state.case_name,
@@ -4451,6 +4488,10 @@ elif st.session_state.step == 4:
             unsafe_allow_html=True,
         )
 
+        related_115_plan_names = state.get("related_115_plan_names", [])
+        if related_115_plan_names:
+            st.markdown("**🔗 同計畫方案：** " + "、".join(related_115_plan_names))
+
         if selected_cats:
             st.markdown("**🗂️ 計畫類別（複選）：**")
             for cat in selected_cats:
@@ -4731,6 +4772,7 @@ elif st.session_state.step == 4:
         "heat_safety_response": state.get("heat_safety_response", ""),
         "heat_safety_note": state.get("heat_safety_note", ""),
         "preset_reference": state.get("preset_reference", {}),
+        "related_115_plan_names": state.get("related_115_plan_names", []),
     }
     export_data = generate_export_json(export_payload)
 

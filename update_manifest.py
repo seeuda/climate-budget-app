@@ -3307,13 +3307,41 @@ if st.session_state.step == 0:
                             for plan_name in st.session_state.get("related_115_plan_names", [])
                             if plan_name in related_plan_options
                         ]
-                        related_115_plan_names = st.multiselect(
-                            "同計畫方案複選",
-                            options=related_plan_options,
-                            default=current_related_plans,
-                            help="可勾選同一個主辦單位下，與本次填報方案屬於同一計畫脈絡的其他115年方案。",
+                        st.session_state.related_115_plan_names = current_related_plans
+                        st.markdown("**同計畫方案複選**")
+                        st.caption(
+                            "請點選下方方案按鈕，勾選同一個主辦單位下，"
+                            "與本次填報方案屬於同一計畫脈絡的其他115年方案。"
                         )
-                        st.session_state.related_115_plan_names = related_115_plan_names
+
+                        if related_plan_options:
+                            def toggle_related_115_plan_selection(plan_name: str) -> None:
+                                """Toggle one related 115 plan selection from the expanded button list."""
+                                selected_plans = list(st.session_state.get("related_115_plan_names", []))
+                                if plan_name in selected_plans:
+                                    selected_plans.remove(plan_name)
+                                else:
+                                    selected_plans.append(plan_name)
+                                st.session_state.related_115_plan_names = [
+                                    option for option in related_plan_options if option in selected_plans
+                                ]
+
+                            for idx, plan_name in enumerate(related_plan_options):
+                                is_selected = plan_name in st.session_state.related_115_plan_names
+                                button_key = f"related_115_plan_{idx}_{safe_key(plan_name)}"
+                                inject_button_style(button_key, is_selected=is_selected)
+                                st.button(
+                                    f"{'✅ ' if is_selected else ''}{plan_name}",
+                                    key=button_key,
+                                    use_container_width=True,
+                                    on_click=toggle_related_115_plan_selection,
+                                    args=(plan_name,),
+                                )
+                            flush_button_styles()
+                        else:
+                            st.caption("此科室目前沒有其他可複選的115年方案。")
+
+                        related_115_plan_names = st.session_state.related_115_plan_names
                         if related_115_plan_names:
                             st.caption("已選取同計畫方案：" + "、".join(related_115_plan_names))
                     else:

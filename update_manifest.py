@@ -2889,7 +2889,7 @@ def validate_forward_transition(start_step: int, target_step: int):
                 case_name
                 and dept not in ("（請選擇）", "")
                 and budget_val > 0
-                and (budget_val >= PARAMS["min_threshold"] or manual_override)
+                #and (budget_val >= PARAMS["min_threshold"] or manual_override)
                 and negative_ok
             ):
                 return False, "請先完成步驟一必要欄位與進入下一步條件。"
@@ -3492,7 +3492,7 @@ if st.session_state.step == 0:
         case_name.strip()
         and selected_dept not in ("（請選擇）", "")
         and budget_val > 0
-        and (budget_val >= PARAMS["min_threshold"] or manual_override)
+        #and (budget_val >= PARAMS["min_threshold"] or manual_override)
         and (not exclusion_hits or st.session_state.negative_filter_override)
     )
 
@@ -3513,7 +3513,7 @@ if st.session_state.step == 0:
         if selected_dept in ("（請選擇）", ""):
             missing.append("主辦局處")
         if not budget_val: missing.append("決標金額")
-        if below_threshold and not manual_override: missing.append("確認繼續評估")
+        #if below_threshold and not manual_override: missing.append("確認繼續評估")
         if exclusion_hits and not st.session_state.negative_filter_override: missing.append("負向排除覆核")
         if missing:
             st.caption(f"⚠️ 尚需填寫：{'、'.join(missing)}")

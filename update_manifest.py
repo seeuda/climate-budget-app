@@ -39,6 +39,7 @@ BUDGET_SUMMARY_HEADERS = [
     "填報日期",
     "案件編號",
     "標案名稱",
+    "正式標案名稱",
     "主辦單位",
     "決標金額",
     "氣候預算",
@@ -89,6 +90,7 @@ HEADER_ALIAS_MAP = {
     "填報日期"          : ["填報日期", "填報時間", "日期時間"],
     "案件編號"          : ["案件編號", "案號", "uid", "UID"],
     "標案名稱"          : ["標案名稱", "計畫名稱", "案件名稱"],
+    "正式標案名稱"      : ["正式標案名稱", "正式標案名稱（選填）", "正式標案名稱備註", "正式標案", "實際標案名稱", "發包標案名稱", "採購標案名稱"],
     "主辦單位"          : ["主辦單位", "主辦局處", "局處名稱", "承辦單位"],
     # 「決標金額或計畫金額」即使未列 alias，也可由 contains_key（含「決標金額」）自動對應。
     "決標金額"          : ["決標金額", "預算金額", "計畫金額"],
@@ -213,16 +215,27 @@ def _resolve_header_key_with_meta(col_name: str) -> tuple[str | None, str]:
                 return std_key, "exact_alias"
 
     # 3) contains alias
-    contains_alias_candidates = []
+    # Prefer the most specific/longest alias when a new header extends an
+    # existing header label, e.g. 「正式標案名稱備註」 contains both
+    # 「正式標案名稱」 and the older 「標案名稱」 alias.
+    contains_alias_matches = []
     for std_key, aliases in key_pool.items():
-        if any(
-            normalize_text_key(alias) and normalize_text_key(alias) in normalized_col
+        matched_lengths = [
+            len(normalized_alias)
             for alias in aliases
-        ):
-            contains_alias_candidates.append(std_key)
-    if len(contains_alias_candidates) == 1:
-        return contains_alias_candidates[0], "contains_alias"
-    if len(contains_alias_candidates) > 1:
+            if (normalized_alias := normalize_text_key(alias))
+            and normalized_alias in normalized_col
+        ]
+        if matched_lengths:
+            contains_alias_matches.append((std_key, max(matched_lengths)))
+    if contains_alias_matches:
+        longest_alias_len = max(match_len for _, match_len in contains_alias_matches)
+        contains_alias_candidates = [
+            std_key for std_key, match_len in contains_alias_matches
+            if match_len == longest_alias_len
+        ]
+        if len(contains_alias_candidates) == 1:
+            return contains_alias_candidates[0], "contains_alias"
         import logging
         logging.warning(
             "[resolve_header_key] 欄位「%s」(normalized=%s) 模糊 alias 比對到多個 key: %s，略過（填空白）",
@@ -231,13 +244,19 @@ def _resolve_header_key_with_meta(col_name: str) -> tuple[str | None, str]:
         return None, "none"
 
     # 4) contains key
-    contains_key_candidates = [
-        std_key for std_key in key_pool.keys()
-        if normalize_text_key(std_key) in normalized_col
+    contains_key_matches = [
+        (std_key, len(normalized_key))
+        for std_key in key_pool.keys()
+        if (normalized_key := normalize_text_key(std_key)) in normalized_col
     ]
-    if len(contains_key_candidates) == 1:
-        return contains_key_candidates[0], "contains_key"
-    if len(contains_key_candidates) > 1:
+    if contains_key_matches:
+        longest_key_len = max(match_len for _, match_len in contains_key_matches)
+        contains_key_candidates = [
+            std_key for std_key, match_len in contains_key_matches
+            if match_len == longest_key_len
+        ]
+        if len(contains_key_candidates) == 1:
+            return contains_key_candidates[0], "contains_key"
         import logging
         logging.warning(
             "[resolve_header_key] 欄位「%s」(normalized=%s) 模糊 key 比對到多個 key: %s，略過（填空白）",
@@ -842,6 +861,13 @@ button[kind="secondary"] {
     border: 1px solid #9ec5ab !important;
 }
 
+/* Keep repeated option clicks responsive: selection buttons rerender often, so avoid
+   browser-side animation/layout work while Streamlit swaps their DOM nodes. */
+.stButton button {
+    transition: none !important;
+    transform: none !important;
+}
+
 /* Keep sidebar reset button style stable (override global secondary rule) */
 [data-testid="stSidebar"] button[kind="secondary"] {
     background: rgba(255,255,255,0.15) !important;
@@ -910,6 +936,23 @@ def get_alert_level(budget):
     else:
         return {"level": "green", "label": "🟢 氣候預算潛力：基層守護", "desc": "依計畫總經費判定；金額300萬–1000萬",
                 "color": "#2ecc71", "badge": "🟢"}
+
+def build_keyword_source_text(
+    case_name: str,
+    work_item_description: str = "",
+    related_plan_names: list[str] | None = None,
+    official_tender_name: str = "",
+) -> str:
+    """Build the full text used by keyword detection.
+
+    In the 115-plan flow, users can select related plans that belong to the
+    same broader program. Those related plan names should contribute to the
+    same keyword scan as the primary selected plan, optional official tender
+    name, and supplemental keywords.
+    """
+    parts = [case_name, official_tender_name, work_item_description, *(related_plan_names or [])]
+    return " ".join(str(part).strip() for part in parts if str(part).strip())
+
 
 def detect_keywords(text):
     """Return list of matching keyword triggers from case name."""
@@ -1457,6 +1500,9 @@ def safe_key(text):
     """Hash arbitrary text to a short, collision-free, alphanumeric Streamlit widget key."""
     return hashlib.md5(text.encode("utf-8")).hexdigest()[:12]
 
+_BUTTON_STYLE_RULES: list[str] = []
+
+
 def inject_button_style(
     key,
     *,
@@ -1464,7 +1510,15 @@ def inject_button_style(
     is_suggested=False,
     suggested_variant="keyword",
 ):
-    """Inject CSS so specific Streamlit buttons can visually reflect state."""
+    """Queue CSS so specific Streamlit buttons can visually reflect state.
+
+    The selection screens can render dozens of option buttons. Emitting one
+    ``st.markdown(<style>...)`` element per button makes Streamlit replace many
+    tiny DOM nodes after every click, which was noticeable as lag and could cause
+    the next rapid click to be swallowed. Queueing rules and flushing them once
+    per screen keeps the DOM much more stable while preserving the same visual
+    states.
+    """
     if is_selected:
         bg = "#2d6a4f"
         text = "#ffffff"
@@ -1501,9 +1555,8 @@ def inject_button_style(
             hover_border = "#f39c12"
             hover_bg = "#fff6dd"
 
-    st.markdown(
+    _BUTTON_STYLE_RULES.append(
         f"""
-        <style>
         .st-key-{key} button {{
             background: {bg} !important;
             color: {text} !important;
@@ -1511,16 +1564,28 @@ def inject_button_style(
             box-shadow: {shadow} !important;
             min-height: 3rem;
             white-space: normal;
+            transition: none !important;
+            transform: none !important;
         }}
         .st-key-{key} button:hover {{
             border-color: {hover_border} !important;
             background: {hover_bg} !important;
             color: {text} !important;
+            transform: none !important;
         }}
-        </style>
-        """,
+        """
+    )
+
+
+def flush_button_styles() -> None:
+    """Emit queued per-button CSS as a single style node for the current run."""
+    if not _BUTTON_STYLE_RULES:
+        return
+    st.markdown(
+        "<style>" + "\n".join(_BUTTON_STYLE_RULES) + "</style>",
         unsafe_allow_html=True,
     )
+    _BUTTON_STYLE_RULES.clear()
 
 # ── 「純零成本」工項清單（部分比對）──────────────────────────────────
 # 這類工項是施工決策或現場再利用，本身不產生採購費用。
@@ -1697,6 +1762,7 @@ def generate_export_json(state):
         "project_metadata": {
             "uid":               generate_uid(state.get("case_name", "")),
             "name":              state.get("case_name", ""),
+            "official_tender_name": state.get("official_tender_name", ""),
             "dept":              state.get("dept", ""),
             "total_budget":      budget,
             "is_manual_override": manual_override,
@@ -1814,6 +1880,7 @@ def generate_export_json(state):
             "engineering_guideline_type": state.get("engineering_guideline_type", ""),
             "user_note":     state.get("user_note", ""),
             "work_item_description": state.get("work_item_description", ""),
+            "official_tender_name": state.get("official_tender_name", ""),
             "management_adaptation_prompt": {
                 "triggered": heat_safety_prompt_triggered,
                 "response": heat_safety_response,
@@ -2192,7 +2259,8 @@ def resolve_header_key(col_name: str) -> str | None:
       2. 先判斷輸入欄位是否屬於 JSON 欄
       3. JSON 欄僅在 JSON key 池內比對；非 JSON 欄僅在非 JSON key 池內比對
       4. 比對序：exact_key → exact_alias → contains_alias → contains_key
-      5. 若有歧義（命中多個 key）或找不到，回傳 None
+      5. contains 比對若命中多個 key，優先採最長命中的 key/alias
+      6. 若仍有歧義（同長度命中多個 key）或找不到，回傳 None
     """
     resolved_key, _ = _resolve_header_key_with_meta(col_name)
     return resolved_key
@@ -2420,6 +2488,7 @@ def build_sync_row_dict(payload):
         "填報日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S"),
         "案件編號"          : metadata.get("uid", ""),
         "標案名稱"          : metadata.get("name", ""),
+        "正式標案名稱"      : metadata.get("official_tender_name", "") or ameta.get("official_tender_name", ""),
         "主辦單位"          : metadata.get("dept", ""),
         "決標金額"          : total_budget,
         "氣候預算"          : climate_total,
@@ -2481,7 +2550,7 @@ def sync_to_google_sheet_direct(payload):
         spreadsheet = client.open_by_key(spreadsheet_id)
         worksheet   = spreadsheet.worksheet(worksheet_name)
     except gspread.WorksheetNotFound:
-        worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=30)
+        worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=max(30, len(DEFAULT_SYNC_HEADERS)))
     except Exception as e:
         return False, f"無法連線試算表：{e}"
 
@@ -2762,7 +2831,7 @@ def init_state():
     初始化 session state。
 
     型別規範（Phase 1A 強化）：
-      str   : case_name, work_item_description, dept, agency_name, unit_name, dept_other,
+      str   : case_name, official_tender_name, work_item_description, dept, agency_name, unit_name, dept_other,
               engineering_guideline_type, user_note,
               sync_message, sync_signature, selection_warning,
               dept_hint,                 # Phase 1B：局處提示文字
@@ -2789,6 +2858,7 @@ def init_state():
         "scroll_to_top":            False,
         # ── 案件基本資訊 ──────────────────────────────────────────────
         "case_name":                "",
+        "official_tender_name":     "",
         "work_item_description":    "",
         "dept":                     "",
         "agency_name":              "",
@@ -3154,6 +3224,7 @@ if st.session_state.step == 0:
         st.session_state.budget = 0
         st.session_state.preset_reference = {}
         st.session_state.related_115_plan_names = []
+        st.session_state.official_tender_name = ""
 
     case_df = pd.DataFrame()
     case_error = ""
@@ -3167,6 +3238,7 @@ if st.session_state.step == 0:
         agency = "（請選擇）"
         unit = "（請選擇）"
         case_name = st.session_state.case_name
+        official_tender_name = st.session_state.official_tender_name
         work_item_description = st.session_state.work_item_description
         dept_other = st.session_state.dept_other
 
@@ -3216,6 +3288,14 @@ if st.session_state.step == 0:
                         st.session_state.preset_reference = extract_preset_reference(auto_selected)
 
                     if use_115_plan_input:
+                        official_tender_name = st.text_input(
+                            "📄 正式標案名稱（選填）",
+                            value=st.session_state.official_tender_name,
+                            placeholder="例：115年度彰化縣○○計畫委託專業服務案",
+                            help="若115年方案後續有正式發包或採購標案名稱，可填於此欄；系統會一併納入關鍵字辨識與匯出。",
+                        ).strip()
+                        st.session_state.official_tender_name = official_tender_name
+
                         related_plan_options = [
                             str(plan_name).strip()
                             for plan_name in case_pool["標案名稱"].tolist()
@@ -3236,6 +3316,9 @@ if st.session_state.step == 0:
                         st.session_state.related_115_plan_names = related_115_plan_names
                         if related_115_plan_names:
                             st.caption("已選取同計畫方案：" + "、".join(related_115_plan_names))
+                    else:
+                        st.session_state.official_tender_name = ""
+                        official_tender_name = ""
                 else:
                     case_name = ""
                     st.session_state.case_name = ""
@@ -3245,10 +3328,14 @@ if st.session_state.step == 0:
                     st.session_state.dept = ""
                     st.session_state.preset_reference = {}
                     st.session_state.related_115_plan_names = []
+                    st.session_state.official_tender_name = ""
+                    official_tender_name = ""
 
         if use_manual_case_input:
             st.session_state.preset_reference = {}
             st.session_state.related_115_plan_names = []
+            st.session_state.official_tender_name = ""
+            official_tender_name = ""
             case_name = st.text_input(
                 "📌 標案或業務名稱",
                 value=st.session_state.case_name,
@@ -3328,7 +3415,14 @@ if st.session_state.step == 0:
 
     with col2:
         # Keyword detection live preview
-        keyword_source_text = " ".join([case_name.strip(), work_item_description.strip()]).strip()
+        related_keyword_plan_names = st.session_state.get("related_115_plan_names", [])
+        official_tender_name = st.session_state.get("official_tender_name", "")
+        keyword_source_text = build_keyword_source_text(
+            case_name,
+            work_item_description,
+            related_keyword_plan_names,
+            official_tender_name,
+        )
         kw_matches = detect_keywords(keyword_source_text)
         if keyword_source_text and kw_matches:
             strong_matches, concept_matches, logic_matches = split_keyword_matches(kw_matches)
@@ -3353,6 +3447,10 @@ if st.session_state.step == 0:
             st.markdown(kw_html, unsafe_allow_html=True)
         elif keyword_source_text:
             st.info("📋 未偵測到特定氣候關鍵字，請繼續手動選擇工項類別。")
+        if official_tender_name:
+            st.caption("📄 已將正式標案名稱納入關鍵字辨識：" + official_tender_name)
+        if related_keyword_plan_names:
+            st.caption("🔗 已將同計畫方案名稱納入關鍵字辨識：" + "、".join(related_keyword_plan_names))
 
         optimized = CONFIG.get("optimized_parameters", {})
         high_risk_hits = detect_text_keywords(keyword_source_text, optimized.get("high_risk_keywords", []))
@@ -3485,6 +3583,7 @@ if st.session_state.step == 0:
     if st.button("下一步：選擇計畫及工項類別 →", disabled=not can_proceed, type="primary", use_container_width=True):
         st.session_state.case_name = case_name
         st.session_state.work_item_description = work_item_description
+        st.session_state.official_tender_name = official_tender_name
         st.session_state.dept = selected_dept
         st.session_state.dept_other = dept_other
         st.session_state.budget = budget_val
@@ -3973,6 +4072,8 @@ elif st.session_state.step == 1:
                 parts.append(f"（{' / '.join(none_cat_labels)} 類別展開全部工項）")
             st.info("已選細項分類（" + str(len(real_sub_ids)) + " 項）：" + "　".join(parts))
 
+    flush_button_styles()
+
     col_back, col_next = st.columns([1, 3])
     with col_back:
         if st.button("← 返回", use_container_width=True):
@@ -4138,6 +4239,7 @@ elif st.session_state.step == 2:
                     )
 
     st.session_state.selected_items = selected_items
+    flush_button_styles()
 
     # 顯示目前已勾選工項數摘要
     valid_count = len([l for l in selected_items if l in valid_item_labels])
@@ -4503,6 +4605,8 @@ elif st.session_state.step == 4:
         )
 
         related_115_plan_names = state.get("related_115_plan_names", [])
+        if state.get("official_tender_name"):
+            st.markdown("**📄 正式標案名稱：** " + state.get("official_tender_name", ""))
         if related_115_plan_names:
             st.markdown("**🔗 同計畫方案：** " + "、".join(related_115_plan_names))
 
@@ -4775,6 +4879,7 @@ elif st.session_state.step == 4:
         "budget": state.budget,
         "manual_override": state.manual_override,
         "work_item_description": state.get("work_item_description", ""),
+        "official_tender_name": state.get("official_tender_name", ""),
         "kw_matches": state.kw_matches,
         "selected_categories": state.selected_categories,
         "selected_sub_categories": state.selected_sub_categories,
@@ -4860,6 +4965,7 @@ elif st.session_state.step == 4:
                 "評估日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d"),
                 "案件編號"          : export_data["project_metadata"]["uid"],
                 "標案名稱"          : state.case_name,
+                "正式標案名稱"      : state.get("official_tender_name", ""),
                 "主辦單位"          : state.dept,
                 "決標金額"          : state.budget,
                 "氣候預算合計"      : climate_total,

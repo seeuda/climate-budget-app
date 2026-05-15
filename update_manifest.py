@@ -4764,6 +4764,7 @@ elif st.session_state.step == 4:
         "dept": state.dept,
         "budget": state.budget,
         "manual_override": state.manual_override,
+        "work_item_description": state.get("work_item_description", ""),
         "kw_matches": state.kw_matches,
         "selected_categories": state.selected_categories,
         "selected_sub_categories": state.selected_sub_categories,
@@ -4868,6 +4869,7 @@ elif st.session_state.step == 4:
                 "潛在減緩/減碳亮點 (實務細節 - Action A)": preset_ref.get("mitigation_highlight_action_a", ""),
                 "潛在調適/韌性亮點 (實務細節 - Action B)": preset_ref.get("adaptation_highlight_action_b", ""),
                 "防呆提醒"          : preset_ref.get("foolproof_notice", ""),
+                "使用者補充關鍵字"  : state.get("work_item_description", ""),
                 "補充說明"          : state.get("user_note", ""),
             })
 

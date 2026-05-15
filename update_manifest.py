@@ -90,7 +90,7 @@ HEADER_ALIAS_MAP = {
     "填報日期"          : ["填報日期", "填報時間", "日期時間"],
     "案件編號"          : ["案件編號", "案號", "uid", "UID"],
     "標案名稱"          : ["標案名稱", "計畫名稱", "案件名稱"],
-    "正式標案名稱"      : ["正式標案名稱", "正式標案", "實際標案名稱", "發包標案名稱", "採購標案名稱"],
+    "正式標案名稱"      : ["正式標案名稱", "正式標案名稱（選填）", "正式標案名稱備註", "正式標案", "實際標案名稱", "發包標案名稱", "採購標案名稱"],
     "主辦單位"          : ["主辦單位", "主辦局處", "局處名稱", "承辦單位"],
     # 「決標金額或計畫金額」即使未列 alias，也可由 contains_key（含「決標金額」）自動對應。
     "決標金額"          : ["決標金額", "預算金額", "計畫金額"],
@@ -215,16 +215,27 @@ def _resolve_header_key_with_meta(col_name: str) -> tuple[str | None, str]:
                 return std_key, "exact_alias"
 
     # 3) contains alias
-    contains_alias_candidates = []
+    # Prefer the most specific/longest alias when a new header extends an
+    # existing header label, e.g. 「正式標案名稱備註」 contains both
+    # 「正式標案名稱」 and the older 「標案名稱」 alias.
+    contains_alias_matches = []
     for std_key, aliases in key_pool.items():
-        if any(
-            normalize_text_key(alias) and normalize_text_key(alias) in normalized_col
+        matched_lengths = [
+            len(normalized_alias)
             for alias in aliases
-        ):
-            contains_alias_candidates.append(std_key)
-    if len(contains_alias_candidates) == 1:
-        return contains_alias_candidates[0], "contains_alias"
-    if len(contains_alias_candidates) > 1:
+            if (normalized_alias := normalize_text_key(alias))
+            and normalized_alias in normalized_col
+        ]
+        if matched_lengths:
+            contains_alias_matches.append((std_key, max(matched_lengths)))
+    if contains_alias_matches:
+        longest_alias_len = max(match_len for _, match_len in contains_alias_matches)
+        contains_alias_candidates = [
+            std_key for std_key, match_len in contains_alias_matches
+            if match_len == longest_alias_len
+        ]
+        if len(contains_alias_candidates) == 1:
+            return contains_alias_candidates[0], "contains_alias"
         import logging
         logging.warning(
             "[resolve_header_key] 欄位「%s」(normalized=%s) 模糊 alias 比對到多個 key: %s，略過（填空白）",
@@ -233,13 +244,19 @@ def _resolve_header_key_with_meta(col_name: str) -> tuple[str | None, str]:
         return None, "none"
 
     # 4) contains key
-    contains_key_candidates = [
-        std_key for std_key in key_pool.keys()
-        if normalize_text_key(std_key) in normalized_col
+    contains_key_matches = [
+        (std_key, len(normalized_key))
+        for std_key in key_pool.keys()
+        if (normalized_key := normalize_text_key(std_key)) in normalized_col
     ]
-    if len(contains_key_candidates) == 1:
-        return contains_key_candidates[0], "contains_key"
-    if len(contains_key_candidates) > 1:
+    if contains_key_matches:
+        longest_key_len = max(match_len for _, match_len in contains_key_matches)
+        contains_key_candidates = [
+            std_key for std_key, match_len in contains_key_matches
+            if match_len == longest_key_len
+        ]
+        if len(contains_key_candidates) == 1:
+            return contains_key_candidates[0], "contains_key"
         import logging
         logging.warning(
             "[resolve_header_key] 欄位「%s」(normalized=%s) 模糊 key 比對到多個 key: %s，略過（填空白）",
@@ -2242,7 +2259,8 @@ def resolve_header_key(col_name: str) -> str | None:
       2. 先判斷輸入欄位是否屬於 JSON 欄
       3. JSON 欄僅在 JSON key 池內比對；非 JSON 欄僅在非 JSON key 池內比對
       4. 比對序：exact_key → exact_alias → contains_alias → contains_key
-      5. 若有歧義（命中多個 key）或找不到，回傳 None
+      5. contains 比對若命中多個 key，優先採最長命中的 key/alias
+      6. 若仍有歧義（同長度命中多個 key）或找不到，回傳 None
     """
     resolved_key, _ = _resolve_header_key_with_meta(col_name)
     return resolved_key

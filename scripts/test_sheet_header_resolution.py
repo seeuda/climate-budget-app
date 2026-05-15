@@ -20,6 +20,8 @@ def run_header_resolution_smoke_test() -> None:
         ("氣候工項明細（JSON）", "氣候工項明細(JSON)"),
         ("非預算型效益與減量明細（JSON）", "非預算型效益明細(JSON)"),
         ("正式標案", "正式標案名稱"),
+        ("正式標案名稱（選填）", "正式標案名稱"),
+        ("正式標案名稱備註", "正式標案名稱"),
     ]
 
     for source, expected in cases:

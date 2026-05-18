@@ -3514,10 +3514,15 @@ if st.session_state.step == 0:
             )
 
         # Budget display
+        budget_input_clean = budget_input.replace(",", "").replace(" ", "") if budget_input else ""
+        budget_input_has_value = bool(budget_input_clean)
+        budget_parse_ok = True
         try:
-            budget_val = int(budget_input.replace(",", "").replace(" ", "")) if budget_input else 0
-        except:
+            budget_val = int(budget_input_clean) if budget_input_has_value else 0
+        except ValueError:
             budget_val = 0
+            budget_parse_ok = False
+        allow_zero_budget = use_115_plan_input
 
         if budget_val > 0:
             alert = get_alert_level(budget_val)
@@ -3616,10 +3621,15 @@ if st.session_state.step == 0:
     else:
         st.session_state.negative_filter_override = False
 
+    budget_is_valid = (
+        budget_parse_ok
+        and budget_val >= 0
+        and (budget_val > 0 or (allow_zero_budget and budget_input_has_value))
+    )
     can_proceed = (
         case_name.strip()
         and selected_dept not in ("（請選擇）", "")
-        and budget_val > 0
+        and budget_is_valid
         #and (budget_val >= PARAMS["min_threshold"] or manual_override)
         and (not exclusion_hits or st.session_state.negative_filter_override)
     )
@@ -3641,7 +3651,7 @@ if st.session_state.step == 0:
         if not case_name.strip(): missing.append("標案名稱")
         if selected_dept in ("（請選擇）", ""):
             missing.append("主辦局處")
-        if not budget_val: missing.append("決標金額")
+        if not budget_is_valid: missing.append("決標金額")
         #if below_threshold and not manual_override: missing.append("確認繼續評估")
         if exclusion_hits and not st.session_state.negative_filter_override: missing.append("負向排除覆核")
         if missing:

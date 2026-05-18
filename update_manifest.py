@@ -932,6 +932,18 @@ def fmt_twd(n):
         return "–"
     return f"NT$ {int(n):,}"
 
+def calc_budget_ratio(amount, total_budget):
+    """Return a percentage ratio only when total_budget is a positive denominator."""
+    if not total_budget:
+        return None
+    return round((amount or 0) / total_budget * 100, 1)
+
+def fmt_ratio(ratio):
+    """Format ratio text, leaving zero-budget cases explicitly uncalculated."""
+    if ratio is None:
+        return "比例不計算"
+    return f"{float(ratio):.1f}%"
+
 def get_alert_level(budget):
     """Return alert level info dict based on total project budget.
     此燈號依「計畫總經費」判定，反映計畫的隱含碳潛力與應投入的檢核力道，
@@ -1734,7 +1746,7 @@ def generate_export_json(state):
 
     # 氣候預算總額（只加 budget 型）
     climate_total = sum(i.get("amount", 0) for i in budget_items)
-    climate_ratio = round(climate_total / budget * 100, 1) if budget else 0.0
+    climate_ratio = calc_budget_ratio(climate_total, budget)
 
     # 工項相關性摘要文字
     item_relevance_parts = []
@@ -1797,7 +1809,7 @@ def generate_export_json(state):
                 {
                     "label":        ib.get("label", ""),
                     "amount":       ib.get("amount", 0),
-                    "ratio":        ib.get("ratio", 0.0),
+                    "ratio":        ib.get("ratio"),
                     "item_id":      ib.get("item_id", ""),
                     "is_zero_cost": ib.get("is_zero_cost", False),
                     "is_smart_use": ib.get("is_smart_use", False),
@@ -2302,7 +2314,7 @@ def build_sync_row_dict(payload):
         if bs else payload.get("climate_budget_total", 0)
     total_budget  = metadata.get("total_budget", 0)
     climate_ratio = bs.get("climate_budget_ratio") \
-        if bs else (round(climate_total / total_budget * 100, 1) if total_budget else 0)
+        if bs else calc_budget_ratio(climate_total, total_budget)
     # 試算表欄位改為「百分比格式」時，需要傳入 0~1 的小數值（例如 41% → 0.41）
     climate_ratio_decimal = (
         round(float(climate_ratio) / 100, 6)
@@ -2416,7 +2428,7 @@ def build_sync_row_dict(payload):
             "sub_id": sub_id,
             "sub_label": sub_label,
             "amount": int(round(amount)),
-            "ratio": round((amount / climate_total * 100), 1) if climate_total else 0.0,
+            "ratio": calc_budget_ratio(amount, climate_total),
         })
 
     sub_category_json = json.dumps(
@@ -2436,7 +2448,7 @@ def build_sync_row_dict(payload):
     ]
     if sub_amount_breakdown:
         sub_category_entries = [
-            f"{idx}. {row['sub_label']}：{row['amount']:,} 元（{row['ratio']:.1f}%）"
+            f"{idx}. {row['sub_label']}：{row['amount']:,} 元（{fmt_ratio(row.get('ratio'))}）"
             for idx, row in enumerate(sub_amount_breakdown, start=1)
         ]
     else:
@@ -2453,12 +2465,18 @@ def build_sync_row_dict(payload):
     sub_category_details_text = join_detail_entries(sub_category_entries)
     category_details_text = format_category_labels_for_sheet(cat_ids, cat_labels) or cat_labels
 
-    counted_item_amount_entries = [
-        f"{idx}. {format_item_text(item)}：{int(item.get('amount', 0) or 0):,} 元"
-        f"（{float(item.get('ratio', 0) or 0):.1f}%）"
-        for idx, item in enumerate(counted_items, start=1)
-        if format_item_text(item)
-    ]
+    counted_item_amount_entries = []
+    for idx, item in enumerate(counted_items, start=1):
+        item_text = format_item_text(item)
+        if not item_text:
+            continue
+        item_amount = int(item.get('amount', 0) or 0)
+        item_ratio = item.get('ratio')
+        if item_ratio is None and total_budget:
+            item_ratio = calc_budget_ratio(item_amount, total_budget)
+        counted_item_amount_entries.append(
+            f"{idx}. {item_text}：{item_amount:,} 元（{fmt_ratio(item_ratio)}）"
+        )
     counted_items_amount_detail_text = join_detail_entries(counted_item_amount_entries)
 
     benefit_type_label_map = {"design": "設計型", "management": "管理型", "other": "其他效益"}
@@ -4414,14 +4432,15 @@ elif st.session_state.step == 3:
                 unsafe_allow_html=True,
             )
             amount = 0
-            pct_of_total = 0.0
+            pct_of_total = calc_budget_ratio(amount, total_budget)
         else:
             col_amt, col_calc = st.columns([3, 2])
             with col_amt:
                 saved_amount_wan = round((ib.get("amount", 0) or 0) / 10000, 1)
                 max_wan = round(total_budget / 10000, 1)
-                # 若尚未填過（0），value 傳 None 讓欄位顯示空白，避免預填 0.0 干擾輸入
-                default_wan = None if saved_amount_wan == 0.0 else saved_amount_wan
+                # 總預算為 0 時，後續工項也允許明確填 0；比例不計算，避免分母為 0。
+                # 其他情況若尚未填過（0），value 傳 None 讓欄位顯示空白，避免預填 0.0 干擾輸入。
+                default_wan = 0.0 if total_budget == 0 else (None if saved_amount_wan == 0.0 else saved_amount_wan)
                 amount_wan = st.number_input(
                     "工項參考金額（萬元）",
                     min_value=0.0,
@@ -4434,8 +4453,12 @@ elif st.session_state.step == 3:
                 )
                 amount = round((amount_wan or 0) * 10000)   # 內部仍以元儲存
             with col_calc:
-                pct_of_total = amount / total_budget * 100 if total_budget else 0
-                st.metric("佔總預算", f"{pct_of_total:.1f}%", delta=fmt_twd(amount))
+                pct_of_total = calc_budget_ratio(amount, total_budget)
+                if pct_of_total is None:
+                    st.metric("佔總預算", "比例不計算", delta=fmt_twd(amount))
+                    st.caption("總預算為 0 元，工項比例不計算。")
+                else:
+                    st.metric("佔總預算", fmt_ratio(pct_of_total), delta=fmt_twd(amount))
             # 聰明使用型：金額欄下方加提示
             if is_smart_use_item(label):
                 st.markdown(
@@ -4451,7 +4474,7 @@ elif st.session_state.step == 3:
 
         updated_items.append({
             "label": label,
-            "ratio": round(pct_of_total, 1),
+            "ratio": pct_of_total,
             "amount": int(amount),
             "is_zero_cost": is_pure_zero_cost(label),   # 純零成本：金額固定為 0
             "is_smart_use": is_smart_use_item(label),   # 聰明使用型：有採購但涵蓋量體效益
@@ -4597,9 +4620,11 @@ elif st.session_state.step == 3:
     # Recalculate for button state
     total_allocated = sum(ib.get("amount", 0) or 0 for ib in updated_items)
     over_budget = total_allocated > total_budget
-    # 純零成本工項金額固定為 0；聰明使用型允許填 0；一般工項才強制填 > 0
+    # 純零成本工項金額固定為 0；聰明使用型允許填 0；總預算為 0 時所有工項允許填 0。
+    # 其他一般工項才強制填 > 0。
     all_set = (not updated_items) or all(
         ib.get("amount", 0) > 0
+        or total_budget == 0
         or ib.get("is_zero_cost", False)
         or ib.get("is_smart_use", False)
         for ib in updated_items
@@ -4636,7 +4661,7 @@ elif st.session_state.step == 4:
             selected_sub_entries.append({"category": cat, "sub": sub})
 
     climate_total = sum(ib.get("amount", 0) for ib in state.item_budgets)
-    climate_ratio = climate_total / state.budget * 100 if state.budget else 0
+    climate_ratio = calc_budget_ratio(climate_total, state.budget)
 
     # Summary display
     col_info, col_chart = st.columns([3, 2])
@@ -4678,8 +4703,8 @@ elif st.session_state.step == 4:
 
         st.markdown("**✅ 氣候相關工項：**")
         for ib in state.item_budgets:
-            pct = ib['amount'] / state.budget * 100 if state.budget else 0
-            st.markdown(f"- {ib['label']}：{fmt_twd(ib['amount'])} （{pct:.1f}%）")
+            pct = calc_budget_ratio(ib['amount'], state.budget)
+            st.markdown(f"- {ib['label']}：{fmt_twd(ib['amount'])} （{fmt_ratio(pct)}）")
 
         # 量體縮減摘要
         phys = state.get("physical_reductions", {})
@@ -4722,7 +4747,7 @@ elif st.session_state.step == 4:
         <div class="budget-display" style="margin-bottom:0.5rem">
             <div class="label">氣候變遷相關經費</div>
             <div class="amount">{fmt_twd(climate_total)}</div>
-            <div style="font-size:0.9rem;opacity:0.85;margin-top:0.3rem">氣候預算占比 {climate_ratio:.1f}%</div>
+            <div style="font-size:0.9rem;opacity:0.85;margin-top:0.3rem">氣候預算占比 {fmt_ratio(climate_ratio)}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -5014,7 +5039,7 @@ elif st.session_state.step == 4:
         phys_text = "；".join(phys_parts)
 
         for ib in state.item_budgets:
-            item_ratio = round(ib["amount"] / state.budget * 100, 1) if state.budget else 0
+            item_ratio = calc_budget_ratio(ib["amount"], state.budget)
             rows.append({
                 "評估日期"          : datetime.now(tz=TZ_TAIPEI).strftime("%Y-%m-%d"),
                 "案件編號"          : export_data["project_metadata"]["uid"],
@@ -5023,12 +5048,12 @@ elif st.session_state.step == 4:
                 "主辦單位"          : state.dept,
                 "決標金額"          : state.budget,
                 "氣候預算合計"      : climate_total,
-                "氣候預算比例%"     : round(climate_ratio, 1),
+                "氣候預算比例%"     : climate_ratio if climate_ratio is not None else "",
                 "計畫類別"          : category_labels,
                 "細項分類"          : sub_category_labels,
                 "氣候工項"          : ib["label"],
                 "工項金額"          : ib["amount"],
-                "工項佔總預算%"     : item_ratio,
+                "工項佔總預算%"     : item_ratio if item_ratio is not None else "",
                 "關鍵字信心"        : export_data.get("confidence", {}).get("label", ""),
                 "減量資訊完整度"    : (export_data.get("reduction_completeness") or {}).get("label", ""),
                 "命中關鍵字"        : "、".join(export_data.get("matched_keywords", [])),

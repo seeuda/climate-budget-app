@@ -2294,6 +2294,44 @@
       "learning_tip": "若案名聚焦減量執行方案，通常涉及盤查、策略執行或減量管理機制，可優先導向 F1 規劃研究類工項。",
       "trigger_id": "KW_142",
       "match_type": "strong"
+    },
+    {
+      "keyword": "高溫",
+      "suggested_item": "高溫健康風險評估與氣候調適措施",
+      "code": "concept",
+      "category_id": "G",
+      "sub_id": "G3",
+      "_match_type": "exact",
+      "weight": 0.5,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "極端高溫",
+        "酷熱"
+      ],
+      "negative_context": [],
+      "learning_tip": "高溫可能涉及氣候變遷下的熱健康風險；命中時先標記為調適潛力，再確認是否包含預警、防護、降溫或脆弱族群照顧等具體措施。",
+      "trigger_id": "KW_144",
+      "match_type": "concept_trigger"
+    },
+    {
+      "keyword": "低溫",
+      "suggested_item": "低溫健康風險評估與氣候調適措施",
+      "code": "concept",
+      "category_id": "G",
+      "sub_id": "G3",
+      "_match_type": "exact",
+      "weight": 0.5,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [],
+      "synonyms": [
+        "極端低溫",
+        "寒害"
+      ],
+      "negative_context": [],
+      "learning_tip": "低溫可能涉及氣候變遷下的寒冷健康或災害風險；命中時先標記為調適潛力，再確認是否包含預警、防護或脆弱族群照顧等具體措施。",
+      "trigger_id": "KW_145",
+      "match_type": "concept_trigger"
     }
   ],
   "exclusion_keywords": [

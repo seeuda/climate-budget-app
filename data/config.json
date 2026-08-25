@@ -1,10 +1,11 @@
 {
   "schema_version": {
-    "config_version": "1.3.7",
+    "config_version": "1.3.8",
     "effective_date": "2026-03-25",
-    "updated_at": "2026-03-31",
+    "updated_at": "2026-08-25",
     "updated_by": "氣候變遷因應科",
     "change_log": [
+      "v1.3.8 (2026-08-25): 新增高溫、低溫氣候關鍵字，以概念觸發方式標記為可能涉及氣候變遷調適。",
       "v1.3.7 (2026-03-31): 舊規則清理包第一階段—下修資源回收/住宅/委託營運為概念詞，並收斂永續與監測誤判語境。",
       "v1.3.6 (2026-03-31): 新增生質能/廢棄物再利用概念詞與保守 logic 規則，避免過早綁定工項。",
       "v1.3.5 (2026-03-31): 保守補強生質能概念詞（concept_trigger），僅提示人工確認，不直接綁定 strong 工項。",
@@ -975,17 +976,17 @@
   },
   "manifest": {
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
-    "config_version": "1.3.7",
+    "config_version": "1.3.8",
     "data_version": "1.0.0",
-    "keyword_dictionary_version": "1.0.6",
+    "keyword_dictionary_version": "1.0.7",
     "logic_mapping_version": "1.0.1",
-    "last_synced_at": "2026-04-14T00:00:00+00:00",
+    "last_synced_at": "2026-08-25T00:00:00+00:00",
     "checksums": {
-      "keyword_dictionary": "c4653cda7feb411caeb26d2f41556bc4",
+      "keyword_dictionary": "ba2da17fb44a5ea56dc6a622b149752c",
       "logic_mapping": "2e5209ad1c8dd4a53bb24029a3aaac98"
     },
     "checksum_algorithm": "md5_json_normalized",
-    "checksum_updated_at": "2026-04-14T00:00:00+00:00"
+    "checksum_updated_at": "2026-08-25T00:00:00+00:00"
   },
   "keyword_strategy": {
     "match_types": {

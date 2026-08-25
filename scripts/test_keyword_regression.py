@@ -92,6 +92,10 @@ test_cases = [
     ("🆕 新增驗收", "114年度彰化縣特定工廠登記相關輔導計畫", ["KW_140"], "特定工廠登記輔導案應觸發低純度潛力檢核"),
     ("🆕 新增驗收", "彰化縣產業脆弱度分析及因應輔導作法委託專業服務案", ["KW_134"], "脆弱度分析案應導向氣候風險/脆弱度調查"),
     
+    # --- 新增驗收：高低溫屬於調適潛力概念詞 ---
+    ("🆕 新增驗收", "高溫健康風險預警計畫", ["KW_144"], "高溫應辨識為可能涉及氣候變遷調適"),
+    ("🆕 新增驗收", "低溫寒害關懷服務", ["KW_145"], "低溫應辨識為可能涉及氣候變遷調適"),
+
     # --- 回歸測試：既有高純度詞 ---
     ("🔁 回歸測試", "彰化縣滯洪池新建工程", ["KW_005"], "滯洪池應仍為 P1_HIGH_PURITY"),
     ("🔁 回歸測試", "縣道彰61線LED路燈汰換計畫", ["KW_001", "KW_002"], "LED/路燈雙重命中"),
@@ -155,3 +159,10 @@ kw053_srf = kw_index.get("KW_053", {})
 print(f"\n  [KW_053 SRF] category_id = {kw053_srf.get('category_id')} (期望: B)")
 print(f"  [KW_053 SRF] weight = {kw053_srf.get('weight')} (期望: 0.8)")
 print("=" * 65)
+
+# 高溫、低溫僅作為「可能相關」概念提示，不直接判定為氣候預算工項。
+for trigger_id in ("KW_144", "KW_145"):
+    trigger = kw_index[trigger_id]
+    assert trigger.get("match_type") == "concept_trigger"
+    assert trigger.get("purity_hint") == "P4_LOW"
+    assert trigger.get("category_id") == "G" and trigger.get("sub_id") == "G3"

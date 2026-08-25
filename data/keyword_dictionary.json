@@ -2305,7 +2305,9 @@
       "weight": 0.5,
       "purity_hint": "P4_LOW",
       "anti_pattern_ids": [],
-      "synonyms": [],
+      "synonyms": [
+        "高低溫"
+      ],
       "negative_context": [
         "殺菌",
         "烹調",

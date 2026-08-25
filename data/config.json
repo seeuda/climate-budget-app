@@ -1,10 +1,11 @@
 {
   "schema_version": {
-    "config_version": "1.3.10",
+    "config_version": "1.3.11",
     "effective_date": "2026-03-25",
     "updated_at": "2026-08-25",
     "updated_by": "氣候變遷因應科",
     "change_log": [
+      "v1.3.11 (2026-08-25): 排除低溫乾燥製程誤判，並移除農業、作物與養殖等不足以單獨證明調適關聯的寬泛語境。",
       "v1.3.10 (2026-08-25): 新增「高低溫」組合詞辨識，搭配關懷等調適語境時標記為氣候調適潛力。",
       "v1.3.9 (2026-08-25): 收斂高溫、低溫關鍵字語境，排除殺菌、烹調、冷藏與製程用途，並保留極端溫度及寒害的調適潛力辨識。",
       "v1.3.8 (2026-08-25): 新增高溫、低溫氣候關鍵字，以概念觸發方式標記為可能涉及氣候變遷調適。",
@@ -978,13 +979,13 @@
   },
   "manifest": {
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
-    "config_version": "1.3.10",
+    "config_version": "1.3.11",
     "data_version": "1.0.0",
-    "keyword_dictionary_version": "1.0.9",
+    "keyword_dictionary_version": "1.0.10",
     "logic_mapping_version": "1.0.1",
     "last_synced_at": "2026-08-25T00:00:00+00:00",
     "checksums": {
-      "keyword_dictionary": "7c2e4bfcfc883f73fc18d7ff2b04d69e",
+      "keyword_dictionary": "38af51e5c0a5a5a5be6d5b3adf64f60c",
       "logic_mapping": "2e5209ad1c8dd4a53bb24029a3aaac98"
     },
     "checksum_algorithm": "md5_json_normalized",

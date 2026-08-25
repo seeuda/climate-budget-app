@@ -101,6 +101,7 @@ test_cases = [
     ("❌ 負向排除", "高溫殺菌設備採購", [], "製程用途的高溫不得命中"),
     ("❌ 負向排除", "低溫殺菌設備採購", [], "製程用途的低溫不得命中"),
     ("❌ 負向排除", "低溫烹調設備採購", [], "烹調用途的低溫不得命中"),
+    ("❌ 負向排除", "農業低溫乾燥設備採購", [], "農業加工用途不得以產業詞通過低溫調適語境檢核"),
 
     # --- 回歸測試：既有高純度詞 ---
     ("🔁 回歸測試", "彰化縣滯洪池新建工程", ["KW_005"], "滯洪池應仍為 P1_HIGH_PURITY"),
@@ -172,3 +173,5 @@ for trigger_id in ("KW_144", "KW_145", "KW_146", "KW_147"):
     assert trigger.get("match_type") == "concept_trigger"
     assert trigger.get("purity_hint") == "P4_LOW"
     assert trigger.get("category_id") == "G" and trigger.get("sub_id") == "G3"
+
+assert fail_count == 0, f"關鍵字回歸測試失敗：{fail_count} 個案例未通過"

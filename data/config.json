@@ -1,10 +1,11 @@
 {
   "schema_version": {
-    "config_version": "1.3.13",
+    "config_version": "1.3.14",
     "effective_date": "2026-03-25",
     "updated_at": "2026-08-26",
     "updated_by": "氣候變遷因應科",
     "change_log": [
+      "v1.3.14 (2026-08-26): 將「高低溫」拆為獨立概念詞並套用高低溫製程排除聯集，避免冷鏈、冷藏與物流採購誤判。",
       "v1.3.13 (2026-08-26): 調適分層的高溫備援比對同步套用製程排除與必要調適語境，避免繞過主關鍵字規則。",
       "v1.3.12 (2026-08-25): 極端高溫與極端低溫詞條繼承製程排除語境，避免材料試驗與工業設備採購誤判。",
       "v1.3.11 (2026-08-25): 排除低溫乾燥製程誤判，並移除農業、作物與養殖等不足以單獨證明調適關聯的寬泛語境。",
@@ -1004,17 +1005,17 @@
   },
   "manifest": {
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
-    "config_version": "1.3.13",
+    "config_version": "1.3.14",
     "data_version": "1.0.0",
-    "keyword_dictionary_version": "1.0.11",
+    "keyword_dictionary_version": "1.0.12",
     "logic_mapping_version": "1.0.1",
     "last_synced_at": "2026-08-26T00:00:00+00:00",
     "checksums": {
-      "keyword_dictionary": "c44f9f28ec1a90cb7529b188b8e10669",
+      "keyword_dictionary": "39351c115d647b132226dc9728607427",
       "logic_mapping": "2e5209ad1c8dd4a53bb24029a3aaac98"
     },
     "checksum_algorithm": "md5_json_normalized",
-    "checksum_updated_at": "2026-08-25T00:00:00+00:00"
+    "checksum_updated_at": "2026-08-26T00:00:00+00:00"
   },
   "keyword_strategy": {
     "match_types": {

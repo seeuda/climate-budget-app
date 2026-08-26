@@ -33,6 +33,7 @@ def run_keyword_source_text_smoke_test() -> None:
         "高溫殺菌設備採購",
         "極端高溫材料試驗設備採購",
         "極端低溫材料試驗設備採購",
+        "高低溫冷藏物流風險管理系統採購",
     )
     for case_name in excluded_temperature_cases:
         matches = detect_keywords(case_name)
@@ -42,7 +43,7 @@ def run_keyword_source_text_smoke_test() -> None:
 
     outreach_matches = detect_keywords("辦理本縣遊民高低溫加強關懷措施")
     assert any(
-        hit.get("trigger_id") == "KW_144" and hit.get("matched_term") == "高低溫"
+        hit.get("trigger_id") == "KW_148" and hit.get("matched_term") == "高低溫"
         for hit in outreach_matches
     ), "高低溫遊民關懷措施應保留為調適概念提示"
 

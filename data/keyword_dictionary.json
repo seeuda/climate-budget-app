@@ -2305,9 +2305,7 @@
       "weight": 0.5,
       "purity_hint": "P4_LOW",
       "anti_pattern_ids": [],
-      "synonyms": [
-        "高低溫"
-      ],
+      "synonyms": [],
       "negative_context": [
         "殺菌",
         "烹調",
@@ -2333,6 +2331,51 @@
         "戶外",
         "中暑",
         "降溫"
+      ]
+    },
+    {
+      "keyword": "高低溫",
+      "suggested_item": "高低溫健康風險評估與氣候調適措施",
+      "code": "concept",
+      "category_id": "G",
+      "sub_id": "G3",
+      "_match_type": "exact",
+      "weight": 0.5,
+      "purity_hint": "P4_LOW",
+      "anti_pattern_ids": [],
+      "synonyms": [],
+      "negative_context": [
+        "殺菌",
+        "烹調",
+        "製程",
+        "試驗",
+        "乾燥",
+        "加熱",
+        "冷凍",
+        "冷藏",
+        "物流",
+        "保存",
+        "儲存"
+      ],
+      "learning_tip": "「高低溫」可能表示氣候健康風險，也可能是設備或冷鏈規格；僅在具健康、預警、防護、關懷或災害等調適語境且非殺菌、烹調、試驗、冷凍冷藏、物流、乾燥、保存、儲存或製程用途時標記。",
+      "trigger_id": "KW_148",
+      "match_type": "concept_trigger",
+      "require_any_context": [
+        "氣候",
+        "天氣",
+        "熱浪",
+        "寒流",
+        "健康",
+        "風險",
+        "預警",
+        "防護",
+        "關懷",
+        "脆弱族群",
+        "災害",
+        "戶外",
+        "中暑",
+        "降溫",
+        "寒害"
       ]
     },
     {

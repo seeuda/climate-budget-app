@@ -1,10 +1,11 @@
 {
   "schema_version": {
-    "config_version": "1.3.12",
+    "config_version": "1.3.13",
     "effective_date": "2026-03-25",
-    "updated_at": "2026-08-25",
+    "updated_at": "2026-08-26",
     "updated_by": "氣候變遷因應科",
     "change_log": [
+      "v1.3.13 (2026-08-26): 調適分層的高溫備援比對同步套用製程排除與必要調適語境，避免繞過主關鍵字規則。",
       "v1.3.12 (2026-08-25): 極端高溫與極端低溫詞條繼承製程排除語境，避免材料試驗與工業設備採購誤判。",
       "v1.3.11 (2026-08-25): 排除低溫乾燥製程誤判，並移除農業、作物與養殖等不足以單獨證明調適關聯的寬泛語境。",
       "v1.3.10 (2026-08-25): 新增「高低溫」組合詞辨識，搭配關懷等調適語境時標記為氣候調適潛力。",
@@ -758,7 +759,30 @@
           "term": "高溫",
           "weight": 0.7,
           "suggested_category": "G",
-          "suggested_sub": "G3"
+          "suggested_sub": "G3",
+          "negative_context": [
+            "殺菌",
+            "烹調",
+            "製程",
+            "試驗",
+            "乾燥",
+            "加熱"
+          ],
+          "require_any_context": [
+            "氣候",
+            "天氣",
+            "熱浪",
+            "健康",
+            "風險",
+            "預警",
+            "防護",
+            "關懷",
+            "脆弱族群",
+            "災害",
+            "戶外",
+            "中暑",
+            "降溫"
+          ]
         },
         {
           "term": "遮蔭",
@@ -980,11 +1004,11 @@
   },
   "manifest": {
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
-    "config_version": "1.3.12",
+    "config_version": "1.3.13",
     "data_version": "1.0.0",
     "keyword_dictionary_version": "1.0.11",
     "logic_mapping_version": "1.0.1",
-    "last_synced_at": "2026-08-25T00:00:00+00:00",
+    "last_synced_at": "2026-08-26T00:00:00+00:00",
     "checksums": {
       "keyword_dictionary": "c44f9f28ec1a90cb7529b188b8e10669",
       "logic_mapping": "2e5209ad1c8dd4a53bb24029a3aaac98"

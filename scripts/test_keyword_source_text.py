@@ -34,12 +34,19 @@ def run_keyword_source_text_smoke_test() -> None:
         "極端高溫材料試驗設備採購",
         "極端低溫材料試驗設備採購",
         "高低溫冷藏物流風險管理系統採購",
+        "高溫高壓設備風險評估",
+        "低溫醫療設備風險管理系統",
     )
     for case_name in excluded_temperature_cases:
         matches = detect_keywords(case_name)
         strong_matches, concept_matches, _ = split_keyword_matches(matches)
         assert not strong_matches, f"{case_name} 不得由調適分層重新加入強提示"
         assert not concept_matches, f"{case_name} 不得命中溫度概念詞"
+
+    hot_dry_weather_matches = detect_keywords("高溫乾燥天氣風險預警計畫")
+    assert any(
+        hit.get("trigger_id") == "KW_144" for hit in hot_dry_weather_matches
+    ), "高溫乾燥天氣預警不得被乾燥製程排除規則誤傷"
 
     outreach_matches = detect_keywords("辦理本縣遊民高低溫加強關懷措施")
     assert any(

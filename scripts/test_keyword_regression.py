@@ -20,6 +20,7 @@ def match_keyword(text, kw_entry):
     keyword = kw_entry["keyword"]
     synonyms = kw_entry.get("synonyms", [])
     neg_ctx = kw_entry.get("negative_context", [])
+    neg_ctx_combinations = kw_entry.get("negative_context_combinations", [])
     require_any = kw_entry.get("require_any_context", [])
     require_all = kw_entry.get("require_all_context", [])
     
@@ -30,6 +31,8 @@ def match_keyword(text, kw_entry):
     for neg in neg_ctx:
         if neg in text:
             return False
+    if any(combo and all(term in text for term in combo) for combo in neg_ctx_combinations):
+        return False
     if require_any and not any(ctx in text for ctx in require_any):
         return False
     if require_all and not all(ctx in text for ctx in require_all):
@@ -92,6 +95,24 @@ test_cases = [
     ("🆕 新增驗收", "114年度彰化縣特定工廠登記相關輔導計畫", ["KW_140"], "特定工廠登記輔導案應觸發低純度潛力檢核"),
     ("🆕 新增驗收", "彰化縣產業脆弱度分析及因應輔導作法委託專業服務案", ["KW_134"], "脆弱度分析案應導向氣候風險/脆弱度調查"),
     
+    # --- 新增驗收：高低溫屬於調適潛力概念詞 ---
+    ("🆕 新增驗收", "高溫健康風險預警計畫", ["KW_144"], "具健康風險語境的高溫應辨識為可能涉及氣候變遷調適"),
+    ("🆕 新增驗收", "辦理本縣遊民高低溫加強關懷措施", ["KW_148"], "高低溫搭配遊民關懷語境應辨識為調適潛力"),
+    ("🆕 新增驗收", "極端高溫防護計畫", ["KW_147"], "極端高溫應直接辨識為調適潛力概念詞"),
+    ("🆕 新增驗收", "低溫健康風險預警與關懷服務", ["KW_145"], "具健康風險語境的低溫應辨識為可能涉及氣候變遷調適"),
+    ("🆕 新增驗收", "農作物寒害防護計畫", ["KW_146"], "寒害應直接辨識為調適潛力概念詞"),
+    ("❌ 負向排除", "高溫殺菌設備採購", [], "製程用途的高溫不得命中"),
+    ("❌ 負向排除", "低溫殺菌設備採購", [], "製程用途的低溫不得命中"),
+    ("❌ 負向排除", "低溫烹調設備採購", [], "烹調用途的低溫不得命中"),
+    ("❌ 負向排除", "農業低溫乾燥設備採購", [], "農業加工用途不得以產業詞通過低溫調適語境檢核"),
+    ("❌ 負向排除", "極端高溫材料試驗設備採購", [], "極端高溫不得繞過材料試驗排除語境"),
+    ("❌ 負向排除", "極端低溫材料試驗設備採購", [], "極端低溫不得繞過材料試驗排除語境"),
+    ("❌ 負向排除", "高低溫冷藏物流風險管理系統採購", [], "高低溫不得以風險語境繞過冷藏物流排除條件"),
+    ("❌ 負向排除", "高溫高壓設備風險評估", [], "泛用設備風險不得作為高溫調適語境"),
+    ("❌ 負向排除", "低溫醫療設備風險管理系統", [], "泛用醫療設備風險不得作為低溫調適語境"),
+    ("✅ 正向保留", "高溫乾燥天氣風險預警計畫", ["KW_144"], "乾燥天氣搭配預警應保留為調適概念提示"),
+    ("✅ 正向保留", "極端高溫耐熱作物田間試驗計畫", ["KW_147"], "農業田間試驗不得被工業試驗排除規則誤傷"),
+
     # --- 回歸測試：既有高純度詞 ---
     ("🔁 回歸測試", "彰化縣滯洪池新建工程", ["KW_005"], "滯洪池應仍為 P1_HIGH_PURITY"),
     ("🔁 回歸測試", "縣道彰61線LED路燈汰換計畫", ["KW_001", "KW_002"], "LED/路燈雙重命中"),
@@ -155,3 +176,12 @@ kw053_srf = kw_index.get("KW_053", {})
 print(f"\n  [KW_053 SRF] category_id = {kw053_srf.get('category_id')} (期望: B)")
 print(f"  [KW_053 SRF] weight = {kw053_srf.get('weight')} (期望: 0.8)")
 print("=" * 65)
+
+# 高溫、低溫僅作為「可能相關」概念提示，不直接判定為氣候預算工項。
+for trigger_id in ("KW_144", "KW_145", "KW_146", "KW_147", "KW_148"):
+    trigger = kw_index[trigger_id]
+    assert trigger.get("match_type") == "concept_trigger"
+    assert trigger.get("purity_hint") == "P4_LOW"
+    assert trigger.get("category_id") == "G" and trigger.get("sub_id") == "G3"
+
+assert fail_count == 0, f"關鍵字回歸測試失敗：{fail_count} 個案例未通過"

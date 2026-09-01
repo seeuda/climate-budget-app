@@ -979,6 +979,16 @@ def build_keyword_source_text(
     return " ".join(str(part).strip() for part in parts if str(part).strip())
 
 
+def has_negative_context(text: str, rule: dict) -> bool:
+    """Return whether direct or co-occurring exclusion terms match text."""
+    if any(ctx in text for ctx in rule.get("negative_context", [])):
+        return True
+    return any(
+        combination and all(ctx in text for ctx in combination)
+        for combination in rule.get("negative_context_combinations", [])
+    )
+
+
 def detect_keywords(text):
     """Return list of matching keyword triggers from case name."""
     if not text:
@@ -994,8 +1004,7 @@ def detect_keywords(text):
         matched_term = next((c for c in candidates if c in text), "")
         if not matched_term:
             continue
-        negative_context = kw.get("negative_context", [])
-        if any(ctx in text for ctx in negative_context):
+        if has_negative_context(text, kw):
             continue
         require_any_context = kw.get("require_any_context", [])
         if require_any_context and not any(ctx in text for ctx in require_any_context):
@@ -1056,8 +1065,7 @@ def detect_keywords(text):
             term = kw_item.get("term", "")
             if not term or term not in text or term in seen:
                 continue
-            negative_context = kw_item.get("negative_context", [])
-            if any(ctx in text for ctx in negative_context):
+            if has_negative_context(text, kw_item):
                 continue
             require_any_context = kw_item.get("require_any_context", [])
             if require_any_context and not any(ctx in text for ctx in require_any_context):

@@ -20,6 +20,7 @@ def match_keyword(text, kw_entry):
     keyword = kw_entry["keyword"]
     synonyms = kw_entry.get("synonyms", [])
     neg_ctx = kw_entry.get("negative_context", [])
+    neg_ctx_combinations = kw_entry.get("negative_context_combinations", [])
     require_any = kw_entry.get("require_any_context", [])
     require_all = kw_entry.get("require_all_context", [])
     
@@ -30,6 +31,8 @@ def match_keyword(text, kw_entry):
     for neg in neg_ctx:
         if neg in text:
             return False
+    if any(combo and all(term in text for term in combo) for combo in neg_ctx_combinations):
+        return False
     if require_any and not any(ctx in text for ctx in require_any):
         return False
     if require_all and not all(ctx in text for ctx in require_all):
@@ -108,6 +111,7 @@ test_cases = [
     ("❌ 負向排除", "高溫高壓設備風險評估", [], "泛用設備風險不得作為高溫調適語境"),
     ("❌ 負向排除", "低溫醫療設備風險管理系統", [], "泛用醫療設備風險不得作為低溫調適語境"),
     ("✅ 正向保留", "高溫乾燥天氣風險預警計畫", ["KW_144"], "乾燥天氣搭配預警應保留為調適概念提示"),
+    ("✅ 正向保留", "極端高溫耐熱作物田間試驗計畫", ["KW_147"], "農業田間試驗不得被工業試驗排除規則誤傷"),
 
     # --- 回歸測試：既有高純度詞 ---
     ("🔁 回歸測試", "彰化縣滯洪池新建工程", ["KW_005"], "滯洪池應仍為 P1_HIGH_PURITY"),

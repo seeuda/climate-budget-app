@@ -1,10 +1,11 @@
 {
   "schema_version": {
-    "config_version": "1.3.15",
+    "config_version": "1.3.16",
     "effective_date": "2026-03-25",
-    "updated_at": "2026-08-27",
+    "updated_at": "2026-09-01",
     "updated_by": "氣候變遷因應科",
     "change_log": [
+      "v1.3.16 (2026-09-01): 將溫度詞條的「試驗」排除限縮為材料、設備、實驗室或工業試驗，保留氣候與農業田間試驗調適案例。",
       "v1.3.15 (2026-08-27): 移除溫度詞條的泛用「風險」語境，並將乾燥排除限縮為乾燥設備、乾燥機或乾燥製程。",
       "v1.3.14 (2026-08-26): 將「高低溫」拆為獨立概念詞並套用高低溫製程排除聯集，避免冷鏈、冷藏與物流採購誤判。",
       "v1.3.13 (2026-08-26): 調適分層的高溫備援比對同步套用製程排除與必要調適語境，避免繞過主關鍵字規則。",
@@ -766,7 +767,6 @@
             "殺菌",
             "烹調",
             "製程",
-            "試驗",
             "加熱",
             "乾燥設備",
             "乾燥機",
@@ -785,6 +785,24 @@
             "戶外",
             "中暑",
             "降溫"
+          ],
+          "negative_context_combinations": [
+            [
+              "試驗",
+              "材料"
+            ],
+            [
+              "試驗",
+              "設備"
+            ],
+            [
+              "試驗",
+              "實驗室"
+            ],
+            [
+              "試驗",
+              "工業"
+            ]
           ]
         },
         {
@@ -1007,17 +1025,17 @@
   },
   "manifest": {
     "_note": "各 JSON 檔案獨立版本追蹤。修改任一 JSON 後需重新執行 checksum 更新腳本，並遞增對應 version。",
-    "config_version": "1.3.15",
+    "config_version": "1.3.16",
     "data_version": "1.0.0",
-    "keyword_dictionary_version": "1.0.13",
+    "keyword_dictionary_version": "1.0.14",
     "logic_mapping_version": "1.0.1",
-    "last_synced_at": "2026-08-27T00:00:00+00:00",
+    "last_synced_at": "2026-09-01T00:00:00+00:00",
     "checksums": {
-      "keyword_dictionary": "44493e48a10da8208661362de19dfca7",
+      "keyword_dictionary": "88f426bb1cf5daf356569a9e7051d0d1",
       "logic_mapping": "2e5209ad1c8dd4a53bb24029a3aaac98"
     },
     "checksum_algorithm": "md5_json_normalized",
-    "checksum_updated_at": "2026-08-27T00:00:00+00:00"
+    "checksum_updated_at": "2026-09-01T00:00:00+00:00"
   },
   "keyword_strategy": {
     "match_types": {

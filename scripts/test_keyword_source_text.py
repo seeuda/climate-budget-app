@@ -43,6 +43,11 @@ def run_keyword_source_text_smoke_test() -> None:
         assert not strong_matches, f"{case_name} 不得由調適分層重新加入強提示"
         assert not concept_matches, f"{case_name} 不得命中溫度概念詞"
 
+    field_trial_matches = detect_keywords("極端高溫耐熱作物田間試驗計畫")
+    assert any(
+        hit.get("trigger_id") == "KW_147" for hit in field_trial_matches
+    ), "極端高溫耐熱作物田間試驗不得被工業試驗排除規則誤傷"
+
     hot_dry_weather_matches = detect_keywords("高溫乾燥天氣風險預警計畫")
     assert any(
         hit.get("trigger_id") == "KW_144" for hit in hot_dry_weather_matches
